@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>姓名字帖生成器（繁體/米字格）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'DFKai-SB', 'KaiTi', '標楷體', 'serif';
+      background: #f8f8f8;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px #0001;
+      padding: 2rem 1rem;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.1em;
+      font-weight: bold;
+    }
+    .input-area {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+    input[type="text"] {
+      font-size: 1.25rem;
+      padding: 0.5rem;
+      width: 80%;
+      max-width: 320px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 0.5rem 1.5rem;
+      font-size: 1.1rem;
+      border-radius: 4px;
+      border: none;
+      background: #3498db;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #217dbb;
+    }
+    .grid-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2.2rem 1.2rem;
+      margin-top: 2rem;
+    }
+    .char-grid {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 2.2rem;
+      min-width: 110px;
+    }
+    .big-char {
+      font-size: 2.6rem;
+      font-family: 'DFKai-SB', 'KaiTi', '標楷體', 'serif';
+      margin-bottom: 0.5rem;
+      color: #222;
+      letter-spacing: 0.1em;
+      font-weight: bold;
+    }
+    .tiantige-row {
+      display: flex;
+      flex-direction: row;
+      gap: 0.4rem;
+      margin-bottom: 0.1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .mizige {
+      width: 60px;
+      height: 60px;
+      position: relative;
+      border: 1.5px solid #333;
+      background: #fff;
+      margin-bottom: 0.1rem;
+      margin-right: 0;
+      box-sizing: border-box;
+    }
+    /* 米字格線條 */
+    .mizige .stroke {
+      position: absolute;
+      background: #bbb;
+      pointer-events: none;
+      user-select: none;
+    }
+    .mizige .horizontal {
+      top: 50%; left: 0;
+      width: 100%; height: 1px;
+      transform: translateY(-50%);
+    }
+    .mizige .vertical {
+      left: 50%; top: 0;
+      width: 1px; height: 100%;
+      transform: translateX(-50%);
+    }
+    .mizige .diag1 {
+      left: 0; top: 0;
+      width: 100%; height: 1px;
+      transform: rotate(45deg) translateY(-50%);
+      top: 50%;
+    }
+    .mizige .diag2 {
+      right: 0; top: 0;
+      width: 100%; height: 1px;
+      transform: rotate(-45deg) translateY(-50%);
+      top: 50%;
+    }
+    .mizige .mid1 {
+      left: 25%; top: 0;
+      width: 1px; height: 100%;
+      background: #ccc;
+      transform: none;
+    }
+    .mizige .mid2 {
+      left: 75%; top: 0;
+      width: 1px; height: 100%;
+      background: #ccc;
+      transform: none;
+    }
+    .mizige .mid3 {
+      left: 0; top: 25%;
+      width: 100%; height: 1px;
+      background: #ccc;
+      transform: none;
+    }
+    .mizige .mid4 {
+      left: 0; top: 75%;
+      width: 100%; height: 1px;
+      background: #ccc;
+      transform: none;
+    }
+    .mizige .char {
+      position: absolute;
+      left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.1rem;
+      font-family: 'DFKai-SB', 'KaiTi', '標楷體', 'serif';
+      color: #bbb;
+      opacity: 0.7;
+      user-select: none;
+      pointer-events: none;
+      letter-spacing: 0.1em;
+    }
+    @media (max-width: 600px) {
+      .mizige { width: 36px; height: 36px; }
+      .big-char { font-size: 1.2rem; }
+      .char-grid { min-width: 55px; }
+      .tiantige-row { gap: 0.2rem; }
+    }
+    .print-btn {
+      display: block;
+      margin: 1.5rem auto 0;
+      background: #27ae60;
+    }
+    .print-btn:hover {
+      background: #1e8449;
+    }
+    @media print {
+      body { background: #fff; }
+      .container { box-shadow: none; padding: 0; }
+      .input-area, .print-btn { display: none !important; }
+      .grid-area { gap: 1.5rem 0.6rem; }
+      .char-grid { min-width: unset; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>姓名字帖生成器（繁體）</h1>
+    <div class="input-area">
+      <input type="text" id="nameInput" maxlength="8" placeholder="請輸入姓名（可多於一個字）" autofocus />
+      <button onclick="generateGrid()">生成字帖</button>
+    </div>
+    <div>
+      <button class="print-btn" onclick="window.print()">列印字帖</button>
+    </div>
+    <div class="grid-area" id="gridArea"></div>
+  </div>
+  <script>
+    function createMizige(char, showChar) {
+      return `
+        <div class="mizige">
+          <div class="stroke horizontal"></div>
+          <div class="stroke vertical"></div>
+          <div class="stroke diag1"></div>
+          <div class="stroke diag2"></div>
+          <div class="stroke mid1"></div>
+          <div class="stroke mid2"></div>
+          <div class="stroke mid3"></div>
+          <div class="stroke mid4"></div>
+          ${showChar ? `<div class="char">${char}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function generateGrid() {
+      const name = document.getElementById('nameInput').value.trim();
+      const gridArea = document.getElementById('gridArea');
+      gridArea.innerHTML = '';
+      if (!name) return;
+
+      for (const char of name) {
+        const charBlock = document.createElement('div');
+        charBlock.className = 'char-grid';
+
+        let mizigeRow = '<div class="tiantige-row">';
+        for (let i = 0; i < 10; i++) {
+          mizigeRow += createMizige(char, i < 3 ? true : false);
+        }
+        mizigeRow += '</div>';
+
+        charBlock.innerHTML = `
+          <div class="big-char">${char}</div>
+          ${mizigeRow}
+        `;
+        gridArea.appendChild(charBlock);
+      }
+    }
+
+    // 支援Enter鍵生成
+    document.getElementById('nameInput').addEventListener('keydown', function(e){
+      if (e.key === 'Enter') generateGrid();
+    });
+  </script>
+</body>
+</html>
