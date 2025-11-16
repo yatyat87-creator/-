@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>兩位數直式進位加法生成器</title>
+  <style>
+    body {
+      font-family: "Noto Sans TC", Arial, sans-serif;
+      background: #d2e7fa;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 700px;
+      margin: 30px auto;
+      background: #e6f0fb;
+      border-radius: 12px;
+      padding: 25px 10px 30px 10px;
+      box-shadow: 0 2px 12px rgba(44, 62, 80, 0.18);
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.35em;
+      color: #274472;
+      margin-bottom: 30px;
+      letter-spacing: 0.08em;
+    }
+    .problems {
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      max-width: 460px;
+    }
+    .problem {
+      background: #fff;
+      border-radius: 8px;
+      padding: 17px 10px 18px 18px;
+      box-shadow: 0 1px 4px rgba(44, 62, 80, 0.05);
+    }
+    .prob-title {
+      font-size: 1.12em;
+      margin-bottom: 10px;
+      color: #2c3e50;
+      font-weight: 500;
+      letter-spacing: 0.03em;
+    }
+    .vertical-table {
+      margin: 0 auto;
+      border-collapse: collapse;
+      background: #f4f9ff;
+    }
+    .vertical-table th, .vertical-table td {
+      border: 2px solid #7897c7;
+      width: 36px;
+      height: 36px;
+      text-align: center;
+      font-size: 1.3em;
+    }
+    .vertical-table th {
+      background: #e6f0fb;
+      color: #6180ad;
+      font-size: 1em;
+      font-weight: normal;
+    }
+    .vertical-table .plus {
+      border-right: none;
+      font-size: 1em;
+      color: #1a4a75;
+    }
+    .vertical-table .empty {
+      border: none !important;
+      background: none !important;
+    }
+    .bold-bottom td {
+      border-bottom: 4px solid #1a4a75 !important;
+    }
+    button {
+      display: block;
+      margin: 30px auto 0 auto;
+      padding: 10px 30px;
+      background: #274472;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 1.1em;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #1e3066;
+    }
+    @media (max-width: 600px) {
+      .container {
+        max-width: 98vw;
+        padding: 10px 1vw;
+      }
+      .vertical-table th, .vertical-table td {
+        width: 26px;
+        height: 26px;
+        font-size: 1em;
+      }
+      .problems {
+        max-width: 99vw;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>認識二位數的直式進位加法</h1>
+    <div class="problems" id="problems"></div>
+    <button onclick="generateProblems()">重新生成</button>
+  </div>
+  <script>
+    function getRandomOneToNinetyNine() {
+      return Math.floor(Math.random() * 99) + 1; // 1~99
+    }
+    function splitDigits(num) {
+      if (num < 10) {
+        return { ten: '', one: num };
+      } else {
+        return {
+          ten: Math.floor(num / 10),
+          one: num % 10
+        };
+      }
+    }
+    function generateProblems() {
+      const problemsDiv = document.getElementById('problems');
+      problemsDiv.innerHTML = "";
+      let usedNums = new Set();
+      for (let i = 1; i <= 10; i++) {
+        let a = getRandomOneToNinetyNine();
+        let b = getRandomOneToNinetyNine();
+
+        // 不要重複題（順序無關）
+        let key = a > b ? `${a}+${b}` : `${b}+${a}`;
+        if (usedNums.has(key)) {
+          i--;
+          continue;
+        }
+        usedNums.add(key);
+
+        let aDigits = splitDigits(a);
+        let bDigits = splitDigits(b);
+
+        let html = `
+          <div class="problem">
+            <div class="prob-title">（${i}）${a} + ${b} =</div>
+            <table class="vertical-table">
+              <tr>
+                <th></th>
+                <th>十位</th>
+                <th>個位</th>
+              </tr>
+              <tr>
+                <td class="empty"></td>
+                <td>${aDigits.ten !== '' ? aDigits.ten : '&nbsp;'}</td>
+                <td>${aDigits.one}</td>
+              </tr>
+              <tr class="bold-bottom">
+                <td class="plus">+</td>
+                <td>${bDigits.ten !== '' ? bDigits.ten : '&nbsp;'}</td>
+                <td>${bDigits.one}</td>
+              </tr>
+              <tr>
+                <td class="empty"></td>
+                <td>&nbsp;</td>
+                <td>&nbsp;</td>
+              </tr>
+            </table>
+          </div>
+        `;
+        problemsDiv.innerHTML += html;
+      }
+    }
+    generateProblems();
+  </script>
+</body>
+</html>
