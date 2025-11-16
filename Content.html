@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>我的 GitHub 作品目錄</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f9f9f9; color: #222; margin: 0; padding: 20px; }
+    h1 { color: #24292f; }
+    .repo { background: #fff; margin-bottom: 24px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 18px; }
+    .repo h2 { margin-top: 0; font-size: 1.2em; }
+    ul { padding-left: 20px; }
+    a { color: #0969da; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .loading { color: #666; font-style: italic; }
+    @media (max-width: 600px) {
+      .repo { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>我的 GitHub 作品目錄</h1>
+  <div id="output">
+    <div class="loading">載入中...</div>
+  </div>
+  <script>
+    // 請改成你的 GitHub 使用者名稱
+    const githubUser = "yatyat87-creator";
+    const output = document.getElementById("output");
+
+    async function fetchRepos() {
+      const repoRes = await fetch(`https://api.github.com/users/${githubUser}/repos?per_page=100`);
+      if (!repoRes.ok) {
+        output.innerHTML = "無法取得 GitHub 資料，請稍後再試。";
+        return;
+      }
+      const repos = await repoRes.json();
+      if (!repos.length) {
+        output.innerHTML = "目前沒有任何公開 repository。";
+        return;
+      }
+
+      let html = "";
+      for (const repo of repos) {
+        html += `<div class="repo"><h2>${repo.name}</h2>`;
+        html += `<div><a href="${repo.html_url}" target="_blank">查看 GitHub Repository</a></div>`;
+        html += `<ul id="files-${repo.name}"><li class="loading">載入檔案中...</li></ul></div>`;
+      }
+      output.innerHTML = html;
+
+      // 依序載入每個 repo 的 HTML 檔案
+      for (const repo of repos) {
+        fetchFiles(repo);
+      }
+    }
+
+    async function fetchFiles(repo) {
+      const ul = document.getElementById(`files-${repo.name}`);
+      const res = await fetch(`https://api.github.com/repos/${githubUser}/${repo.name}/contents/`);
+      if (!res.ok) {
+        ul.innerHTML = "<li>無法取得檔案清單。</li>";
+        return;
+      }
+      const files = await res.json();
+      // 選出 .html 檔案
+      const htmlFiles = files.filter(f =>
+        f.type === "file" && f.name.toLowerCase().endsWith(".html")
+      );
+      if (htmlFiles.length === 0) {
+        ul.innerHTML = "<li>沒有 HTML 檔案。</li>";
+        return;
+      }
+      // 產生清單，GitHub Pages 網址格式: https://{username}.github.io/{repo}/{file}
+      let list = "";
+      for (const f of htmlFiles) {
+        const ghPagesUrl = `https://${githubUser}.github.io/${repo.name}/${f.name}`;
+        list += `<li><a href="${ghPagesUrl}" target="_blank">${f.name}</a></li>`;
+      }
+      ul.innerHTML = list;
+    }
+
+    fetchRepos();
+  </script>
+</body>
+</html>
