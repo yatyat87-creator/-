@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>俄羅斯方塊 Tetris</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <style>
+    :root {
+      --cell-size: 32px;
+      --rows: 20;
+      --cols: 10;
+      --board-bg: #222;
+      --border-color: #888;
+    }
+    body {
+      background: #181c20;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      min-height: 100vh;
+      padding: 0;
+    }
+    h1 {
+      margin: 20px 0 10px 0;
+      font-size: 2em;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+    #tetris-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    #board {
+      display: grid;
+      grid-template-rows: repeat(var(--rows), var(--cell-size));
+      grid-template-columns: repeat(var(--cols), var(--cell-size));
+      background: var(--board-bg);
+      border: 2px solid var(--border-color);
+      box-shadow: 2px 2px 10px #000a;
+      margin-bottom: 8px;
+      position: relative;
+    }
+    .cell {
+      width: var(--cell-size);
+      height: var(--cell-size);
+      box-sizing: border-box;
+      border: 1px solid #333;
+      background: transparent;
+      transition: background 0.1s;
+    }
+    .I { background: #00f0f0; }
+    .J { background: #0000f0; }
+    .L { background: #f0a000; }
+    .O { background: #f0f000; }
+    .S { background: #00f000; }
+    .T { background: #a000f0; }
+    .Z { background: #f00000; }
+    .ghost {
+      opacity: 0.2;
+      filter: brightness(1.5);
+    }
+    #scoreboard {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: calc(var(--cols) * var(--cell-size));
+      margin-bottom: 4px;
+      font-size: 1.1em;
+    }
+    #next-piece {
+      display: grid;
+      grid-template-rows: repeat(4, var(--cell-size));
+      grid-template-columns: repeat(4, var(--cell-size));
+      gap: 0;
+      background: #111;
+      border: 2px solid #444;
+      margin-bottom: 4px;
+    }
+    .next-cell {
+      width: var(--cell-size);
+      height: var(--cell-size);
+      box-sizing: border-box;
+      border: 1px solid #222;
+      background: transparent;
+    }
+    .mobile-controls {
+      display: none;
+      width: 100%;
+      max-width: calc(var(--cols) * var(--cell-size));
+      margin-top: 7px;
+      gap: 4px;
+      justify-content: space-between;
+      user-select: none;
+    }
+    .mobile-btn {
+      flex: 1;
+      margin: 0 2px;
+      font-size: 1.3em;
+      padding: 12px 0;
+      background: #222;
+      color: #fff;
+      border: 1px solid #333;
+      border-radius: 5px;
+      transition: background 0.1s;
+      touch-action: manipulation;
+    }
+    .mobile-btn:active {
+      background: #444;
+    }
+    #game-over {
+      position: absolute;
+      left: 0; top: 50%; width: 100%;
+      transform: translateY(-50%);
+      background: rgba(0,0,0,0.85);
+      text-align: center;
+      padding: 30px 0;
+      font-size: 2em;
+      z-index: 10;
+      color: #fff;
+      letter-spacing: 2px;
+      border-radius: 10px;
+      display: none;
+    }
+    #restart-btn {
+      margin-top: 10px;
+      padding: 8px 20px;
+      font-size: 1em;
+      background: #444;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.14s;
+    }
+    #restart-btn:hover { background: #666; }
+    @media (max-width: 560px) {
+      :root { --cell-size: 7vw; }
+      #scoreboard { font-size: 1em; }
+    }
+    @media (max-width: 400px) {
+      :root { --cell-size: 6vw; }
+      #scoreboard { font-size: 0.95em; }
+    }
+    @media (pointer: coarse) {
+      .mobile-controls { display: flex; }
+    }
+  </style>
+</head>
+<body>
+  <h1>俄羅斯方塊<br>TETRIS</h1>
+  <div id="tetris-container">
+    <div id="scoreboard">
+      <span>分數: <span id="score">0</span></span>
+      <span>行數: <span id="lines">0</span></span>
+      <span>等級: <span id="level">1</span></span>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <div id="board"></div>
+      <div>
+        <span style="font-size:1.02em;">下一塊：</span>
+        <div id="next-piece"></div>
+      </div>
+    </div>
+    <div class="mobile-controls">
+      <button class="mobile-btn" id="btn-left">&#8678;</button>
+      <button class="mobile-btn" id="btn-rotate">&#8635;</button>
+      <button class="mobile-btn" id="btn-right">&#8680;</button>
+      <button class="mobile-btn" id="btn-down">&#8681;</button>
+      <button class="mobile-btn" id="btn-drop">▼</button>
+    </div>
+  </div>
+  <div id="game-over">
+    <div>遊戲結束</div>
+    <button id="restart-btn">重新開始</button>
+  </div>
+  <script>
+    // 方塊資料
+    const PIECES = {
+      I: [
+        [[0,1],[1,1],[2,1],[3,1]],
+        [[2,0],[2,1],[2,2],[2,3]],
+        [[0,2],[1,2],[2,2],[3,2]],
+        [[1,0],[1,1],[1,2],[1,3]]
+      ],
+      J: [
+        [[0,0],[0,1],[1,1],[2,1]],
+        [[1,0],[2,0],[1,1],[1,2]],
+        [[0,1],[1,1],[2,1],[2,2]],
+        [[1,0],[1,1],[0,2],[1,2]]
+      ],
+      L: [
+        [[2,0],[0,1],[1,1],[2,1]],
+        [[1,0],[1,1],[1,2],[2,2]],
+        [[0,1],[1,1],[2,1],[0,2]],
+        [[0,0],[1,0],[1,1],[1,2]]
+      ],
+      O: [
+        [[1,0],[2,0],[1,1],[2,1]],
+        [[1,0],[2,0],[1,1],[2,1]],
+        [[1,0],[2,0],[1,1],[2,1]],
+        [[1,0],[2,0],[1,1],[2,1]]
+      ],
+      S: [
+        [[1,0],[2,0],[0,1],[1,1]],
+        [[1,0],[1,1],[2,1],[2,2]],
+        [[1,1],[2,1],[0,2],[1,2]],
+        [[0,0],[0,1],[1,1],[1,2]]
+      ],
+      T: [
+        [[1,0],[0,1],[1,1],[2,1]],
+        [[1,0],[1,1],[2,1],[1,2]],
+        [[0,1],[1,1],[2,1],[1,2]],
+        [[1,0],[0,1],[1,1],[1,2]]
+      ],
+      Z: [
+        [[0,0],[1,0],[1,1],[2,1]],
+        [[2,0],[1,1],[2,1],[1,2]],
+        [[0,1],[1,1],[1,2],[2,2]],
+        [[1,0],[0,1],[1,1],[0,2]]
+      ]
+    };
+
+    const COLORS = {
+      I: "I", J: "J", L: "L", O: "O", S: "S", T: "T", Z: "Z"
+    };
+
+    // 遊戲參數
+    const ROWS = 20, COLS = 10;
+    const EMPTY = "";
+    let board = [];
+    let currentPiece, nextPiece, currentX, currentY, rotation;
+    let score = 0, lines = 0, level = 1;
+    let dropInterval = 800, timer = null, isGameOver = false;
+    let holdDown = false;
+
+    const scoreEl = document.getElementById("score");
+    const linesEl = document.getElementById("lines");
+    const levelEl = document.getElementById("level");
+    const boardEl = document.getElementById("board");
+    const nextEl = document.getElementById("next-piece");
+    const gameOverEl = document.getElementById("game-over");
+    const restartBtn = document.getElementById("restart-btn");
+
+    // 建立遊戲板
+    function createBoard() {
+      boardEl.innerHTML = "";
+      board = [];
+      for(let r=0;r<ROWS;r++) {
+        let row = [];
+        for(let c=0;c<COLS;c++) {
+          let cell = document.createElement("div");
+          cell.className = "cell";
+          cell.dataset.row = r;
+          cell.dataset.col = c;
+          boardEl.appendChild(cell);
+          row.push(EMPTY);
+        }
+        board.push(row);
+      }
+    }
+
+    // 建立下一塊顯示
+    function createNextPieceBoard() {
+      nextEl.innerHTML = "";
+      for(let r=0;r<4;r++) for(let c=0;c<4;c++) {
+        let nc = document.createElement("div");
+        nc.className = "next-cell";
+        nc.dataset.row = r;
+        nc.dataset.col = c;
+        nextEl.appendChild(nc);
+      }
+    }
+
+    // 隨機產生一個方塊
+    function randomPiece() {
+      let keys = Object.keys(PIECES);
+      let type = keys[Math.floor(Math.random() * keys.length)];
+      return { type, rotation: 0 };
+    }
+
+    // 畫出遊戲板
+    function drawBoard(showGhost=true) {
+      for(let r=0;r<ROWS;r++) {
+        for(let c=0;c<COLS;c++) {
+          let cell = boardEl.children[r*COLS+c];
+          cell.className = "cell";
+          if(board[r][c]) cell.classList.add(board[r][c]);
+        }
+      }
+      // 畫出目前方塊
+      drawPiece(currentPiece, currentX, currentY, rotation, false);
+      // 畫出 ghost
+      if(showGhost && !isGameOver) {
+        let dropY = getDropY();
+        if(dropY !== currentY)
+          drawPiece(currentPiece, currentX, dropY, rotation, true);
+      }
+    }
+
+    // 畫出一個方塊
+    function drawPiece(piece, x, y, rot, isGhost) {
+      let shape = PIECES[piece.type][rot];
+      shape.forEach(([dx,dy])=>{
+        let r = y+dy, c = x+dx;
+        if(r>=0 && r<ROWS && c>=0 && c<COLS) {
+          let cell = boardEl.children[r*COLS+c];
+          cell.classList.add(COLORS[piece.type]);
+          if(isGhost) cell.classList.add("ghost");
+        }
+      });
+    }
+
+    // 修正版：畫出下一個方塊
+    function drawNextPiece() {
+      // 清空
+      for(let ncell of nextEl.children)
+        ncell.className = "next-cell";
+      let shape = PIECES[nextPiece.type][0];
+      // 找出最小x、最小y，並置中顯示
+      let minX = Math.min(...shape.map(([dx,dy])=>dx));
+      let maxX = Math.max(...shape.map(([dx,dy])=>dx));
+      let minY = Math.min(...shape.map(([dx,dy])=>dy));
+      let maxY = Math.max(...shape.map(([dx,dy])=>dy));
+      let offsetX = Math.floor((4 - (maxX - minX + 1)) / 2) - minX;
+      let offsetY = Math.floor((4 - (maxY - minY + 1)) / 2) - minY;
+      shape.forEach(([dx,dy])=>{
+        let x = dx + offsetX;
+        let y = dy + offsetY;
+        if(x>=0 && x<4 && y>=0 && y<4){
+          let cell = nextEl.children[y*4+x];
+          if(cell) cell.classList.add(COLORS[nextPiece.type]);
+        }
+      });
+    }
+
+    // 判斷能否移動
+    function valid(piece, x, y, rot) {
+      let shape = PIECES[piece.type][rot];
+      for(let [dx,dy] of shape) {
+        let r = y+dy, c = x+dx;
+        if(r<0) continue;
+        if(r>=ROWS || c<0 || c>=COLS) return false;
+        if(board[r][c]) return false;
+      }
+      return true;
+    }
+
+    // 鎖定方塊
+    function lockPiece() {
+      let shape = PIECES[currentPiece.type][rotation];
+      for(let [dx,dy] of shape) {
+        let r = currentY+dy, c = currentX+dx;
+        if(r>=0 && r<ROWS && c>=0 && c<COLS) {
+          board[r][c] = COLORS[currentPiece.type];
+        }
+      }
+    }
+
+    // 消行
+    function clearLines() {
+      let cnt = 0;
+      for(let r=ROWS-1;r>=0;r--) {
+        if(board[r].every(cell=>cell!==EMPTY)) {
+          board.splice(r,1);
+          board.unshift(Array(COLS).fill(EMPTY));
+          cnt++;
+          r++;
+        }
+      }
+      if(cnt>0) {
+        score += [0,40,100,300,1200][cnt]*level;
+        lines += cnt;
+        level = Math.min(10,1+Math.floor(lines/10));
+        dropInterval = Math.max(100, 800-((level-1)*70));
+        updateScore();
+      }
+    }
+
+    // 更新分數
+    function updateScore() {
+      scoreEl.textContent = score;
+      linesEl.textContent = lines;
+      levelEl.textContent = level;
+    }
+
+    // 下一個方塊
+    function next() {
+      currentPiece = nextPiece;
+      nextPiece = randomPiece();
+      currentX = 3;
+      currentY = -2;
+      rotation = 0;
+      if(!valid(currentPiece, currentX, currentY+1, rotation)) {
+        gameOver();
+      }
+      drawNextPiece();
+    }
+
+    // 下降一格
+    function drop() {
+      if(valid(currentPiece, currentX, currentY+1, rotation)) {
+        currentY++;
+      } else {
+        lockPiece();
+        clearLines();
+        next();
+      }
+      drawBoard();
+    }
+
+    // 直接掉落
+    function hardDrop() {
+      currentY = getDropY();
+      lockPiece();
+      clearLines();
+      next();
+      drawBoard();
+    }
+
+    // 取得硬掉落位置
+    function getDropY() {
+      let y = currentY;
+      while(valid(currentPiece, currentX, y+1, rotation)) {
+        y++;
+      }
+      return y;
+    }
+
+    // 遊戲循環
+    function tick() {
+      if(isGameOver) return;
+      drop();
+      timer = setTimeout(tick, dropInterval);
+    }
+
+    // 控制移動
+    function move(dx) {
+      if(valid(currentPiece, currentX+dx, currentY, rotation)) {
+        currentX += dx;
+        drawBoard();
+      }
+    }
+    function rotate() {
+      let newRot = (rotation+1)%4;
+      if(valid(currentPiece, currentX, currentY, newRot)) {
+        rotation = newRot;
+      } else if(valid(currentPiece, currentX-1, currentY, newRot)) {
+        currentX -= 1; rotation = newRot;
+      } else if(valid(currentPiece, currentX+1, currentY, newRot)) {
+        currentX += 1; rotation = newRot;
+      }
+      drawBoard();
+    }
+    function softDrop() {
+      if(valid(currentPiece, currentX, currentY+1, rotation)) {
+        currentY++;
+        score += 1;
+        updateScore();
+        drawBoard();
+      }
+    }
+
+    // 鍵盤控制
+    document.addEventListener("keydown", e=>{
+      if(isGameOver) return;
+      switch(e.code) {
+        case "ArrowLeft": move(-1); e.preventDefault(); break;
+        case "ArrowRight": move(1); e.preventDefault(); break;
+        case "ArrowDown": softDrop(); e.preventDefault(); break;
+        case "Space": hardDrop(); e.preventDefault(); break;
+        case "ArrowUp": rotate(); e.preventDefault(); break;
+      }
+    });
+
+    // 手機按鈕控制
+    document.getElementById("btn-left").addEventListener("touchstart", e=>{ move(-1); e.preventDefault(); });
+    document.getElementById("btn-right").addEventListener("touchstart", e=>{ move(1); e.preventDefault(); });
+    document.getElementById("btn-down").addEventListener("touchstart", e=>{ softDrop(); e.preventDefault(); });
+    document.getElementById("btn-rotate").addEventListener("touchstart", e=>{ rotate(); e.preventDefault(); });
+    document.getElementById("btn-drop").addEventListener("touchstart", e=>{ hardDrop(); e.preventDefault(); });
+
+    // PC 也能按手機按鈕
+    document.getElementById("btn-left").addEventListener("click", ()=>move(-1));
+    document.getElementById("btn-right").addEventListener("click", ()=>move(1));
+    document.getElementById("btn-down").addEventListener("click", softDrop);
+    document.getElementById("btn-rotate").addEventListener("click", rotate);
+    document.getElementById("btn-drop").addEventListener("click", hardDrop);
+
+    // 遊戲結束
+    function gameOver() {
+      isGameOver = true;
+      clearTimeout(timer);
+      drawBoard(false);
+      gameOverEl.style.display = "block";
+    }
+
+    // 重新開始
+    restartBtn.onclick = ()=>{
+      isGameOver = false;
+      gameOverEl.style.display = "none";
+      startGame();
+    };
+
+    // 初始化
+    function startGame() {
+      createBoard();
+      createNextPieceBoard();
+      score = 0; lines = 0; level = 1; dropInterval = 800;
+      nextPiece = randomPiece();
+      next();
+      updateScore();
+      isGameOver = false;
+      clearTimeout(timer);
+      drawBoard();
+      timer = setTimeout(tick, dropInterval);
+    }
+    startGame();
+  </script>
+</body>
+</html>
