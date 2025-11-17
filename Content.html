@@ -62,9 +62,11 @@
         return;
       }
       const files = await res.json();
-      // 選出 .html 檔案
+       // 選出 .html 檔案，並排除 Content.html
       const htmlFiles = files.filter(f =>
-        f.type === "file" && f.name.toLowerCase().endsWith(".html")
+        f.type === "file" &&
+        f.name.toLowerCase().endsWith(".html") &&
+        f.name.toLowerCase() !== "content.html"
       );
       if (htmlFiles.length === 0) {
         ul.innerHTML = "<li>沒有 HTML 檔案。</li>";
@@ -82,4 +84,5 @@
     fetchRepos();
   </script>
 </body>
+
 </html>
