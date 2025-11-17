@@ -268,7 +268,7 @@
             let h2 = h<10 ? "0"+h : h;
             let m2 = m<10 ? "0"+m : m;
             let ap = isAM ? "AM" : "PM";
-            digitalTime.textContent = ${h2}:${m2} ${ap};
+            digitalTime.textContent = `${h2}:${m2} ${ap}`;
         }
         // 時鐘顯示
         function updateClock() {
@@ -420,4 +420,5 @@
         updateClock();
     </script>
 </body>
+
 </html>
