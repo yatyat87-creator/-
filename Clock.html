@@ -43,14 +43,19 @@
             border: 1px solid #d1d8e0;
             min-width: 44px;
         }
+        .ampm-group {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 0.3em;
+            margin-bottom: 12px;
+        }
         .ampm-btn {
             font-size: 1.08em;
             background-color: #dff9fb;
             border: none;
             border-radius: 5px;
-            margin-left: 4px;
-            margin-right: 4px;
-            padding: 4px 16px;
+            padding: 4px 18px;
             cursor: pointer;
             transition: background 0.2s;
         }
@@ -104,7 +109,7 @@
 <body>
     <div class="container">
         <h2>12小時制互動時鐘</h2>
-        <div class="digital-time" id="digitalTime">03:12 PM</div>
+        <div class="digital-time" id="digitalTime">03:12 AM</div>
         <div class="inputs">
             <label>
                 小時：
@@ -114,6 +119,8 @@
                 分鐘：
                 <select id="minute"></select>
             </label>
+        </div>
+        <div class="ampm-group">
             <button id="amBtn" class="ampm-btn">AM</button>
             <button id="pmBtn" class="ampm-btn">PM</button>
         </div>
@@ -261,7 +268,7 @@
             let h2 = h<10 ? "0"+h : h;
             let m2 = m<10 ? "0"+m : m;
             let ap = isAM ? "AM" : "PM";
-            digitalTime.textContent = `${h2}:${m2} ${ap}`;
+            digitalTime.textContent = ${h2}:${m2} ${ap};
         }
         // 時鐘顯示
         function updateClock() {
@@ -289,11 +296,19 @@
 
         function setHour(val) {
             let h = parseInt(hourSel.value);
+            let prevH = h;
             h += val;
             if (h < 1) h = 12;
             if (h > 12) h = 1;
+            // 檢查是否從 11→12 或 12→11，自動切換AM/PM
+            if ((prevH === 11 && h === 12) || (prevH === 12 && h === 11)) {
+                isAM = !isAM;
+                playDing();
+                updateAMPM();
+            } else {
+                playTick();
+            }
             hourSel.value = h;
-            playTick();
             updateClock();
         }
         function setMinute(val) {
