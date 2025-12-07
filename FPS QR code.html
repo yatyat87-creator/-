@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <title>FPS QR Code 產生器</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {font-family: 'Segoe UI', Arial, sans-serif; background: #f4f4f4;}
+    .container {max-width: 400px; margin: 30px auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.13); padding: 20px 25px 30px 25px;}
+    h2 {text-align: center; color: #006fb6;}
+    label {font-weight: 500; display: block; margin-top: 16px; margin-bottom: 4px;}
+    input, select {width: 100%; padding: 8px 10px; border: 1px solid #bcccdc; border-radius: 5px; margin-bottom: 6px; font-size: 1rem;}
+    .qr-code {display: flex; justify-content: center; margin: 20px 0 10px 0; min-height: 200px;}
+    .note {font-size: 0.9em; color: #777; margin-bottom: 15px;}
+    .footer {text-align: center; font-size: 0.9em; color: #aaa; margin-top: 18px;}
+    @media (max-width: 480px) {.container { padding: 12px 5vw; } h2 { font-size: 1.2em; } .qr-code { min-height: 140px; }}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>FPS QR Code 產生器</h2>
+    <div class="note">
+      請填寫以下資料，即時產生可用於香港FPS收款的QR Code。<br>
+     ⚠️ <b>FPS識別碼/商戶號碼/電話/電郵必須正確！</b>
+    </div>
+    <form id="fpsForm" onsubmit="return false;">
+      <label for="idType">FPS ID 類型</label>
+      <select id="idType" required>
+        <option value="phone">電話號碼</option>
+        <option value="email">電郵地址</option>
+        <option value="fpsid">FPS識別碼</option>
+        <option value="merchant">商戶號碼</option>
+      </select>
+      <label for="fpsId">FPS ID / 商戶號碼</label>
+      <input type="text" id="fpsId" maxlength="100" required placeholder="例如：98765432 或 valid@email.com">
+      <label for="amount">金額 (HKD)</label>
+      <input type="number" id="amount" min="0" step="0.01" placeholder="可留空">
+      <label for="message">付款訊息 (可選)</label>
+      <input type="text" id="message" maxlength="20" placeholder="例如：付款備註">
+    </form>
+    <div class="qr-code" id="qrcode"></div>
+    <div style="text-align:center;">
+      <button type="button" id="decodeBtn" style="margin-bottom:12px;">顯示 QR 內容</button>
+      <div id="qrContent" style="word-break:break-all;font-size:0.93em;color:#4c4c4c;"></div>
+    </div>
+    <div class="footer">
+      由 <a href="https://www.hkma.gov.hk/" target="_blank">香港金管局</a> FPS 標準支援
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+function pad2(num) {
+  return num.toString().padStart(2, '0');
+}
+function emvField(id, value) {
+  if (value === undefined || value === null || value === '') return '';
+  return pad2(id) + pad2(value.length) + value;
+}
+function crc16ccitt(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      if ((crc & 0x8000) !== 0) crc = (crc << 1) ^ 0x1021;
+      else crc <<= 1;
+      crc &= 0xFFFF;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, '0');
+}
+function getSubIdType(idType) {
+  switch (idType) {
+    case 'phone':    return '01';
+    case 'fpsid':    return '02';
+    case 'email':    return '03';
+    case 'merchant': return '04';
+    default:         return '01';
+  }
+}
+function buildFpsQr({idType, fpsId, amount, message}) {
+  let merchantAccountInfo;
+  if (idType === 'phone') {
+    // 處理電話號碼格式
+    let num = fpsId.replace(/[^\d]/g, '');
+    if (num.startsWith('852')) num = num.slice(3);
+    num = '+852-' + num;
+    merchantAccountInfo =
+      emvField('00', 'hk.com.hkicl') +
+      emvField('01', '000') +
+      emvField('03', num); // 長度自動是15
+  } else {
+    merchantAccountInfo =
+      emvField('00', 'hk.com.hkicl') +
+      emvField(getSubIdType(idType), fpsId.trim());
+  }
+  let qrStr =
+    emvField('00', '01') +
+    emvField('01', (amount ? '12' : '11')) +
+    emvField('26', merchantAccountInfo) +
+    emvField('52', '0000') +
+    emvField('53', '344') +
+    (amount ? emvField('54', String(Number(amount).toFixed(2))) : '') +
+    emvField('58', 'HK') +
+    emvField('59', 'NA') +
+    emvField('60', 'HK') +
+    (message ? emvField('62', emvField('01', message)) : '');
+  let dataForCrc = qrStr + '6304';
+  let crc = crc16ccitt(dataForCrc);
+  return dataForCrc + crc;
+}
+function renderQr() {
+  let idType = document.getElementById('idType').value;
+  let fpsId = document.getElementById('fpsId').value.trim();
+  let amount = document.getElementById('amount').value.trim();
+  let message = document.getElementById('message').value.trim();
+  if (!fpsId) {
+    document.getElementById('qrcode').innerHTML = '<div style="color:#888;">請輸入 FPS ID</div>';
+    document.getElementById('qrContent').textContent = '';
+    return;
+  }
+  let qrStr = buildFpsQr({idType, fpsId, amount, message});
+  document.getElementById('qrcode').innerHTML = '';
+  new QRCode(document.getElementById('qrcode'), {
+    text: qrStr,
+    width: 200,
+    height: 200
+  });
+  document.getElementById('qrContent').textContent = '';
+}
+document.querySelectorAll('input,select').forEach(ele => {
+  ele.addEventListener('input', renderQr);
+  ele.addEventListener('change', renderQr);
+});
+window.onload = renderQr;
+document.getElementById('decodeBtn').onclick = function() {
+  let idType = document.getElementById('idType').value;
+  let fpsId = document.getElementById('fpsId').value.trim();
+  let amount = document.getElementById('amount').value.trim();
+  let message = document.getElementById('message').value.trim();
+  if (!fpsId) return;
+  let qrStr = buildFpsQr({idType, fpsId, amount, message});
+  document.getElementById('qrContent').textContent = qrStr;
+};
+</script>
+</body>
+</html>
