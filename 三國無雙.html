@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>敵人追擊遊戲（手機版）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #222;
+      overflow: hidden;
+      touch-action: none;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    #gameWrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+      max-width: 100vw;
+      max-height: 100vh;
+      overflow: hidden;
+    }
+    #gameCanvas {
+      background: #444;
+      border: 3px solid #fff;
+      image-rendering: pixelated;
+      display: block;
+      margin: 0 auto;
+      width: 96vw;
+      height: auto;
+      max-width: 384px;
+      max-height: 80vh;
+      touch-action: none;
+    }
+    #gameOverMsg {
+      position: fixed;
+      left: 0; right: 0; top: 0; bottom: 0; margin: auto;
+      width: 100vw; height: 100vh; display: flex; justify-content: center; align-items: center;
+      font-size: 2.5em; color: #fff; background: rgba(0,0,0,0.6); z-index: 10; display:none;
+      flex-direction:column;
+    }
+    #controls {
+      width: 100vw;
+      max-width: 384px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      user-select: none;
+      -webkit-user-select: none;
+      z-index: 5;
+      touch-action: none;
+    }
+    .dpad-container {
+      flex: 1.7;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      padding-left: 8vw;
+    }
+    .dpad-btn {
+      width: 50px; height: 50px;
+      background: #333;
+      border: 2px solid #aaa;
+      border-radius: 12px;
+      margin: 4px;
+      color: #fff;
+      font-size: 1.6em;
+      text-align: center;
+      line-height: 46px;
+      font-weight: bold;
+      opacity: 0.85;
+      transition: background 0.14s;
+      touch-action: none;
+    }
+    .dpad-btn:active, .dpad-btn.active {
+      background: #3c6;
+      color: #fff;
+      border-color: #fff;
+      opacity: 1;
+    }
+    .attack-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      padding-right: 8vw;
+    }
+    .attack-btn {
+      width: 68px; height: 68px;
+      background: #b22;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      color: #fff;
+      font-size: 2em;
+      text-align: center;
+      line-height: 64px;
+      font-weight: bold;
+      margin-top: 8px;
+      box-shadow: 0 2px 10px #0006;
+      opacity: 0.92;
+      user-select: none;
+      touch-action: none;
+      transition: background 0.12s;
+    }
+    .attack-btn:active, .attack-btn.active {
+      background: #e44;
+      color: #fff;
+      opacity: 1;
+    }
+    @media (max-width: 480px) {
+      #gameCanvas {
+        max-width: 98vw;
+        max-height: 60vw;
+      }
+      #controls {
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .dpad-container { padding-left: 0; }
+      .attack-container { padding-right: 0; }
+    }
+  </style>
+</head>
+<body>
+<div id="gameWrapper">
+  <div id="gameOverMsg"></div>
+  <canvas id="gameCanvas" width="384" height="256"></canvas>
+  <div id="controls">
+    <div class="dpad-container">
+      <div>
+        <div style="display:flex; justify-content:center;">
+          <button class="dpad-btn" data-dir="up"    style="margin-bottom:4px;">▲</button>
+        </div>
+        <div style="display:flex; justify-content:center;">
+          <button class="dpad-btn" data-dir="left">◀</button>
+          <button class="dpad-btn" data-dir="down"  style="margin:0 4px;">▼</button>
+          <button class="dpad-btn" data-dir="right">▶</button>
+        </div>
+      </div>
+    </div>
+    <div class="attack-container">
+      <button class="attack-btn" id="attackBtn">攻擊<br>J</button>
+    </div>
+  </div>
+</div>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const gameOverMsg = document.getElementById('gameOverMsg');
+// 參數設定
+const attackSpriteWidth = 64, attackSpriteHeight = 64, attackFrameCount = 4;
+const moveSpriteWidth = 48, moveSpriteHeight = 64, moveFrameCount = 4;
+const playerSpeed = 2.5;
+const enemySpeed = 1.2;
+const enemyMoveSpriteWidth = 48, enemyMoveSpriteHeight = 64, enemyMoveFrameCount = 4;
+const enemyAtkSpriteWidth = 64, enemyAtkSpriteHeight = 64, enemyAtkFrameCount = 4;
+const directions = { 'down': 0, 'left': 1, 'right': 2, 'up': 3 };
+let posX = 160, posY = 96;
+let currentDirection = 'down', moving = false, currentFrame = 0, frameTimer = 0;
+const frameInterval = 100; // ms
+let activeDirection = null, state = 'idle', attackFrame = 0, attackTimer = 0;
+let attackHitboxFrame = 1;
+let canAttack = true;
+let isGameOver = false;
+let playerHP = 10;
+let killCount = 0;
+const maxKill = 60;
+const maxEnemies = 3;
+// 精靈圖
+const attackImg = new Image();
+attackImg.src = 'https://github.com/yatyat87-creator/-/blob/main/512e6c89db3e4edeb6bac551393f0825%20attack.png?raw=true';
+const moveImg = new Image();
+moveImg.src = 'https://github.com/yatyat87-creator/-/blob/main/%E9%97%9C%E7%BE%BD-removebg-preview.png?raw=true';
+const enemyMoveImg = new Image();
+enemyMoveImg.src = 'https://github.com/yatyat87-creator/PNG-file/blob/main/%E9%87%8D%E6%AD%A5%E5%85%B5walk.png?raw=true';
+const enemyAtkImg = new Image();
+enemyAtkImg.src = 'https://github.com/yatyat87-creator/PNG-file/blob/main/%E9%87%8D%E6%AD%A5%E5%85%B5attack.png?raw=true';
+const bgImg = new Image();
+bgImg.src = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=384&q=80';
+
+let imagesLoaded = 0;
+function checkAllLoaded() {
+  imagesLoaded++;
+  if (imagesLoaded === 5) requestAnimationFrame(gameLoop);
+}
+attackImg.onload = checkAllLoaded;
+moveImg.onload = checkAllLoaded;
+enemyMoveImg.onload = checkAllLoaded;
+enemyAtkImg.onload = checkAllLoaded;
+bgImg.onload = checkAllLoaded;
+
+// 敵人
+function randomEdgePosition() {
+  let edge = Math.floor(Math.random() * 4);
+  let x, y;
+  switch (edge) {
+    case 0: x = Math.random() * (canvas.width - enemyMoveSpriteWidth); y = 0; break;
+    case 1: x = Math.random() * (canvas.width - enemyMoveSpriteWidth); y = canvas.height - enemyMoveSpriteHeight; break;
+    case 2: x = 0; y = Math.random() * (canvas.height - enemyMoveSpriteHeight); break;
+    case 3: x = canvas.width - enemyMoveSpriteWidth; y = Math.random() * (canvas.height - enemyMoveSpriteHeight); break;
+  }
+  return {x, y};
+}
+function createEnemy() {
+  let pos = randomEdgePosition();
+  return {
+    x: pos.x, y: pos.y,
+    alive: true,
+    hp: 1,
+    frame: 0,
+    frameTimer: 0,
+    direction: 'down',
+    state: 'move',
+    atkFrame: 0,
+    atkTimer: 0,
+    attackCD: 0,
+    attackHit: false,
+  };
+}
+let enemies = [createEnemy()];
+function rectsIntersect(a, b) {
+  return !(a.x + a.w < b.x || a.x > b.x + b.w || a.y + a.h < b.y || a.y > b.y + b.h);
+}
+function getAttackHitboxes(px, py, dir) {
+  let hitboxes = [];
+  const w = 20, h = 20;
+  switch (dir) {
+    case 'up':
+      hitboxes.push({x: px + 4, y: py - h, w: w, h: h});
+      hitboxes.push({x: px - w + 12, y: py - h, w: w, h: h});
+      hitboxes.push({x: px + w - 8, y: py - h, w: w, h: h});
+      break;
+    case 'down':
+      hitboxes.push({x: px + 4, y: py + moveSpriteHeight, w: w, h: h});
+      hitboxes.push({x: px - w + 12, y: py + moveSpriteHeight, w: w, h: h});
+      hitboxes.push({x: px + w - 8, y: py + moveSpriteHeight, w: w, h: h});
+      break;
+    case 'left':
+      hitboxes.push({x: px - w, y: py + 8, w: w, h: h});
+      hitboxes.push({x: px - w, y: py - h/2 + 8, w: w, h: h});
+      hitboxes.push({x: px - w, y: py + moveSpriteHeight - h/2 - 8, w: w, h: h});
+      break;
+    case 'right':
+      hitboxes.push({x: px + moveSpriteWidth, y: py + 8, w: w, h: h});
+      hitboxes.push({x: px + moveSpriteWidth, y: py - h/2 + 8, w: w, h: h});
+      hitboxes.push({x: px + moveSpriteWidth, y: py + moveSpriteHeight - h/2 - 8, w: w, h: h});
+      break;
+  }
+  return hitboxes;
+}
+
+// ======== 主迴圈 ========
+function gameLoop() {
+  if(isGameOver) return;
+  ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+
+  // 玩家狀態
+  if (state === 'attack') {
+    attackTimer += 16.67;
+    if (attackTimer >= frameInterval) {
+      attackFrame++;
+      attackTimer = 0;
+      if (attackFrame === attackHitboxFrame) {
+        let hitboxes = getAttackHitboxes(posX, posY, currentDirection);
+        for(let enemy of enemies){
+          if(!enemy.alive) continue;
+          let enemyBox = {x: enemy.x, y: enemy.y, w: enemyMoveSpriteWidth, h: enemyMoveSpriteHeight};
+          for(let box of hitboxes) {
+            if(rectsIntersect(box, enemyBox)) {
+              enemy.alive = false;
+              killCount++;
+              setTimeout(spawnEnemy, 200);
+            }
+          }
+        }
+      }
+      if (attackFrame >= attackFrameCount) {
+        attackFrame = 0;
+        state = moving ? 'move' : 'idle';
+        canAttack = true;
+      }
+    }
+  } else {
+    if (moving && activeDirection) {
+      let nextX = posX, nextY = posY;
+      switch (activeDirection) {
+        case 'up':    nextY -= playerSpeed; break;
+        case 'down':  nextY += playerSpeed; break;
+        case 'left':  nextX -= playerSpeed; break;
+        case 'right': nextX += playerSpeed; break;
+      }
+      if (nextX >= 0 && nextX <= canvas.width - moveSpriteWidth &&
+          nextY >= 0 && nextY <= canvas.height - moveSpriteHeight) {
+        posX = nextX; posY = nextY;
+      } else {
+        moving = false; activeDirection = null;
+      }
+    }
+    if (moving) {
+      state = 'move';
+      frameTimer += 16.67;
+      if (frameTimer >= frameInterval) {
+        currentFrame = (currentFrame + 1) % moveFrameCount;
+        frameTimer = 0;
+      }
+    } else {
+      state = 'idle'; currentFrame = 0;
+    }
+  }
+
+  // 敵人AI
+  for(let enemy of enemies){
+    if(!enemy.alive) continue;
+    let dx = (posX + moveSpriteWidth/2) - (enemy.x + enemyMoveSpriteWidth/2);
+    let dy = (posY + moveSpriteHeight/2) - (enemy.y + enemyMoveSpriteHeight/2);
+    let dist = Math.sqrt(dx*dx+dy*dy);
+
+    if(enemy.state === 'move'){
+      if(Math.abs(dx) > Math.abs(dy)){
+        enemy.direction = dx>0 ? 'right':'left';
+      }else{
+        enemy.direction = dy>0 ? 'down':'up';
+      }
+      if(dist > 18){
+        let stepX = enemySpeed * dx / dist;
+        let stepY = enemySpeed * dy / dist;
+        enemy.x += stepX;
+        enemy.y += stepY;
+      }
+      enemy.frameTimer += 16.67;
+      if(enemy.frameTimer>=frameInterval){
+        enemy.frame=(enemy.frame+1)%enemyMoveFrameCount;
+        enemy.frameTimer=0;
+      }
+      if(dist <= 18 && enemy.attackCD<=0){
+        enemy.state = 'attack';
+        enemy.atkFrame = 0;
+        enemy.atkTimer = 0;
+        enemy.attackHit = false;
+      }
+    }else if(enemy.state === 'attack'){
+      enemy.atkTimer += 16.67;
+      if(enemy.atkTimer >= frameInterval){
+        enemy.atkFrame++;
+        enemy.atkTimer = 0;
+        if(enemy.atkFrame === 1 && !enemy.attackHit){
+          let playerBox = {x: posX, y: posY, w: moveSpriteWidth, h: moveSpriteHeight};
+          let enemyAtkBox = getEnemyAttackHitbox(enemy);
+          if(rectsIntersect(playerBox, enemyAtkBox)){
+            playerHP--;
+            enemy.attackHit = true;
+            if(playerHP<=0) endGame(false);
+          }
+        }
+        if(enemy.atkFrame >= enemyAtkFrameCount){
+          enemy.atkFrame = 0;
+          enemy.state = 'move';
+          enemy.attackCD = 800 + Math.random()*400;
+        }
+      }
+    }
+    if(enemy.state==='move' && enemy.attackCD>0)
+      enemy.attackCD-=16.67;
+  }
+
+  // 畫敵人
+  for(let enemy of enemies){
+    if(!enemy.alive) continue;
+    if(enemy.state==='move'){
+      ctx.drawImage(
+        enemyMoveImg,
+        enemy.frame * enemyMoveSpriteWidth,
+        directions[enemy.direction] * enemyMoveSpriteHeight,
+        enemyMoveSpriteWidth, enemyMoveSpriteHeight,
+        Math.round(enemy.x), Math.round(enemy.y),
+        enemyMoveSpriteWidth, enemyMoveSpriteHeight
+      );
+    }else if(enemy.state==='attack'){
+      ctx.drawImage(
+        enemyAtkImg,
+        enemy.atkFrame * enemyAtkSpriteWidth,
+        directions[enemy.direction] * enemyAtkSpriteHeight,
+        enemyAtkSpriteWidth, enemyAtkSpriteHeight,
+        Math.round(enemy.x), Math.round(enemy.y),
+        enemyAtkSpriteWidth, enemyAtkSpriteHeight
+      );
+    }
+  }
+
+  // 畫角色
+  if (state === 'attack') {
+    ctx.drawImage(
+      attackImg,
+      attackFrame * attackSpriteWidth,
+      directions[currentDirection] * attackSpriteHeight,
+      attackSpriteWidth, attackSpriteHeight,
+      Math.round(posX), Math.round(posY),
+      attackSpriteWidth, attackSpriteHeight
+    );
+  } else {
+    ctx.drawImage(
+      moveImg,
+      currentFrame * moveSpriteWidth,
+      directions[currentDirection] * moveSpriteHeight,
+      moveSpriteWidth, moveSpriteHeight,
+      Math.round(posX), Math.round(posY),
+      moveSpriteWidth, moveSpriteHeight
+    );
+  }
+
+  ctx.save();
+  ctx.font = "bold 18px monospace";
+  ctx.fillStyle = "#fff";
+  ctx.fillText("HP: " + playerHP, 10, 22);
+  ctx.fillText("擊敗: " + killCount + "/" + maxKill, 10, 42);
+  ctx.restore();
+
+  if(killCount>=maxKill){
+    endGame(true);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+function getEnemyAttackHitbox(enemy){
+  const w = 10, h = 10;
+  let ex = enemy.x, ey = enemy.y;
+  switch(enemy.direction){
+    case 'up':    return {x: ex+4, y: ey-h, w:w, h:h};
+    case 'down':  return {x: ex+4, y: ey+enemyMoveSpriteHeight, w:w, h:h};
+    case 'left':  return {x: ex-w, y: ey+8, w:w, h:h};
+    case 'right': return {x: ex+enemyMoveSpriteWidth, y: ey+8, w:w, h:h};
+  }
+  return {x:ex, y:ey, w:w, h:h};
+}
+function spawnEnemy(){
+  if(isGameOver) return;
+  if(killCount>=maxKill) return;
+  let aliveEnemies = enemies.filter(e=>e.alive).length;
+  if(aliveEnemies>=maxEnemies) return;
+  for(let i=0;i<enemies.length;i++){
+    if(!enemies[i].alive){
+      enemies[i] = createEnemy();
+      return;
+    }
+  }
+  if(enemies.length<maxEnemies){
+    enemies.push(createEnemy());
+  }
+}
+
+// ====== 虛擬按鍵支援 ======
+let virtualMoving = false;
+let virtualDir = null;
+function startMove(dir) {
+  if(isGameOver) return;
+  if (state === 'attack') return;
+  currentDirection = dir;
+  activeDirection = dir;
+  moving = true;
+  virtualMoving = true;
+  virtualDir = dir;
+}
+function stopMove() {
+  if(isGameOver) return;
+  if (state === 'attack') return;
+  moving = false;
+  activeDirection = null;
+  virtualMoving = false;
+  virtualDir = null;
+}
+
+const dpadBtns = document.querySelectorAll('.dpad-btn');
+dpadBtns.forEach(btn=>{
+  // 支援觸控
+  btn.addEventListener('touchstart', (e)=>{
+    e.preventDefault();
+    btn.classList.add('active');
+    startMove(btn.dataset.dir);
+  }, {passive:false});
+  btn.addEventListener('mousedown', (e)=>{
+    e.preventDefault();
+    btn.classList.add('active');
+    startMove(btn.dataset.dir);
+  });
+  btn.addEventListener('touchend', (e)=>{
+    e.preventDefault();
+    btn.classList.remove('active');
+    stopMove();
+  }, {passive:false});
+  btn.addEventListener('mouseup', (e)=>{
+    btn.classList.remove('active');
+    stopMove();
+  });
+  btn.addEventListener('mouseleave', (e)=>{
+    btn.classList.remove('active');
+    stopMove();
+  });
+});
+
+const attackBtn = document.getElementById('attackBtn');
+function triggerAttack() {
+  if(isGameOver) return;
+  if (state === 'attack') return;
+  if (canAttack) {
+    state = 'attack'; attackFrame = 0; attackTimer = 0; canAttack = false;
+  }
+}
+attackBtn.addEventListener('touchstart', e=>{
+  e.preventDefault();
+  attackBtn.classList.add('active');
+  triggerAttack();
+}, {passive:false});
+attackBtn.addEventListener('mousedown', e=>{
+  attackBtn.classList.add('active');
+  triggerAttack();
+});
+attackBtn.addEventListener('touchend', e=>{
+  e.preventDefault();
+  attackBtn.classList.remove('active');
+}, {passive:false});
+attackBtn.addEventListener('mouseup', e=>{
+  attackBtn.classList.remove('active');
+});
+
+// ===== 鍵盤控制 =====
+document.addEventListener('keydown', (e) => {
+  if(isGameOver) return;
+  if (state === 'attack') return;
+  let dir = null;
+  switch (e.key) {
+    case 'ArrowUp':    dir = 'up'; break;
+    case 'ArrowDown':  dir = 'down'; break;
+    case 'ArrowLeft':  dir = 'left'; break;
+    case 'ArrowRight': dir = 'right'; break;
+  }
+  if (dir && (!moving || dir !== activeDirection)) {
+    currentDirection = dir;
+    activeDirection = dir;
+    moving = true;
+  }
+  if ((e.key === 'j' || e.key === 'J') && canAttack) {
+    state = 'attack'; attackFrame = 0; attackTimer = 0; canAttack = false;
+  }
+});
+document.addEventListener('keyup', (e) => {
+  if(isGameOver) return;
+  if (state === 'attack') return;
+  switch (e.key) {
+    case 'ArrowUp':
+    case 'ArrowDown':
+    case 'ArrowLeft':
+    case 'ArrowRight':
+      moving = false; activeDirection = null; break;
+  }
+});
+
+// ===== GameOver/Win =====
+function endGame(win) {
+  isGameOver = true;
+  if(win)
+    gameOverMsg.innerHTML = `<div>勝利！<br>你擊敗了60個敵人！<br><button onclick="location.reload()">再玩一次</button></div>`;
+  else
+    gameOverMsg.innerHTML = `<div>Game Over<br>你被敵人攻擊三次！<br><button onclick="location.reload()">重新開始</button></div>`;
+  gameOverMsg.style.display = "flex";
+}
+
+// ==== 自動縮放canvas到螢幕 ====
+function resizeCanvas() {
+  let w = window.innerWidth, h = window.innerHeight;
+  let ow = 384, oh = 256;
+  let scale = Math.min(w*0.97/ow, h*0.70/oh, 1);
+  canvas.style.width = (ow*scale)+"px";
+  canvas.style.height = (oh*scale)+"px";
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+</script>
+</body>
+</html>
