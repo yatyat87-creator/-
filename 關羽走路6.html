@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>攻擊動畫示範</title>
+  <style>
+    body { background: #222; display: flex; justify-content: center; align-items: center; height: 100vh;}
+    #gameCanvas { background: #444; border: 3px solid #fff; image-rendering: pixelated; display: block;}
+  </style>
+</head>
+<body>
+<canvas id="gameCanvas" width="384" height="256"></canvas>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// ======== 設定參數 ========
+// 攻擊精靈圖
+const attackSpriteWidth = 64;   // 攻擊格寬
+const attackSpriteHeight = 64;  // 格高
+const attackFrameCount = 3;     // 攻擊動畫格數
+
+// 移動精靈圖
+const moveSpriteWidth = 48;     // 移動格寬
+const moveSpriteHeight = 64;    // 格高
+const moveFrameCount = 4;       // 移動動畫格數
+
+const speed = 2.5;
+
+// 方向與行數對應
+const directions = {
+  'down': 0,
+  'left': 1,
+  'right': 2,
+  'up': 3
+};
+let posX = 160, posY = 96;
+let currentDirection = 'down';
+let moving = false;
+let currentFrame = 0;
+let frameTimer = 0;
+const frameInterval = 100; // 毫秒
+let activeDirection = null;
+let state = 'idle'; // idle, move, attack
+let attackFrame = 0;
+let attackTimer = 0;
+
+// 載入精靈圖（攻擊用）
+const attackImg = new Image();
+attackImg.src = 'https://github.com/yatyat87-creator/-/blob/main/512e6c89db3e4edeb6bac551393f0825%20attack.png?raw=true'; // 請換成你的攻擊精靈圖
+
+// 載入普通移動精靈圖
+const moveImg = new Image();
+moveImg.src = 'https://github.com/yatyat87-creator/-/blob/main/%E9%97%9C%E7%BE%BD-removebg-preview.png?raw=true'; // 請換成你的移動精靈圖
+
+const bgImg = new Image();
+bgImg.src = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=384&q=80';
+
+let imagesLoaded = 0;
+function checkAllLoaded() {
+  imagesLoaded++;
+  if (imagesLoaded === 3) requestAnimationFrame(gameLoop);
+}
+attackImg.onload = checkAllLoaded;
+moveImg.onload = checkAllLoaded;
+bgImg.onload = checkAllLoaded;
+
+function gameLoop() {
+  // 畫背景
+  ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+
+  // 狀態控制
+  if (state === 'attack') {
+    attackTimer += 16.67;
+    if (attackTimer >= frameInterval) {
+      attackFrame++;
+      attackTimer = 0;
+      if (attackFrame >= attackFrameCount) {
+        attackFrame = 0;
+        state = moving ? 'move' : 'idle';
+      }
+    }
+  } else {
+    // 移動
+    if (moving && activeDirection) {
+      let nextX = posX;
+      let nextY = posY;
+      switch (activeDirection) {
+        case 'up':    nextY -= speed; break;
+        case 'down':  nextY += speed; break;
+        case 'left':  nextX -= speed; break;
+        case 'right': nextX += speed; break;
+      }
+      // 用移動的格寬判斷邊界
+      if (
+        nextX >= 0 && nextX <= canvas.width - moveSpriteWidth &&
+        nextY >= 0 && nextY <= canvas.height - moveSpriteHeight
+      ) {
+        posX = nextX;
+        posY = nextY;
+      } else {
+        moving = false;
+        activeDirection = null;
+      }
+    }
+    // 動畫更新
+    if (moving) {
+      state = 'move';
+      frameTimer += 16.67;
+      if (frameTimer >= frameInterval) {
+        currentFrame = (currentFrame + 1) % moveFrameCount;
+        frameTimer = 0;
+      }
+    } else {
+      state = 'idle';
+      currentFrame = 0;
+    }
+  }
+
+  // 畫角色（根據狀態選擇不同格子大小與圖）
+  if (state === 'attack') {
+    ctx.drawImage(
+      attackImg,
+      attackFrame * attackSpriteWidth,
+      directions[currentDirection] * attackSpriteHeight,
+      attackSpriteWidth, attackSpriteHeight,
+      Math.round(posX), Math.round(posY),
+      attackSpriteWidth, attackSpriteHeight
+    );
+  } else {
+    ctx.drawImage(
+      moveImg,
+      currentFrame * moveSpriteWidth,
+      directions[currentDirection] * moveSpriteHeight,
+      moveSpriteWidth, moveSpriteHeight,
+      Math.round(posX), Math.round(posY),
+      moveSpriteWidth, moveSpriteHeight
+    );
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+// 鍵盤控制
+document.addEventListener('keydown', (e) => {
+  if (state === 'attack') return; // 攻擊時不能移動
+  let dir = null;
+  switch (e.key) {
+    case 'ArrowUp':    dir = 'up'; break;
+    case 'ArrowDown':  dir = 'down'; break;
+    case 'ArrowLeft':  dir = 'left'; break;
+    case 'ArrowRight': dir = 'right'; break;
+  }
+  if (dir && (!moving || dir !== activeDirection)) {
+    currentDirection = dir;
+    activeDirection = dir;
+    moving = true;
+  }
+  // 攻擊鍵 J
+  if (e.key === 'j' || e.key === 'J') {
+    state = 'attack';
+    attackFrame = 0;
+    attackTimer = 0;
+  }
+});
+
+document.addEventListener('keyup', (e) => {
+  if (state === 'attack') return;
+  switch (e.key) {
+    case 'ArrowUp':
+    case 'ArrowDown':
+    case 'ArrowLeft':
+    case 'ArrowRight':
+      moving = false;
+      activeDirection = null;
+      break;
+  }
+});
+</script>
+</body>
+</html>
