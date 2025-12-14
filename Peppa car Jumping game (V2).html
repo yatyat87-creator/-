@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Dino 跳躍遊戲（Sprite 角色動畫）</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #f7f7f7;
+      overflow: hidden;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      justify-content: flex-start;
+    }
+    h2 {
+      margin-top: 24px;
+      margin-bottom: 8px;
+      font-size: 1.5em;
+    }
+    #controls {
+      margin-bottom: 10px;
+    }
+    #game {
+      position: relative;
+      width: 95vw;
+      max-width: 600px;
+      /* 預設高度，JS會再調整 */
+      height: 60vw;
+      max-height: 80vh;
+      min-width: 160px;
+      background: #fff;
+      border: 2px solid #aaa;
+      overflow: hidden;
+      box-shadow: 0 2px 10px #bbb;
+      margin-bottom: 10px;
+      margin-top: 10px;
+      background-image: url('https://github.com/yatyat87-creator/PNG-file/blob/main/Peppa%20house.jpg?raw=true');
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+      touch-action: manipulation;
+      transition: height 0.2s;
+    }
+    #ground {
+      position: absolute;
+      left: 0; bottom: 0;
+      width: 100%; height: 30px;
+      background: #e0e0e0;
+      border-top: 2px solid #aaa;
+    }
+    #dino {
+      position: absolute;
+      left: 40px;
+      bottom: 30px;
+      width: 50px;
+      height: 50px;
+      transition: bottom 0.08s, height 0.08s, width 0.08s;
+      touch-action: none;
+      z-index: 5;
+      background-repeat: no-repeat;
+      background-size: 200% 100%;
+      background-position: 0 0;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+    #dino.dead { filter: grayscale(0.8) brightness(0.6); }
+    .obstacle {
+      position: absolute;
+      bottom: 30px;
+      width: 20px; height: 40px;
+      background: #396;
+      border-radius: 4px;
+      z-index: 2;
+    }
+    #score {
+      font-size: 1.2em;
+      margin-top: 2px;
+      color: #333;
+      font-family: monospace;
+      margin-bottom: 8px;
+    }
+    #gameover {
+      position: absolute;
+      left: 0; top: 0; width: 100%; height: 100%;
+      background: rgba(255,255,255,0.92);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      color: #b22;
+      z-index: 20;
+      font-family: sans-serif;
+      display: none;
+    }
+    #instruction {
+      color: #555;
+      font-size: 1em;
+      margin-bottom: 12px;
+      padding: 0 10px;
+      text-align: center;
+    }
+    #avatarSel {
+      font-size: 1em;
+      padding: 4px 8px;
+      margin-left: 5px;
+    }
+    #startbtn {
+      display: none;
+      font-size: 1.1em;
+      margin: 10px 0 0 0;
+      padding: 6px 24px;
+      border: 1px solid #aaa;
+      background: #f7e0ec;
+      border-radius: 8px;
+      color: #b22;
+      font-weight: bold;
+    }
+    @media (max-width: 480px) {
+      #game {
+        min-width: 120px;
+      }
+    }
+    html,body,#game {
+      touch-action: manipulation;
+    }
+  </style>
+</head>
+<body>
+  <h2>Dino 跳躍遊戲</h2>
+  <div id="instruction">
+    空白鍵/點擊區域：跳躍<br>
+    <span style="font-size:0.96em;">可選角色造型！</span>
+  </div>
+  <div id="controls">
+    選擇角色：
+    <select id="avatarSel">
+      <option value="0">黑色恐龍 🦖</option>
+      <option value="1">藍色方塊 😊</option>
+      <option value="2">粉紅圓球 😛</option>
+      <option value="3">粉紅小豬車車 🚗</option>
+    </select>
+  </div>
+  <button id="startbtn">開始遊戲</button>
+  <div id="game">
+    <div id="dino" class="alive"></div>
+    <div id="ground"></div>
+    <div id="gameover">
+      Game Over<br>
+      <span id="finalscore"></span>
+      <br>
+      <button onclick="restartGame()" style="font-size:1em;margin-top:12px;">重新開始</button>
+    </div>
+  </div>
+  <div id="score">分數：0</div>
+  <script>
+    // 角色 SVG 模板
+    const avatars = [
+      `<svg viewBox="0 0 50 50"><g>
+        <rect x="10" y="15" width="24" height="20" rx="6" fill="#232323"/>
+        <rect x="24" y="10" width="18" height="12" rx="5" fill="#232323"/>
+        <rect x="27" y="25" width="8" height="8" rx="2" fill="#232323"/>
+        <ellipse cx="35" cy="16" rx="3" ry="2" fill="#fff"/>
+        <ellipse cx="36" cy="16" rx="1" ry="1" fill="#222"/>
+        <rect x="12" y="34" width="7" height="5" rx="2" fill="#232323"/>
+        <rect x="28" y="34" width="7" height="5" rx="2" fill="#232323"/>
+        <rect x="40" y="14" width="4" height="5" rx="2" fill="#232323"/>
+        <ellipse cx="12" cy="21" rx="2" ry="3" fill="#232323" />
+      </g></svg>`,
+      `<svg viewBox="0 0 50 50"><rect x="8" y="12" width="34" height="26" rx="7" fill="#3399dd"/><circle cx="20" cy="24" r="3" fill="#fff"/><circle cx="32" cy="24" r="3" fill="#fff"/><ellipse cx="20" cy="25" rx="1" ry="1.5" fill="#222"/><ellipse cx="32" cy="25" rx="1" ry="1.5" fill="#222"/><rect x="20" y="30" width="10" height="4" rx="2" fill="#fff"/><rect x="22" y="31" width="6" height="2" rx="1" fill="#222"/></svg>`,
+      `<svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="16" fill="#eb4fa6"/><ellipse cx="19" cy="23" rx="2" ry="3" fill="#fff"/><ellipse cx="31" cy="23" rx="2" ry="3" fill="#fff"/><ellipse cx="19" cy="24" rx="0.7" ry="1.1" fill="#222"/><ellipse cx="31" cy="24" rx="0.7" ry="1.1" fill="#222"/><ellipse cx="25" cy="32" rx="5" ry="2.2" fill="#fff"/><ellipse cx="25" cy="33" rx="3.3" ry="1.2" fill="#d81c7c"/></svg>`
+    ];
+    const spriteInfo = {
+      url: 'https://github.com/yatyat87-creator/PNG-file/blob/main/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88-removebg-preview%20(1).png?raw=true',
+      frameCount: 4,
+      frameW: 323.25,
+      frameH: 180,
+      displayW: 89.79167, // 原始建議寬
+      displayH: 50        // 原始建議高
+    };
+
+    // DOM
+    const game = document.getElementById('game');
+    const dino = document.getElementById('dino');
+    const scoreEl = document.getElementById('score');
+    const gameoverEl = document.getElementById('gameover');
+    const finalscoreEl = document.getElementById('finalscore');
+    const avatarSel = document.getElementById('avatarSel');
+    const startbtn = document.getElementById('startbtn');
+
+    // 遊戲參數
+    let gameWidth, gameHeight;
+    let dinoY = 0, velocity = 0, gravity = 0.5, jumpPower = 13;
+    let isJumping = false, isAlive = true, obstacles = [];
+    let score = 0, speed = 5, frame = 0;
+    let gameLoopId;
+    let dinoHeight = 50, dinoWidth = 50;
+    let spriteFrame = 0, spriteFrameTick = 0;
+    let started = false;
+    let groundHeight = 30;
+
+    function getGameHeight() {
+      // 以螢幕方向決定遊戲區高度
+      let vw = window.innerWidth;
+      let vh = window.innerHeight;
+      let h1 = Math.round(vw * 0.56); // 橫向比例
+      let h2 = Math.round(vh * 0.8);  // 直向比例
+      let maxH = 340;
+      let minH = 140;
+      let h;
+      if (vw > vh) {
+        h = Math.min(h1, h2, maxH); // 橫向
+      } else {
+        h = Math.min(h2, h1, maxH); // 直向
+      }
+      h = Math.max(h, minH);
+      return h;
+    }
+
+    function resizeGame() {
+      // 1. 設定遊戲區高度
+      let gheight = getGameHeight();
+      game.style.height = gheight + "px";
+      gameWidth = game.offsetWidth;
+      gameHeight = gheight;
+
+      // 2. ground 高度根據遊戲高調整
+      groundHeight = Math.max(14, Math.round(gameHeight * 0.09));
+      document.getElementById("ground").style.height = groundHeight + "px";
+      document.getElementById("ground").style.borderTop = "2px solid #aaa";
+
+      // 3. 設定角色大小
+      let avatarIdx = parseInt(avatarSel.value);
+      let scale = gameHeight / 220; // 220是最大遊戲高度時的比例
+      if (avatarIdx == 3) {
+        dinoWidth = Math.max(32, spriteInfo.displayW * scale);
+        dinoHeight = Math.max(18, spriteInfo.displayH * scale);
+      } else {
+        dinoWidth = Math.max(18, 50 * scale);
+        dinoHeight = Math.max(18, 50 * scale);
+      }
+      dino.style.width = dinoWidth + "px";
+      dino.style.height = dinoHeight + "px";
+      // 4. 角色底部位置
+      dino.style.left = Math.max(8, gameWidth * 0.08) + "px";
+      dino.style.bottom = groundHeight + dinoY + "px";
+      // 5. 調整障礙物
+      for (let obs of obstacles) {
+        obs.style.bottom = groundHeight + "px";
+      }
+    }
+
+    function setAvatar(idx) {
+      dino.className = 'alive';
+      dino.style.background = '';
+      dino.style.backgroundImage = '';
+      if (idx == 3) {
+        dino.innerHTML = '';
+        dino.classList.add('sprite');
+        let scale = dinoHeight / spriteInfo.frameH;
+        dino.style.backgroundImage = `url('${spriteInfo.url}')`;
+        dino.style.backgroundSize = `${spriteInfo.frameW * spriteInfo.frameCount * scale}px ${dinoHeight}px`;
+        dino.style.backgroundPosition = '0 0';
+      } else {
+        dino.classList.remove('sprite');
+        dino.innerHTML = avatars[idx];
+      }
+      dino.style.width = dinoWidth + 'px';
+      dino.style.height = dinoHeight + 'px';
+    }
+    avatarSel.addEventListener('change', e => {
+      setAvatar(e.target.value);
+      resizeGame();
+    });
+
+    function jump() {
+      if (!isAlive || !started) return;
+      if (!isJumping) {
+        velocity = jumpPower;
+        isJumping = true;
+      }
+    }
+
+    function createObstacle() {
+      const obs = document.createElement('div');
+      obs.className = 'obstacle';
+      obs.style.left = gameWidth + 'px';
+      let type = Math.random();
+      let baseH = Math.max(18, Math.round(gameHeight / 6.5));
+      let smallH = Math.max(12, Math.round(gameHeight / 10));
+      obs.style.height = type < 0.5 ? baseH + 'px' : smallH + 'px';
+      obs.style.background = type < 0.5 ? '#396' : '#a73';
+      obs.style.bottom = groundHeight + "px";
+      obs.style.width = Math.max(10, Math.round(gameWidth / 28)) + "px";
+      game.appendChild(obs);
+      obstacles.push(obs);
+    }
+
+    function updateObstacles() {
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        let left = parseFloat(obs.style.left);
+        left -= speed;
+        obs.style.left = left + 'px';
+        if (left + obs.offsetWidth < 0) {
+          game.removeChild(obs);
+          obstacles.splice(i, 1);
+          score++;
+        }
+      }
+    }
+
+    function checkCollision() {
+      const dinoRect = dino.getBoundingClientRect();
+      for (let obs of obstacles) {
+        const obsRect = obs.getBoundingClientRect();
+        if (
+          obsRect.left < dinoRect.right - 6 &&
+          obsRect.right > dinoRect.left + 6 &&
+          obsRect.bottom > dinoRect.top + 6 &&
+          obsRect.top < dinoRect.bottom - 6
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function gameLoop() {
+      frame++;
+      if (isJumping) {
+        dinoY += velocity;
+        velocity -= gravity;
+        if (dinoY <= 0) {
+          dinoY = 0;
+          isJumping = false;
+        }
+        dino.style.bottom = (groundHeight + dinoY) + 'px';
+      } else {
+        dino.style.bottom = (groundHeight + dinoY) + 'px';
+      }
+      if (avatarSel.value == 3) {
+        spriteFrameTick++;
+        if (spriteFrameTick % 6 === 0) {
+          spriteFrame = (spriteFrame + 1) % spriteInfo.frameCount;
+        }
+        let scale = dinoHeight / spriteInfo.frameH;
+        let x = -spriteFrame * spriteInfo.frameW * scale;
+        dino.style.backgroundPosition = `${x}px 0`;
+        dino.style.backgroundSize = `${spriteInfo.frameW * spriteInfo.frameCount * scale}px ${dinoHeight}px`;
+      }
+      if (frame % Math.max(90 - Math.floor(score/2), 56) === 0) {
+        createObstacle();
+      }
+      updateObstacles();
+      speed = 4 + Math.floor(score/16);
+      scoreEl.textContent = '分數：' + score;
+      if (checkCollision()) {
+        gameOver();
+        return;
+      }
+      if (isAlive) {
+        gameLoopId = requestAnimationFrame(gameLoop);
+      }
+    }
+
+    function startGame() {
+      dinoY = 0; velocity = 0; isJumping = false;
+      isAlive = true; obstacles.forEach(o=>o.remove()); obstacles = [];
+      score = 0; speed = 5; frame = 0;
+      spriteFrame = 0; spriteFrameTick = 0; avatarSel.value = 3;
+      setAvatar(avatarSel.value);
+      dino.style.bottom = (groundHeight + dinoY) + 'px';
+      gameoverEl.style.display = 'none';
+      scoreEl.textContent = '分數：0';
+      started = true;
+      gameLoopId = requestAnimationFrame(gameLoop);
+      resizeGame();
+    }
+
+    function gameOver() {
+      isAlive = false;
+      dino.className = 'dead';
+      finalscoreEl.textContent = `分數：${score}`;
+      gameoverEl.style.display = 'flex';
+      started = false;
+      cancelAnimationFrame(gameLoopId);
+      startbtn.style.display = '';
+    }
+
+    function restartGame() {
+      started = false;
+      startbtn.style.display = '';
+      gameoverEl.style.display = 'none';
+      resizeGame();
+    }
+
+    // 控制
+    document.addEventListener('keydown', e => {
+      if (e.code === 'Space' || e.key === ' ') {
+        if (!started) {
+          startGame();
+          startbtn.style.display = 'none';
+        } else {
+          jump();
+        }
+        e.preventDefault();
+      }
+      if (!isAlive && (e.code === 'Space' || e.key === ' ')) {
+        startGame();
+        startbtn.style.display = 'none';
+      }
+    });
+
+    // 點擊區域跳
+    let lastTouch = 0;
+    game.addEventListener('touchstart', function(e) {
+      let now = Date.now();
+      if (now - lastTouch < 200) return; // 避免連點
+      lastTouch = now;
+      if (!started) {
+        startGame();
+        startbtn.style.display = 'none';
+      } else {
+        jump();
+      }
+      e.preventDefault();
+    }, {passive: false});
+    game.addEventListener('mousedown', function(e) {
+      if (!started) {
+        startGame();
+        startbtn.style.display = 'none';
+      } else {
+        jump();
+      }
+    });
+
+    // 開始按鈕
+    startbtn.addEventListener('click', function() {
+      startGame();
+      startbtn.style.display = 'none';
+    });
+
+    // 初始
+    function initial() {
+      setAvatar(3);
+      resizeGame();
+      startbtn.style.display = '';
+    }
+    initial();
+
+    // 確保橫直切換都能完整顯示
+    window.addEventListener('resize', function() {
+      resizeGame();
+    });
+    window.addEventListener('orientationchange', function() {
+      setTimeout(resizeGame, 200);
+    });
+
+    // iOS 瀏覽器 address bar 收回時高度變動自動調整
+    let lastWinH = window.innerHeight;
+    setInterval(() => {
+      if (window.innerHeight !== lastWinH) {
+        lastWinH = window.innerHeight;
+        resizeGame();
+      }
+    }, 500);
+  </script>
+</body>
+</html>
