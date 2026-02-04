@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K2 數學小天地</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        .bounce-in { animation: bounceIn 0.5s cubic-bezier(0.36, 0, 0.66, -0.56) forwards; }
+        @keyframes bounceIn {
+            0% { transform: scale(0); }
+            80% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-sky-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // 簡單模擬 Lucide 圖示 (因為 CDN 版本 React 整合較複雜)
+        const Icon = ({ name, size = 24, className = "" }) => {
+            return <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
+        };
+
+        const MODES = {
+            MENU: 'menu',
+            COUNTING: 'counting',
+            ADDITION: 'addition',
+            SUBTRACTION: 'subtraction',
+            SHAPES: 'shapes',
+            COMPARING: 'comparing'
+        };
+
+        const EMOJIS = ['🍎', '🐶', '⭐', '🎈', '🐱', '🍦', '🚗', '🦁', '🍓', '🏀'];
+
+        const App = () => {
+            const [mode, setMode] = useState(MODES.MENU);
+            const [score, setScore] = useState(0);
+            const [question, setQuestion] = useState(null);
+            const [options, setOptions] = useState([]);
+            const [feedback, setFeedback] = useState(null);
+            const [streak, setStreak] = useState(0);
+
+            // 當模式切換、題目更新或反饋出現時，重新渲染 Lucide 圖標
+            useEffect(() => {
+                if (window.lucide) window.lucide.createIcons();
+            }, [mode, question, feedback]);
+
+            // 當進入遊戲模式時，生成題目
+            useEffect(() => {
+                if (mode !== MODES.MENU) {
+                    generateQuestion();
+                } else {
+                    setQuestion(null); // 回到主選單時清空題目
+                }
+            }, [mode]);
+
+            const generateQuestion = () => {
+                setFeedback(null);
+                let newQuestion = {};
+                let newOptions = [];
+
+                const getOpts = (correct, min, max) => {
+                    const opts = new Set([correct]);
+                    while (opts.size < 4) {
+                        const random = Math.floor(Math.random() * (max - min + 1)) + min;
+                        opts.add(random);
+                    }
+                    return Array.from(opts).sort(() => Math.random() - 0.5);
+                };
+
+                switch (mode) {
+                    case MODES.COUNTING:
+                        const num = Math.floor(Math.random() * 10) + 1;
+                        newQuestion = { type: 'count', target: num, item: EMOJIS[Math.floor(Math.random() * EMOJIS.length)] };
+                        newOptions = getOpts(num, 1, 10);
+                        break;
+                    case MODES.ADDITION:
+                        const a1 = Math.floor(Math.random() * 5) + 1;
+                        const b1 = Math.floor(Math.random() * 5) + 1;
+                        newQuestion = { type: 'add', a: a1, b: b1, target: a1 + b1, item: '🍎' };
+                        newOptions = getOpts(a1 + b1, 1, 10);
+                        break;
+                    case MODES.SUBTRACTION:
+                        const a2 = Math.floor(Math.random() * 6) + 4;
+                        const b2 = Math.floor(Math.random() * a2) + 1;
+                        newQuestion = { type: 'sub', a: a2, b: b2, target: a2 - b2, item: '🎈' };
+                        newOptions = getOpts(a2 - b2, 0, 9);
+                        break;
+                    case MODES.SHAPES:
+                        const shapes = [
+                            { name: '圓形', icon: '🔴' },
+                            { name: '正方形', icon: '🟦' },
+                            { name: '三角形', icon: '🔺' },
+                            { name: '星形', icon: '⭐' }
+                        ];
+                        const s = shapes[Math.floor(Math.random() * shapes.length)];
+                        newQuestion = { type: 'shape', target: s.name, icon: s.icon };
+                        newOptions = shapes.map(x => x.name).sort(() => Math.random() - 0.5);
+                        break;
+                    case MODES.COMPARING:
+                        const c1 = Math.floor(Math.random() * 10) + 1;
+                        let c2 = Math.floor(Math.random() * 10) + 1;
+                        while(c1 === c2) c2 = Math.floor(Math.random() * 10) + 1;
+                        newQuestion = { type: 'compare', a: c1, b: c2, target: c1 > c2 ? c1 : c2 };
+                        newOptions = [c1, c2].sort(() => Math.random() - 0.5);
+                        break;
+                    default:
+                        return;
+                }
+                setQuestion(newQuestion);
+                setOptions(newOptions);
+            };
+
+            const handleAnswer = (val) => {
+                if (feedback || !question) return;
+                if (val === question.target) {
+                    setFeedback('correct');
+                    setScore(s => s + 10);
+                    setStreak(s => s + 1);
+                    setTimeout(generateQuestion, 1500);
+                } else {
+                    setFeedback('wrong');
+                    setStreak(0);
+                    setTimeout(() => setFeedback(null), 1000);
+                }
+            };
+
+            // 主選單 UI
+            if (mode === MODES.MENU) {
+                return (
+                    <div className="min-h-screen p-4 md:p-8">
+                        <header className="text-center mb-12">
+                            <h1 className="text-5xl font-black text-blue-600 mb-4">K2 數學小天地</h1>
+                            <p className="text-xl text-gray-600">快樂學習，聰明數數！</p>
+                        </header>
+                        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <MenuCard title="數一數" icon="hash" color="bg-pink-500" onClick={() => setMode(MODES.COUNTING)} />
+                            <MenuCard title="簡單加法" icon="plus" color="bg-blue-500" onClick={() => setMode(MODES.ADDITION)} />
+                            <MenuCard title="簡單減法" icon="minus" color="bg-green-500" onClick={() => setMode(MODES.SUBTRACTION)} />
+                            <MenuCard title="認識形狀" icon="shapes" color="bg-yellow-500" onClick={() => setMode(MODES.SHAPES)} />
+                            <MenuCard title="哪個比較大？" icon="maximize-2" color="bg-purple-500" onClick={() => setMode(MODES.COMPARING)} />
+                        </div>
+                    </div>
+                );
+            }
+
+            // 遊戲載入中保護 (防止讀取 null 屬性)
+            if (!question) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-sky-50">
+                        <div className="text-2xl font-bold text-blue-500 animate-pulse">準備題目中...</div>
+                    </div>
+                );
+            }
+
+            // 遊戲畫面 UI
+            return (
+                <div className="min-h-screen p-4 flex flex-col items-center">
+                    <div className="w-full max-w-2xl flex justify-between items-center mb-8">
+                        <button onClick={() => setMode(MODES.MENU)} className="bg-white px-6 py-2 rounded-full font-bold shadow hover:bg-gray-50 flex items-center gap-2">
+                            <Icon name="home" size={20} /> 返回
+                        </button>
+                        <div className="flex gap-4 font-bold">
+                            <span className="bg-yellow-400 text-white px-4 py-2 rounded-full shadow">得分: {score}</span>
+                            <span className="bg-orange-400 text-white px-4 py-2 rounded-full shadow">連勝: {streak}</span>
+                        </div>
+                    </div>
+
+                    <div className="bg-white w-full max-w-2xl rounded-3xl p-8 shadow-2xl border-b-8 border-gray-200 text-center">
+                        <h2 className="text-3xl font-bold text-gray-800 mb-8">
+                            {question.type === 'count' && "這裡有幾個？"}
+                            {question.type === 'add' && `${question.a} 加 ${question.b} 是多少？`}
+                            {question.type === 'sub' && `${question.a} 減 ${question.b} 是多少？`}
+                            {question.type === 'shape' && `哪個是「${question.target}」？`}
+                            {question.type === 'compare' && "哪個數字比較大？"}
+                        </h2>
+
+                        <div className="bg-sky-50 rounded-2xl p-10 mb-8 flex flex-wrap justify-center items-center gap-4 text-5xl min-h-[120px]">
+                            {question.type === 'count' && Array(question.target).fill(question.item)}
+                            {question.type === 'add' && (
+                                <div className="flex items-center gap-4">
+                                    <span>{Array(question.a).fill(question.item)}</span>
+                                    <span className="text-blue-500 font-black">+</span>
+                                    <span>{Array(question.b).fill(question.item)}</span>
+                                </div>
+                            )}
+                            {question.type === 'sub' && (
+                                <div className="flex items-center gap-4">
+                                    <span>{Array(question.a).fill(question.item)}</span>
+                                    <span className="text-red-500 font-black">-</span>
+                                    <span className="opacity-20">{Array(question.b).fill(question.item)}</span>
+                                </div>
+                            )}
+                            {question.type === 'shape' && <div className="text-8xl">{question.icon}</div>}
+                            {question.type === 'compare' && (
+                                <div className="flex gap-12 font-black text-blue-600">
+                                    <div className="bg-white px-8 py-4 rounded-xl shadow-inner border border-blue-100">{question.a}</div>
+                                    <div className="bg-white px-8 py-4 rounded-xl shadow-inner border border-blue-100">{question.b}</div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            {options.map((opt, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => handleAnswer(opt)}
+                                    className={`py-6 rounded-2xl text-3xl font-bold transition-all transform active:scale-95 shadow-md
+                                        ${feedback === 'correct' && opt === question.target ? 'bg-green-500 text-white scale-105' : 
+                                          feedback === 'wrong' && opt !== question.target ? 'bg-gray-100 text-gray-300' :
+                                          'bg-blue-500 text-white hover:bg-blue-600'}
+                                    `}
+                                >
+                                    {opt}
+                                </button>
+                            ))}
+                        </div>
+
+                        {feedback && (
+                            <div className={`mt-8 text-3xl font-black bounce-in ${feedback === 'correct' ? 'text-green-500' : 'text-red-500'}`}>
+                                {feedback === 'correct' ? '🌟 太棒了！答對了！' : '❌ 再試一次喔！'}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const MenuCard = ({ title, icon, color, onClick }) => (
+            <button onClick={onClick} className={`${color} p-10 rounded-3xl text-white shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-2 flex flex-col items-center gap-4 active:scale-95`}>
+                <div className="bg-white/20 p-6 rounded-2xl">
+                    <Icon name={icon} size={48} />
+                </div>
+                <span className="text-3xl font-black">{title}</span>
+            </button>
+        );
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
