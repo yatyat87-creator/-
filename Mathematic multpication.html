@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>糖果森林數學大冒險</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'ZCOOL KuaiLe', cursive, system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            touch-action: manipulation;
+            overflow-x: hidden;
+        }
+        .candy-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 8px solid #FFD1DC;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .bounce {
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .correct-pop {
+            animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .btn-hover:active {
+            transform: scale(0.95);
+        }
+        /* 隱藏數字輸入框的箭頭 */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- 背景裝飾 -->
+    <div class="fixed top-10 left-10 text-5xl opacity-20 bounce">🍭</div>
+    <div class="fixed bottom-10 right-10 text-5xl opacity-20 bounce" style="animation-delay: 0.5s;">🍬</div>
+    <div class="fixed top-20 right-20 text-5xl opacity-20 bounce" style="animation-delay: 1s;">🍦</div>
+    <div class="fixed bottom-20 left-20 text-5xl opacity-20 bounce" style="animation-delay: 1.5s;">🍩</div>
+
+    <div id="app" class="w-full max-w-md">
+        <!-- 主選單 -->
+        <div id="menu-view" class="candy-card rounded-3xl p-8 text-center">
+            <h1 class="text-4xl font-bold text-pink-500 mb-2">糖果森林</h1>
+            <p class="text-xl text-blue-400 mb-8 font-bold">數學大冒險</p>
+            
+            <div class="space-y-4">
+                <button onclick="startGame('choice')" class="w-full bg-pink-400 text-white py-4 rounded-2xl text-2xl font-bold shadow-lg hover:bg-pink-500 transition btn-hover">
+                    甜心選擇題 🍰
+                </button>
+                <button onclick="startGame('fill')" class="w-full bg-blue-400 text-white py-4 rounded-2xl text-2xl font-bold shadow-lg hover:bg-blue-500 transition btn-hover">
+                    魔法填空題 🪄
+                </button>
+            </div>
+            
+            <p class="mt-8 text-gray-400 text-sm italic">點擊按鈕開始挑戰吧！</p>
+        </div>
+
+        <!-- 遊戲主畫面 -->
+        <div id="game-view" class="hidden candy-card rounded-3xl p-6 text-center">
+            <div class="flex justify-between items-center mb-6">
+                <button onclick="showMenu()" class="text-gray-400 hover:text-gray-600">🏠 返回</button>
+                <div class="bg-yellow-100 px-4 py-1 rounded-full text-yellow-600 font-bold">
+                    積分: <span id="score-display">0</span>
+                </div>
+            </div>
+
+            <div class="mb-8">
+                <div id="character" class="text-6xl mb-4">🐰</div>
+                <div class="text-5xl font-bold text-gray-700 tracking-widest" id="question-text">2 × 3 = ?</div>
+            </div>
+
+            <!-- 選擇模式容器 -->
+            <div id="choice-container" class="grid grid-cols-2 gap-4">
+                <!-- 由 JavaScript 生成按鈕 -->
+            </div>
+
+            <!-- 填空模式容器 -->
+            <div id="fill-container" class="hidden">
+                <input type="number" id="answer-input" placeholder="輸入答案" class="w-full text-center text-4xl border-b-4 border-blue-300 focus:border-blue-500 outline-none p-2 mb-6 bg-transparent text-blue-600 font-bold">
+                <button onclick="checkFillAnswer()" class="w-full bg-blue-400 text-white py-4 rounded-2xl text-2xl font-bold shadow-lg btn-hover">提交答案</button>
+            </div>
+
+            <div id="feedback" class="mt-6 h-12 text-2xl font-bold opacity-0 transition-opacity duration-300"></div>
+        </div>
+
+        <!-- 結算畫面 -->
+        <div id="result-view" class="hidden candy-card rounded-3xl p-8 text-center">
+            <h2 class="text-3xl font-bold text-yellow-500 mb-4">冒險結束！</h2>
+            <div class="text-8xl mb-6">🏆</div>
+            <p class="text-2xl text-gray-600 mb-8 font-bold">你的總得分是: <span id="final-score" class="text-pink-500 text-4xl">0</span></p>
+            <button onclick="showMenu()" class="w-full bg-green-400 text-white py-4 rounded-2xl text-2xl font-bold shadow-lg hover:bg-green-500 transition btn-hover">
+                再玩一次 🚀
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let gameState = {
+            mode: 'choice',
+            score: 0,
+            currentAnswer: 0,
+            questionCount: 0,
+            maxQuestions: 10
+        };
+
+        const icons = ['🐰', '🐼', '🦊', '🦁', '🐸', '🐨', '🐷', '🐵'];
+
+        function showView(viewId) {
+            document.getElementById('menu-view').classList.add('hidden');
+            document.getElementById('game-view').classList.add('hidden');
+            document.getElementById('result-view').classList.add('hidden');
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        function startGame(mode) {
+            gameState.mode = mode;
+            gameState.score = 0;
+            gameState.questionCount = 0;
+            updateScore();
+            nextQuestion();
+            showView('game-view');
+            
+            if (mode === 'choice') {
+                document.getElementById('choice-container').classList.remove('hidden');
+                document.getElementById('fill-container').classList.add('hidden');
+            } else {
+                document.getElementById('choice-container').classList.add('hidden');
+                document.getElementById('fill-container').classList.remove('hidden');
+                document.getElementById('answer-input').focus();
+            }
+        }
+
+        function showMenu() {
+            showView('menu-view');
+        }
+
+        function updateScore() {
+            document.getElementById('score-display').innerText = gameState.score;
+        }
+
+        function nextQuestion() {
+            if (gameState.questionCount >= gameState.maxQuestions) {
+                document.getElementById('final-score').innerText = gameState.score;
+                showView('result-view');
+                return;
+            }
+
+            gameState.questionCount++;
+            const a = Math.floor(Math.random() * 9) + 1;
+            const b = Math.floor(Math.random() * 9) + 1;
+            gameState.currentAnswer = a * b;
+
+            document.getElementById('question-text').innerText = `${a} × ${b} = ?`;
+            document.getElementById('character').innerText = icons[Math.floor(Math.random() * icons.length)];
+            
+            const feedback = document.getElementById('feedback');
+            feedback.style.opacity = '0';
+
+            if (gameState.mode === 'choice') {
+                generateChoices(gameState.currentAnswer);
+            } else {
+                document.getElementById('answer-input').value = '';
+                document.getElementById('answer-input').focus();
+            }
+        }
+
+        function generateChoices(correct) {
+            const container = document.getElementById('choice-container');
+            container.innerHTML = '';
+            
+            let choices = [correct];
+            while (choices.length < 4) {
+                let r = Math.floor(Math.random() * 81) + 1;
+                if (!choices.includes(r)) choices.push(r);
+            }
+            
+            choices.sort(() => Math.random() - 0.5);
+
+            const colors = ['bg-orange-300', 'bg-blue-300', 'bg-purple-300', 'bg-yellow-300'];
+
+            choices.forEach((val, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `${colors[idx]} text-white text-3xl font-bold py-6 rounded-2xl shadow-md btn-hover transform active:scale-95 transition-all`;
+                btn.innerText = val;
+                btn.onclick = () => checkChoiceAnswer(val);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkChoiceAnswer(selected) {
+            if (selected === gameState.currentAnswer) {
+                onCorrect();
+            } else {
+                onWrong();
+            }
+        }
+
+        function checkFillAnswer() {
+            const input = document.getElementById('answer-input');
+            const val = parseInt(input.value);
+            if (val === gameState.currentAnswer) {
+                onCorrect();
+            } else {
+                onWrong();
+            }
+        }
+
+        function onCorrect() {
+            gameState.score += 10;
+            updateScore();
+            const fb = document.getElementById('feedback');
+            fb.innerText = "太棒了! 🌟 正確!";
+            fb.className = "mt-6 h-12 text-2xl font-bold text-green-500 opacity-100 correct-pop";
+            setTimeout(nextQuestion, 1200);
+        }
+
+        function onWrong() {
+            const fb = document.getElementById('feedback');
+            fb.innerText = "再試一次! 💪 加油!";
+            fb.className = "mt-6 h-12 text-2xl font-bold text-red-400 opacity-100";
+            // 輕微震動效果
+            const gv = document.getElementById('game-view');
+            gv.classList.add('translate-x-1');
+            setTimeout(() => gv.classList.remove('translate-x-1'), 50);
+        }
+
+        // 監聽鍵盤 Enter
+        document.getElementById('answer-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') checkFillAnswer();
+        });
+    </script>
+</body>
+</html>
