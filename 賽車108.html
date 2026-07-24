@@ -101,15 +101,16 @@
             <div id="character-grid" class="char-grid"></div>
         </div>
         
-        <div class="form-group">
-            <label>選擇難度：</label>
-            <select id="difficulty" onclick="AudioManager.playSound('click')">
-                <option value="easy">🟢 簡單</option>
-                <option value="normal" selected>🟡 普通</option>
-                <option value="hard">🔴 困難</option>
-            </select>
-        </div>
-
+		<div class="form-group">
+		    <label>選擇難度：</label>
+		    <select id="difficulty" onclick="AudioManager.playSound('click')">
+		        <option value="super_easy">🟢 超簡單 (劇情必勝)</option> <!-- 新增這行 -->
+		        <option value="easy">🟢 簡單</option>
+		        <option value="normal" selected>🟡 普通</option>
+		        <option value="hard">🔴 困難</option>
+		    </select>
+		</div>
+		
         <div class="form-group">
             <label>選擇運算模式：</label>
             <select id="operation-mode" onclick="AudioManager.playSound('click')">
@@ -404,12 +405,13 @@
     let eventInterval, speechInterval;
     let aiTimers = { ai1: null, ai2: null, ai3: null };
 
-    const diffParams = {
+	const diffParams = {
+        super_easy: { maxNum: 5, aiSpeedMin: 2500, aiSpeedMax: 4500 }, // 數字極簡，但 AI 前期跑很快
         easy: { maxNum: 10, aiSpeedMin: 4000, aiSpeedMax: 6000 },
         normal: { maxNum: 12, aiSpeedMin: 2500, aiSpeedMax: 4500 },
         hard: { maxNum: 20, aiSpeedMin: 1500, aiSpeedMax: 2500 }
     };
-
+	
     let racers = {
         player: { element: document.getElementById('player'), emoji: document.querySelector('#player .char-emoji'), step: 0, stalled: false, finished: false, name: "你" },
         ai1: { element: document.getElementById('ai1'), emoji: document.querySelector('#ai1 .char-emoji'), step: 0, stalled: false, finished: false, name: "對手 1" },
@@ -437,9 +439,9 @@
             racers.player.emoji.innerText = pData.emoji;
         }
 
-        let diffNames = { easy: "🟢 簡單", normal: "🟡 普通", hard: "🔴 困難" };
+		let diffNames = { super_easy: "🟢 超簡單", easy: "🟢 簡單", normal: "🟡 普通", hard: "🔴 困難" };
         document.getElementById('diff-display').innerText = `難度：${diffNames[difficultySetting]}`;
-        document.getElementById('setup-screen').style.display = 'none';
+		document.getElementById('setup-screen').style.display = 'none';
         document.getElementById('play-screen').style.display = 'block';
         document.querySelector('.top-bar').style.display = 'none';
 
@@ -512,7 +514,16 @@
         if (currentLevel === maxLevels && aiName === 'ai3') {
             delay = delay * GAME_DATA.bosses[0].speedMultiplier; 
         }
-        
+	// ▼▼▼ 新增這一段：超簡單模式的「極限放水」機制 ▼▼▼
+        if (difficultySetting === 'super_easy') {
+            // 如果 AI 已經跑到第 17 步 (距離終點 20 步只剩一點點)，且玩家還沒贏
+            if (racers[aiName].step >= 17 && racers.player.step < 20) {
+                // 強制加上 15 秒的極大延遲！AI 會在終點前看起來像卡住一樣
+                // 玩家會覺得「哇！AI 快贏了！」，然後趁這 15 秒瘋狂答題逆轉勝
+                delay += 15000; 
+            }
+        }
+        // ▲▲▲ 新增完畢 ▲▲▲        
         clearTimeout(aiTimers[aiName]); 
         aiTimers[aiName] = setTimeout(() => {
             if (!gameActive || racers[aiName].finished) return;
