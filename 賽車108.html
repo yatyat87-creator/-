@@ -104,9 +104,9 @@
 		<div class="form-group">
 		    <label>選擇難度：</label>
 		    <select id="difficulty" onclick="AudioManager.playSound('click')">
-		        <option value="super_easy">🟢 超簡單 (劇情必勝)</option> <!-- 新增這行 -->
+		        <option value="super_easy" selected>🟢 超簡單 </option> <!-- 新增這行 -->
 		        <option value="easy">🟢 簡單</option>
-		        <option value="normal" selected>🟡 普通</option>
+		        <option value="normal">🟡 普通</option>
 		        <option value="hard">🔴 困難</option>
 		    </select>
 		</div>
@@ -114,9 +114,9 @@
         <div class="form-group">
             <label>選擇運算模式：</label>
             <select id="operation-mode" onclick="AudioManager.playSound('click')">
-                <option value="add">➕ 加法</option>
+                <option value="add" selected>➕ 加法</option>
                 <option value="sub">➖ 減法</option>
-                <option value="mul" selected>✖️ 乘法</option>
+                <option value="mul">✖️ 乘法</option>
                 <option value="div">➗ 除法</option>
             </select>
         </div>
@@ -124,9 +124,9 @@
         <div class="form-group">
             <label>選擇基準數字：</label>
             <select id="multiplier" onclick="AudioManager.playSound('click')">
-                <option value="random">🎲 隨機 (2~12)</option>
+                <option value="random" selected>🎲 隨機 (2~12)</option>
                 <option value="2">數字 2</option>
-                <option value="3" selected>數字 3</option>
+                <option value="3">數字 3</option>
                 <option value="4">數字 4</option>
                 <option value="5">數字 5</option>
                 <option value="6">數字 6</option>
