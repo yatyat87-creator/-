@@ -523,8 +523,9 @@
             if (!racers[aiName].stalled) {
                 let canMove = true; // 預設 AI 可以移動
                 
-                // ▼▼▼ 超簡單模式專屬的「動態控分」機制 ▼▼▼
-                if (difficultySetting === 'super_easy') {
+				// ▼▼▼ 超簡單模式專屬的「動態控分」機制 ▼▼▼
+                // 新增 !racers.player.finished 條件，玩家衝線後就解除封印
+                if (difficultySetting === 'super_easy' && !racers.player.finished) {
                     let pStep = racers.player.step;
                     let targetStep = racers[aiName].step + 1; // AI 預計移動到的下一步
                     
@@ -547,7 +548,6 @@
                     }
                 }
                 // ▲▲▲ 機制結束 ▲▲▲
-
                 // 只有在允許移動的情況下，AI 才會真的前進
                 if (canMove) {
                     racers[aiName].step++;
