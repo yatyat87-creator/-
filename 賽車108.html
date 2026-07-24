@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>汽車總動員 - 數學賽車 (資料驅動維護版 - 音效升級)</title>
+    <title>超名星賽車</title>
     <style>
         /* 基礎樣式 */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f39c12; color: #fff; text-align: center; margin: 0; padding: 20px; }
@@ -305,7 +305,18 @@
                 skillDesc: "連對 3 條對手停 2 秒", streakReq: 3, skillType: "stun_all", skillValue: 2000, 
                 price: 0, purchasable: false, unlockCondition: "乘法 (困難難度 + 隨機數字) 取得第一名解鎖" 
             },
-            "Hello Kitty": { 
+            "Pompompurin": { 
+                name: "布丁狗", emoji: "⛽", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Pompompurin.png", 
+                skillDesc: "連對 5 條領先者退 1 步", streakReq: 5, skillType: "pull_back_leader", skillValue: 1, 
+                price: 0, purchasable: false, unlockCondition: "加法 (簡單難度 + 隨機數字) 取得第一名解鎖" 
+            },
+            "Cinnamoroll": { 
+                name: "玉桂狗", emoji: "🛞", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Cinnamoroll.png", 
+                skillDesc: "連對 5 條對手停 1 秒", streakReq: 5, skillType: "stun_all", skillValue: 1000, 
+                price: 0, purchasable: false, unlockCondition: "減法 (簡單難度 + 隨機數字) 取得第一名解鎖" 
+            },
+
+			"Hello Kitty": { 
                 name: "吉蒂貓", emoji: "🚗", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Hello Kitty.png", 
                 skillDesc: "無視突發退後懲罰", streakReq: 999, skillType: "immune_backwards", skillValue: 0, 
                 price: 0, purchasable: false, unlockCondition: "除法 (困難難度 + 隨機數字) 取得第一名解鎖" 
@@ -885,6 +896,13 @@
             }
             // ▲▲▲ 新增這一段困難難度解鎖邏輯 ▲▲▲
 
+	// ▼▼▼ 新增這一段簡單難度解鎖邏輯 ▼▼▼
+            if (difficultySetting === 'easy' && currentMultiplierSetting === 'random') {
+                if (currentOperation === 'add' && !unlockedChars.includes('Pompompurin')) newlyUnlockedChar = 'Pompompurin';
+                if (currentOperation === 'sub' && !unlockedChars.includes('Cinnamoroll')) newlyUnlockedChar = 'Cinnamoroll';
+            }
+            // ▲▲▲ 新增這一段簡單難度解鎖邏輯 ▲▲▲
+			
             if (newlyUnlockedChar) {
                 unlockedChars.push(newlyUnlockedChar);
                 localStorage.setItem('mathRacerUnlocked_v2', JSON.stringify(unlockedChars));
