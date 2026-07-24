@@ -505,37 +505,60 @@
         speechInterval = setInterval(updateSpeechBubbles, 3500);
     }
 
-    function scheduleAIMove(aiName) {
+	function scheduleAIMove(aiName) {
         if (!gameActive || racers[aiName].finished) return;
         
         let params = diffParams[difficultySetting];
         let delay = Math.floor(Math.random() * (params.aiSpeedMax - params.aiSpeedMin + 1)) + params.aiSpeedMin;
         
+        // Boss 會有速度加成
         if (currentLevel === maxLevels && aiName === 'ai3') {
             delay = delay * GAME_DATA.bosses[0].speedMultiplier; 
         }
-	// ▼▼▼ 新增這一段：超簡單模式的「極限放水」機制 ▼▼▼
-        if (difficultySetting === 'super_easy') {
-            // 如果 AI 已經跑到第 17 步 (距離終點 20 步只剩一點點)，且玩家還沒贏
-            if (racers[aiName].step >= 17 && racers.player.step < 20) {
-                // 強制加上 15 秒的極大延遲！AI 會在終點前看起來像卡住一樣
-                // 玩家會覺得「哇！AI 快贏了！」，然後趁這 15 秒瘋狂答題逆轉勝
-                delay += 15000; 
-            }
-        }
-        // ▲▲▲ 新增完畢 ▲▲▲        
+        
         clearTimeout(aiTimers[aiName]); 
         aiTimers[aiName] = setTimeout(() => {
             if (!gameActive || racers[aiName].finished) return;
+            
             if (!racers[aiName].stalled) {
-                racers[aiName].step++;
-                updatePositions();
-                checkWinCondition();
+                let canMove = true; // 預設 AI 可以移動
+                
+                // ▼▼▼ 超簡單模式專屬的「動態控分」機制 ▼▼▼
+                if (difficultySetting === 'super_easy') {
+                    let pStep = racers.player.step;
+                    let targetStep = racers[aiName].step + 1; // AI 預計移動到的下一步
+                    
+                    if (targetStep > pStep) {
+                        // 規則 1：絕對不可以超過玩家 (最多只能平排)
+                        canMove = false;
+                    } else if (targetStep === pStep) {
+                        // 規則 2：最多只能有一台車跟玩家平排
+                        let parallelCount = 0;
+                        for (let k of ['ai1', 'ai2', 'ai3']) {
+                            // 檢查其他對手，是不是已經有人跟玩家平排（或超過）了
+                            if (k !== aiName && racers[k].step >= pStep) {
+                                parallelCount++;
+                            }
+                        }
+                        if (parallelCount >= 1) {
+                            // 如果已經有 1 台(或以上)的車跟玩家平排，這台車就必須留在後面
+                            canMove = false; 
+                        }
+                    }
+                }
+                // ▲▲▲ 機制結束 ▲▲▲
+
+                // 只有在允許移動的情況下，AI 才會真的前進
+                if (canMove) {
+                    racers[aiName].step++;
+                    updatePositions();
+                    checkWinCondition();
+                }
             }
+            // 無論這次有沒有前進，都繼續安排下一次動作，讓 AI 保持引擎運轉隨時準備追上
             if(gameActive && !racers[aiName].finished) scheduleAIMove(aiName);
         }, delay);
     }
-
     function triggerRandomEvent() {
         if (!gameActive) return;
         let eventMsg = document.getElementById('event-message');
