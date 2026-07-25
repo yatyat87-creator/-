@@ -866,10 +866,10 @@
         let playerRank = finalSorted.indexOf("player") + 1;
         
         let goldReward = 0;
-        if (playerRank === 1) goldReward = 100;
-        else if (playerRank === 2) goldReward = 50;
-        else if (playerRank === 3) goldReward = 20;
-        else goldReward = 50;
+        if (playerRank === 1) goldReward = 1000;
+        else if (playerRank === 2) goldReward = 500;
+        else if (playerRank === 3) goldReward = 200;
+        else goldReward = 100;
 
         let finalMsg = "🏆 活塞盃總冠軍賽果 🏆\n\n";
         finalMsg += `🥇 冠軍：${racers[finalSorted[0]].name} (總分: ${scores[finalSorted[0]]})\n`;
