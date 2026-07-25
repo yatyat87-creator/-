@@ -600,31 +600,44 @@ opponents: [
                                 AudioManager.playSound('skillBoost');
                                 eventMsg.innerText = `⚠️ 警告：${racers[aiName].name} 發動了【瞬間推進】！`;
                             }
-                        } else if (oppData.skillType === "stun_player") {
-                            // 技能：干擾玩家停駛
-                            if (racers.player.hasShield) {
-                                // 步驟 1 的護盾在這裡發揮作用！
-                                racers.player.hasShield = false; 
-                                AudioManager.playSound('skillBoost');
-                                eventMsg.innerText = `🛡️ ${racers[aiName].name} 試圖干擾你，但被【護盾】擋下了！`;
-                            } else {
-                                AudioManager.playSound('eventStall');
-                                eventMsg.innerText = `⚠️ 警告：${racers[aiName].name} 發動了干擾，你被迫停駛 2 秒！`;
-                                racers.player.stalled = true;
-                                racers.player.element.classList.remove('driving');
-                                racers.player.element.classList.add('stopped');
+							} else if (oppData.skillType === "stun_player") {
+                            // 技能：干擾隨機對手停駛 (包含玩家或其他 AI)
+                            // 1. 找出所有未衝線、且不是施放者自己的車手作為合法目標
+                            let validTargets = ["player", "ai1", "ai2", "ai3"].filter(k => !racers[k].finished && k !== aiName);
+                            
+                            if (validTargets.length > 0) {
+                                // 2. 隨機抽選一個倒楣鬼
+                                let targetKey = validTargets[Math.floor(Math.random() * validTargets.length)];
+                                let targetRacer = racers[targetKey];
                                 
-                                setTimeout(() => {
-                                    if(gameActive && !racers.player.finished) {
-                                        racers.player.stalled = false;
-                                        racers.player.element.classList.add('driving');
-                                        racers.player.element.classList.remove('stopped');
-                                    }
-                                }, 2000);
+                                if (targetKey === 'player' && targetRacer.hasShield) {
+                                    // 如果抽中玩家，且玩家有護盾
+                                    targetRacer.hasShield = false; 
+                                    AudioManager.playSound('skillBoost');
+                                    eventMsg.innerText = `🛡️ ${racers[aiName].name} 試圖干擾你，但被【護盾】擋下了！`;
+                                } else {
+                                    // 抽中玩家沒護盾，或是抽中其他 AI
+                                    AudioManager.playSound('eventStall');
+                                    let targetNameDisplay = (targetKey === 'player') ? "你" : targetRacer.name;
+                                    eventMsg.innerText = `⚠️ 警告：${racers[aiName].name} 發動了干擾，${targetNameDisplay} 被迫停駛 2 秒！`;
+                                    
+                                    targetRacer.stalled = true;
+                                    targetRacer.element.classList.remove('driving', 'boss-driving');
+                                    targetRacer.element.classList.add('stopped');
+                                    
+                                    setTimeout(() => {
+                                        if (gameActive && !targetRacer.finished) {
+                                            targetRacer.stalled = false;
+                                            targetRacer.element.classList.remove('stopped');
+                                            // 判斷恢復時要加回哪種引擎動畫 (Boss 或一般)
+                                            let isTargetBoss = (currentLevel === maxLevels && targetKey === 'ai3');
+                                            targetRacer.element.classList.add(isTargetBoss ? 'boss-driving' : 'driving');
+                                        }
+                                    }, 2000);
+                                }
                             }
                         }
-                        
-                        // 2.5秒後清除提示訊息
+						// 2.5秒後清除提示訊息
                         setTimeout(() => { if(gameActive) eventMsg.innerText = ""; }, 2500);
                     }
                     // ▲▲▲ 步驟 2 新增結束 ▲▲▲
