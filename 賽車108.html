@@ -320,20 +320,32 @@
                 name: "吉蒂貓", emoji: "🚗", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Hello Kitty.png", 
                 skillDesc: "無視突發退後懲罰", streakReq: 999, skillType: "immune_backwards", skillValue: 0, 
                 price: 0, purchasable: false, unlockCondition: "除法 (困難難度 + 隨機數字) 取得第一名解鎖" 
+            },
+            // ▼▼▼ 步驟 1 新增：擴充護盾與淘金角色 ▼▼▼
+            "red_firetruck": { 
+                name: "阿紅 (消防車)", emoji: "🚒", img: "", 
+                skillDesc: "連對 3 條獲得護盾", streakReq: 3, skillType: "shield", skillValue: 0, 
+                price: 12000, purchasable: true, unlockCondition: "花費 12000 金幣" 
+            },
+            "flo": { 
+                name: "芙蓉", emoji: "⛽", img: "", 
+                skillDesc: "連對 3 條淘金(+10金幣)", streakReq: 3, skillType: "gold_rush", skillValue: 10, 
+                price: 15000, purchasable: true, unlockCondition: "花費 15000 金幣" 
             }
+            // ▲▲▲ 步驟 1 新增結束 ▲▲▲
         },
-        opponents: [
-            { name: "Tesla", emoji: "🚕", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Tesla-removebg-preview.png" },
-            { name: "BMW", emoji: "🚓", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/BMW-removebg-preview.png" },
-            { name: "Angry Taxi", emoji: "🚕", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Taxi.png" },
-            { name: "Friendly Bus", emoji: "🚌", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/KMB.png" },
-            { name: "Mini Bus", emoji: "🚐", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Mini bus.png" }
+opponents: [
+            { name: "Tesla", emoji: "🚕", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Tesla-removebg-preview.png", skillType: "boost", skillChance: 0.15 },
+            { name: "BMW", emoji: "🚓", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/BMW-removebg-preview.png", skillType: "stun_player", skillChance: 0.1 },
+            { name: "Angry Taxi", emoji: "🚕", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Taxi.png", skillType: "boost", skillChance: 0.15 },
+            { name: "Friendly Bus", emoji: "🚌", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/KMB.png", skillType: "stun_player", skillChance: 0.1 },
+            { name: "Mini Bus", emoji: "🚐", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Mini bus.png", skillType: "boost", skillChance: 0.15 }
         ],
         bosses: [
-            { name: "暴風傑森", emoji: "👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Jackson storm.png", speedMultiplier: 0.65 },
-            { name: "閃電麥坤(黑色)", emoji: "🏎️👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Black_Mcqueen-removebg-preview.png", speedMultiplier: 0.65 }
+            { name: "暴風傑森", emoji: "👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Jackson storm.png", speedMultiplier: 0.65, skillType: "stun_player", skillChance: 0.25 },
+            { name: "閃電麥坤(黑色)", emoji: "🏎️👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Black_Mcqueen-removebg-preview.png", speedMultiplier: 0.65, skillType: "boost", skillChance: 0.3 }
         ],
-        dialogues: {
+		dialogues: {
             lead: ["太慢啦！", "吃我的沙吧！", "我是無敵的！", "看不到我的車尾燈！"],
             mid: ["要追上了！", "別擋路！", "穩住節奏！"],
             behind: ["我不會放棄的！", "等著瞧！", "前面等等我！"],
@@ -410,7 +422,12 @@
 
     let currentMultiplierSetting = '3', currentOperation = 'mul';
     let totalSteps = 20, currentAnswer = 0, gameActive = false, difficultySetting = 'normal';
-    let playerStreak = 0, finishOrder = [], currentLevel = 1;
+	// ▼▼▼ 步驟 3 新增：學習數據追蹤變數 ▼▼▼
+    let learningStats = [];       // 存放這場遊戲的所有答題記錄
+    let questionStartTime = 0;    // 記錄每次出題的時間戳記
+    let currentQuestionText = ""; // 記錄當前的題目字串
+    // ▲▲▲ 步驟 3 新增結束 ▲▲▲
+	let playerStreak = 0, finishOrder = [], currentLevel = 1;
     const maxLevels = 3;
     let scores = { player: 0, ai1: 0, ai2: 0, ai3: 0 };
     let eventInterval, speechInterval;
@@ -559,13 +576,63 @@
                     }
                 }
                 // ▲▲▲ 機制結束 ▲▲▲
-                // 只有在允許移動的情況下，AI 才會真的前進
+// 只有在允許移動的情況下，AI 才會真的前進
                 if (canMove) {
                     racers[aiName].step++;
+                    
+                    // ▼▼▼ 步驟 2 新增：AI 技能觸發機制 ▼▼▼
+                    let oppData;
+                    if (currentLevel === maxLevels && aiName === 'ai3') {
+                        oppData = GAME_DATA.bosses.find(b => b.name === racers.ai3.name) || GAME_DATA.bosses[0];
+                    } else {
+                        oppData = GAME_DATA.opponents.find(o => o.name === racers[aiName].name) || GAME_DATA.opponents[0];
+                    }
+
+                    // 檢查是否發動技能 (有機率且沒衝線)
+                    if (oppData.skillType && Math.random() < oppData.skillChance && !racers.player.finished) {
+                        let eventMsg = document.getElementById('event-message');
+                        let isSuperEasyRestricted = (difficultySetting === 'super_easy');
+                        
+                        if (oppData.skillType === "boost") {
+                            // 技能：瞬間推進 (如果超簡單模式下，推進後會超過玩家就不發動)
+                            if (!(isSuperEasyRestricted && racers[aiName].step + 1 > racers.player.step)) {
+                                racers[aiName].step++; // 額外前進一步
+                                AudioManager.playSound('skillBoost');
+                                eventMsg.innerText = `⚠️ 警告：${racers[aiName].name} 發動了【瞬間推進】！`;
+                            }
+                        } else if (oppData.skillType === "stun_player") {
+                            // 技能：干擾玩家停駛
+                            if (racers.player.hasShield) {
+                                // 步驟 1 的護盾在這裡發揮作用！
+                                racers.player.hasShield = false; 
+                                AudioManager.playSound('skillBoost');
+                                eventMsg.innerText = `🛡️ ${racers[aiName].name} 試圖干擾你，但被【護盾】擋下了！`;
+                            } else {
+                                AudioManager.playSound('eventStall');
+                                eventMsg.innerText = `⚠️ 警告：${racers[aiName].name} 發動了干擾，你被迫停駛 2 秒！`;
+                                racers.player.stalled = true;
+                                racers.player.element.classList.remove('driving');
+                                racers.player.element.classList.add('stopped');
+                                
+                                setTimeout(() => {
+                                    if(gameActive && !racers.player.finished) {
+                                        racers.player.stalled = false;
+                                        racers.player.element.classList.add('driving');
+                                        racers.player.element.classList.remove('stopped');
+                                    }
+                                }, 2000);
+                            }
+                        }
+                        
+                        // 2.5秒後清除提示訊息
+                        setTimeout(() => { if(gameActive) eventMsg.innerText = ""; }, 2500);
+                    }
+                    // ▲▲▲ 步驟 2 新增結束 ▲▲▲
+
                     updatePositions();
                     checkWinCondition();
                 }
-            }
+			}
             // 無論這次有沒有前進，都繼續安排下一次動作，讓 AI 保持引擎運轉隨時準備追上
             if(gameActive && !racers[aiName].finished) scheduleAIMove(aiName);
         }, delay);
@@ -675,6 +742,11 @@
 
         document.getElementById('question-area').innerText = questionText;
 
+		// ▼▼▼ 步驟 3 新增：記錄題目與出題時間 ▼▼▼
+        currentQuestionText = questionText;
+        questionStartTime = Date.now();
+        // ▲▲▲ 步驟 3 新增結束 ▲▲▲
+		
         let options = [currentAnswer];
         while (options.length < 4) {
             let offset = Math.floor(Math.random() * 5) + 1;
@@ -695,13 +767,44 @@
         let msgElement = document.getElementById('message');
         document.getElementById('options-container').innerHTML = ""; 
 
+		// ▼▼▼ 步驟 3 新增：計算作答時間與記錄數據 ▼▼▼
+        let timeSpent = (Date.now() - questionStartTime) / 1000; // 計算毫秒差並轉為秒
+        let isCorrect = (selected === currentAnswer);
+        learningStats.push({
+            question: currentQuestionText,
+            userAnswer: selected,
+            correctAnswer: currentAnswer,
+            isCorrect: isCorrect,
+            timeElapsed: timeSpent.toFixed(2) + "秒",
+            timestamp: new Date().toLocaleString()
+        });
+        // ▲▲▲ 步驟 3 新增結束 ▲▲▲
+		
         if (selected === currentAnswer) {
             playerStreak++;
             document.getElementById('streak-display').innerText = `🔥 連勝: ${playerStreak}`;
             msgElement.style.color = "#2ecc71";
             msgElement.innerText = `⚡ 加速衝刺！ (連續答對 ${playerStreak} 條)`;
             racers.player.step++;
-            
+
+			// ▼▼▼ 步驟 4 新增：戰鬥中經濟系統微調 ▼▼▼
+            if (playerStreak > 0 && playerStreak % 3 === 0) {
+                playerGold += 10;
+                updateGoldDisplay(); // 呼叫既有函數即時更新畫面上方金幣
+                
+                let eventMsg = document.getElementById('event-message');
+                eventMsg.innerText = `💰 表現出色！連對 ${playerStreak} 題，額外獲得 10 金幣！`;
+                AudioManager.playSound('skillBoost'); // 播放一個音效當作獎勵提示
+                
+                // 2.5秒後清除提示，避免卡在畫面上
+                setTimeout(() => { 
+                    if (gameActive && eventMsg.innerText.includes('金幣')) {
+                        eventMsg.innerText = ""; 
+                    }
+                }, 2500);
+            }
+            // ▲▲▲ 步驟 4 新增結束 ▲▲▲
+			
             applyPlayerSkill();
             updatePositions(); checkWinCondition();
             if (gameActive && !racers.player.finished) setTimeout(generateQuestion, 500);
@@ -761,7 +864,20 @@
                         }
                     }, pData.skillValue);
                     break;
-            }
+				// ▼▼▼ 步驟 1 新增：擴充護盾與淘金技能邏輯 ▼▼▼
+                case "shield":
+                    AudioManager.playSound('skillBoost');
+                    racers.player.hasShield = true; // 賦予玩家護盾狀態
+                    eventMsg.innerText = `🛡️ 【技能發動】獲得護盾！免疫下一次答錯熄火或退後！`;
+                    break;
+                case "gold_rush":
+                    AudioManager.playSound('skillBoost');
+                    playerGold += pData.skillValue; // 直接增加金幣
+                    updateGoldDisplay();            // 即時更新頂部 UI
+                    eventMsg.innerText = `💰 【技能發動】淘金成功！立即獲得 ${pData.skillValue} 金幣！`;
+                    break;
+                // ▲▲▲ 步驟 1 新增結束 ▲▲▲
+			}
         }
     }
 
@@ -918,6 +1034,18 @@
         playerGold += goldReward;
         localStorage.setItem('mathRacerGold', playerGold);
 
+		// ▼▼▼ 步驟 3 新增：遊戲結束時儲存學習數據 ▼▼▼
+        if (learningStats.length > 0) {
+            // 讀取歷史數據，若無則為空陣列
+            let pastStats = JSON.parse(localStorage.getItem('mathRacerLearningStats')) || [];
+            // 將本次遊戲的數據與歷史數據合併
+            pastStats = pastStats.concat(learningStats);
+            // 存回瀏覽器
+            localStorage.setItem('mathRacerLearningStats', JSON.stringify(pastStats));
+            console.log("📊 本次學習數據已儲存至 LocalStorage:", learningStats);
+        }
+        // ▲▲▲ 步驟 3 新增結束 ▲▲▲
+		
         document.getElementById('message').innerText = "比賽結束！"; 
         document.getElementById('question-area').innerText = "🏆 頒獎典禮 🏆";
         
