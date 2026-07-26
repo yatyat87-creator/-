@@ -549,7 +549,7 @@ opponents: [
         startRace(); 
     }
 
-    function startRace() {
+function startRace() {
         document.getElementById('level-display').innerText = `回合：${currentLevel} / ${maxLevels}`;
         document.getElementById('score-display').innerText = `目前總分: ${scores.player}`;
         document.getElementById('streak-display').innerText = `🔥 連勝: 0`;
@@ -559,7 +559,7 @@ opponents: [
 
         let shuffledOpponents = [...GAME_DATA.opponents].sort(() => 0.5 - Math.random());
         
-		// ▼▼▼ 替換這裡的對手生成邏輯 ▼▼▼
+        // ▼▼▼ 正確的對手生成邏輯 ▼▼▼
         ["ai1", "ai2", "ai3"].forEach((aiKey, index) => {
             let oppData = shuffledOpponents[index % shuffledOpponents.length];
             racers[aiKey].name = oppData.name;
@@ -580,9 +580,9 @@ opponents: [
             }
             document.getElementById(`${aiKey}-name`).innerText = racers[aiKey].name;
             document.getElementById(`${aiKey}-name`).classList.remove('boss-lane');
-        });
+        }); // <--- forEach 迴圈在此正確結束
 
-        // ▼▼▼ 替換這裡的 Boss 生成邏輯 ▼▼▼
+        // ▼▼▼ 正確的 Boss 生成邏輯 ▼▼▼
         if (currentLevel === maxLevels) {
             let bossData = GAME_DATA.bosses[Math.floor(Math.random() * GAME_DATA.bosses.length)];
             
@@ -603,54 +603,17 @@ opponents: [
             racers.ai3.name = bossData.name;
             document.getElementById('ai3-name').innerText = `🔥 ${bossData.name} 🔥`;
             document.getElementById('ai3-name').classList.add('boss-lane');
-        });
-
-        // ▼▼▼ 替換這裡的 Boss 生成邏輯 ▼▼▼
-        if (currentLevel === maxLevels) {
-            let bossData = GAME_DATA.bosses[Math.floor(Math.random() * GAME_DATA.bosses.length)];
-            
-            // 1. 先重置基礎 Class 設定為 Boss 狀態
-            racers.ai3.element.className = 'character boss-driving';
-            
-            if (bossData.img !== "") {
-                racers.ai3.element.style.backgroundImage = `url('${bossData.img}')`;
-                racers.ai3.emoji.innerText = "";
-                // 2. 判定是否為精靈圖並加入專屬 Class
-                if (bossData.isSprite) {
-                    racers.ai3.element.classList.add('sprite-mode');
-                }
-            } else {
-                racers.ai3.element.style.backgroundImage = "none";
-                racers.ai3.emoji.innerText = bossData.emoji;
-            }
-            racers.ai3.name = bossData.name;
-            document.getElementById('ai3-name').innerText = `🔥 ${bossData.name} 🔥`;
-            document.getElementById('ai3-name').classList.add('boss-lane');
-        });
-
-        if (currentLevel === maxLevels) {
-            let bossData = GAME_DATA.bosses[Math.floor(Math.random() * GAME_DATA.bosses.length)];
-            if (bossData.img !== "") {
-                racers.ai3.element.style.backgroundImage = `url('${bossData.img}')`;
-                racers.ai3.emoji.innerText = "";
-            } else {
-                racers.ai3.element.style.backgroundImage = "none";
-                racers.ai3.emoji.innerText = bossData.emoji;
-            }
-            racers.ai3.name = bossData.name;
-            document.getElementById('ai3-name').innerText = `🔥 ${bossData.name} 🔥`;
-            document.getElementById('ai3-name').classList.add('boss-lane');
-            racers.ai3.element.className = 'character boss-driving';
-        }
+        } // <--- if 判斷式在此正確結束
 
         for (let key in racers) {
             racers[key].step = 0; racers[key].stalled = false; racers[key].finished = false;
-				racers[key].element.classList.remove('finished'); // 新增這行：移除衝線狀態
-				if(key === 'player') {
+            racers[key].element.classList.remove('finished'); // 移除衝線狀態
+            if(key === 'player') {
                 racers[key].element.classList.add('driving');
                 racers[key].element.classList.remove('stopped');
             }
         }
+        
         updatePositions(); gameActive = true; generateQuestion();
         
         scheduleAIMove('ai1'); scheduleAIMove('ai2'); scheduleAIMove('ai3');
@@ -658,7 +621,6 @@ opponents: [
         eventInterval = setInterval(triggerRandomEvent, 7000);
         speechInterval = setInterval(updateSpeechBubbles, 3500);
     }
-
 	function scheduleAIMove(aiName) {
         if (!gameActive || racers[aiName].finished) return;
         
