@@ -429,16 +429,15 @@ opponents: [
 			let avatarHtml = "";
             if (charData.img) {
                 if (charData.isSprite) {
-                    // 精靈圖特製：因為頭像框是 60x60，4x4 精靈圖要放大 4 倍變成 240x240，並對齊左上角第一格
-                    avatarHtml = `<div class="img-avatar" style="background-image: url('${charData.img}'); background-size: 240px 240px; background-position: 0px -240px; background-repeat: no-repeat;"></div>`;
+                    // 精靈圖特製：放大 4 倍 (240x240)，並將 Y 軸上移 180px 來精準顯示第 4 列的「停止(Idle)」狀態，加上 !important 強制覆蓋
+                    avatarHtml = `<div class="img-avatar" style="background-image: url('${charData.img}'); background-size: 240px 240px !important; background-position: 0px -180px !important; background-repeat: no-repeat !important;"></div>`;
                 } else {
                     // 一般圖片維持原本的 contain 設定
                     avatarHtml = `<div class="img-avatar" style="background-image: url('${charData.img}')"></div>`;
                 }
             } else {
                 avatarHtml = `<div class="avatar">${charData.emoji}</div>`;
-            }
-			
+            }			
             card.innerHTML = `
                 ${avatarHtml}
                 <div class="name">${charData.name}</div>
