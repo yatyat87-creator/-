@@ -58,7 +58,51 @@
         .boss-driving { animation: bossDriveEngine 0.15s infinite alternate; filter: drop-shadow(0 0 8px red); }
         @keyframes bossDriveEngine { from { transform: translateY(0px) scale(1.1); } to { transform: translateY(-4px) scale(1.1); } }
         .stopped { animation: none !important; filter: grayscale(80%) drop-shadow(0 0 5px red); transform: scale(0.9); }
-
+		
+		/* =========================================
+		   精靈圖 (Sprite Sheet) 專用動畫設定 
+		   ========================================= */
+		.character.sprite-mode {
+		    background-size: 320px 320px !important; /* 4x4 網格，每格 80px */
+		    background-position-x: 0px !important;
+		    border-radius: 0;
+		    box-shadow: none !important;
+		    filter: none !important; /* 移除預設的濾鏡效果 */
+		}
+		
+		/* 第 1 列：停止 (Idle) - 只有 1 幀 */
+		.character.sprite-mode.idle, 
+		.character.sprite-mode:not(.driving):not(.stopped):not(.finished) {
+		    background-position-y: -240px !important;
+		    animation: none !important;
+		}
+		
+		/* 第 2 列：行駛 (Driving) - 4 幀動畫 */
+		.character.sprite-mode.driving,
+		.character.sprite-mode.boss-driving {
+		    background-position-y: 0px !important;
+		    animation: sprite-play 0.5s steps(4) infinite !important;
+		}
+		
+		/* 第 3 列：拋錨 (Stalled) - 4 幀動畫 */
+		.character.sprite-mode.stopped {
+		    background-position-y: -80px !important;
+		    animation: sprite-play 0.8s steps(4) infinite !important;
+		    transform: scale(1) !important; /* 取消預設的縮小效果 */
+		}
+		
+		/* 第 4 列：勝利衝線 (Finished) - 4 幀動畫 */
+		.character.sprite-mode.finished {
+		    background-position-y: -160px !important;
+		    animation: sprite-play 0.6s steps(4) infinite !important;
+		}
+		
+		/* 精靈圖 X 軸橫移核心動畫 */
+		@keyframes sprite-play {
+		    from { background-position-x: 0px; }
+		    to { background-position-x: -320px; } /* 移動 4 格的寬度 */
+		}
+		
         .speech-bubble { position: absolute; top: -25px; left: 10px; background-color: white; color: black; font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 8px; white-space: nowrap; display: none; z-index: 10; border: 2px solid #3498db; box-shadow: 0px 2px 5px rgba(0,0,0,0.3); line-height: 1.2; }
         .speech-bubble::after { content: ''; position: absolute; bottom: -5px; left: 10px; border-width: 5px 5px 0; border-style: solid; border-color: white transparent transparent transparent; }
         
@@ -279,17 +323,20 @@
                 skillDesc: "連對 3 條推 2 步", streakReq: 3, skillType: "boost", skillValue: 2, 
                 price: 0, purchasable: false, unlockCondition: "乘法 (普通難度 + 隨機數字) 取得第一名解鎖" 
             },
-            "storm": { 
-                name: "暴風積克", emoji: "🏎️💨", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Jackson storm.png", 
+
+			"storm": { 
+                name: "暴風積克", emoji: "🏎️💨", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/賽車Sprite.png", // 換成精靈圖檔名
+			    isSprite: true, // 新增這行：告訴系統這是精靈圖
                 skillDesc: "連對 2 條對手停 2 秒", streakReq: 2, skillType: "stun_all", skillValue: 2000, 
                 price: 0, purchasable: false, unlockCondition: "除法 (普通難度 + 隨機數字) 取得第一名解鎖" 
             },
-            "mcmissile": { 
+
+			"mcmissile": { 
                 name: "「王者」理奇·培恩", emoji: "🚁", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/The Kings.png", 
                 skillDesc: "無視突發退後懲罰", streakReq: 999, skillType: "immune_backwards", skillValue: 0, 
                 price: 20000, purchasable: true, unlockCondition: "花費 20000 金幣" 
             },
-// ▼▼▼ 在這裡接續新增四個困難難度解鎖角色 ▼▼▼
+			// ▼▼▼ 在這裡接續新增四個困難難度解鎖角色 ▼▼▼
             "Doc Hudson": { 
                 name: "藍天博士", emoji: "🎨", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Doc_Hudson-removebg-preview.png", 
                 skillDesc: "連對 4 條推 2 步", streakReq: 4, skillType: "boost", skillValue: 2, 
@@ -459,10 +506,20 @@ opponents: [
         document.getElementById('player-name').innerText = pData.name;
         racers.player.name = pData.name; 
 
-        if (pData.img && pData.img !== "") {
-            racers.player.element.style.backgroundImage = `url('${pData.img}')`;
-            racers.player.emoji.innerText = "";
-        } else {
+		if (pData.img && pData.img !== "") {
+		    racers.player.element.style.backgroundImage = `url('${pData.img}')`;
+		    racers.player.emoji.innerText = "";
+		    // 判定是否套用精靈圖模式
+		    if (pData.isSprite) {
+		        racers.player.element.classList.add('sprite-mode');
+		    } else {
+		        racers.player.element.classList.remove('sprite-mode');
+		    }
+		} else {
+		    racers.player.element.style.backgroundImage = "none";
+		    racers.player.emoji.innerText = pData.emoji;
+		    racers.player.element.classList.remove('sprite-mode');
+		} else {
             racers.player.element.style.backgroundImage = "none";
             racers.player.emoji.innerText = pData.emoji;
         }
@@ -491,10 +548,15 @@ opponents: [
         ["ai1", "ai2", "ai3"].forEach((aiKey, index) => {
             let oppData = shuffledOpponents[index % shuffledOpponents.length];
             racers[aiKey].name = oppData.name;
-            if (oppData.img) {
-                racers[aiKey].element.style.backgroundImage = `url('${oppData.img}')`;
-                racers[aiKey].emoji.innerText = "";
-            } else {
+			if (oppData.img) {
+			    racers[aiKey].element.style.backgroundImage = `url('${oppData.img}')`;
+			    racers[aiKey].emoji.innerText = "";
+			    if (oppData.isSprite) {
+			        racers[aiKey].element.classList.add('sprite-mode');
+			    } else {
+			        racers[aiKey].element.classList.remove('sprite-mode');
+			    }
+			} else {
                 racers[aiKey].element.style.backgroundImage = "none";
                 racers[aiKey].emoji.innerText = oppData.emoji;
             }
@@ -520,7 +582,8 @@ opponents: [
 
         for (let key in racers) {
             racers[key].step = 0; racers[key].stalled = false; racers[key].finished = false;
-            if(key === 'player') {
+				racers[key].element.classList.remove('finished'); // 新增這行：移除衝線狀態
+				if(key === 'player') {
                 racers[key].element.classList.add('driving');
                 racers[key].element.classList.remove('stopped');
             }
@@ -955,6 +1018,11 @@ opponents: [
             if (racers[key].step >= totalSteps && !racers[key].finished) {
                 racers[key].finished = true;
                 finishOrder.push(key);
+
+				// ▼▼▼ 新增這兩行：讓角色切換到勝利動畫並移除行駛狀態 ▼▼▼
+			    racers[key].element.classList.remove('driving', 'boss-driving');
+			    racers[key].element.classList.add('finished');
+			    // ▲▲▲ 新增結束 ▲▲▲
                 
                 // 1) 單獨車輛衝線音效
                 AudioManager.playSound('finish');
