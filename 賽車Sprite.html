@@ -993,11 +993,12 @@ function startRace() {
         }
     }
 
-    function updatePositions() {
+	function updatePositions() {
         let isMobile = window.innerWidth <= 768;
         let pStep = racers.player.step;
 
         if (!isMobile) {
+            // 電腦版保持原本的絕對位置邏輯
             for (let key in racers) { 
                 let percentage = (racers[key].step / totalSteps) * 85; 
                 racers[key].element.style.left = percentage + "%"; 
@@ -1006,16 +1007,14 @@ function startRace() {
             document.querySelector('.finish-line').style.left = 'auto';
             document.querySelector('.finish-line').style.right = '15px';
         } else {
-			// ▼▼▼ 修改這裡：動態計算玩家鏡頭基準位置 ▼▼▼
-            let playerBasePos = 15; // 頭段 (0-5步)：預設靠左，觀察前方
-            
-            if (pStep >= 6 && pStep <= 15) {
-                playerBasePos = 45; // 中段 (6-15步)：置中，兼顧前後
-            } else if (pStep > 15) {
-                playerBasePos = 75; // 尾段 (16步以上)：靠右，觀察後方未衝線對手
-            }
+            // ▼▼▼ 修改這裡：按比例平滑移動鏡頭基準位置 ▼▼▼
+            // 公式解說：
+            // 起點 (pStep = 0) -> 15 + 0 = 15% (靠左)
+            // 中點 (pStep = 10) -> 15 + (10/20)*60 = 45% (置中)
+            // 終點 (pStep = 20) -> 15 + 60 = 75% (靠右)
+            let playerBasePos = 15 + (pStep / totalSteps) * 60;
             // ▲▲▲ 修改結束 ▲▲▲
-			
+
             let stepWidth = 12;
 
             for (let key in racers) {
@@ -1026,13 +1025,13 @@ function startRace() {
                 
                 element.classList.remove('offscreen-ahead', 'offscreen-behind');
 
-                if (targetPos > 75) {
-                    element.style.left = "80%";
+                if (targetPos > 85) { 
+                    element.style.left = "85%";
                     element.classList.add('offscreen-ahead');
                     bubble.innerText = `${racers[key].name} ⏩`;
                     bubble.style.display = "block";
-                } else if (targetPos < -5) {
-                    element.style.left = "0%";
+                } else if (targetPos < 0) { 
+                    element.style.left = "-5%";
                     element.classList.add('offscreen-behind');
                     bubble.innerText = `⏪ ${racers[key].name}`;
                     bubble.style.display = "block";
@@ -1055,7 +1054,7 @@ function startRace() {
             }
         }
     }
-
+	
     function checkWinCondition() {
         if (!gameActive) return;
 
