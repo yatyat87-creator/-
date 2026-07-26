@@ -397,8 +397,9 @@
                 price: 0, purchasable: false, unlockCondition: "乘法 (困難難度 + 隨機數字) 取得第一名解鎖" 
             },
             "Pompompurin": { 
-                name: "布丁狗", emoji: "⛽", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Pompompurin.png", 
-                skillDesc: "連對 5 條領先者退 1 步", streakReq: 5, skillType: "pull_back_leader", skillValue: 1, 
+                name: "布丁狗", emoji: "⛽", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Pompompurin (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 5 條領先者退 1 步", streakReq: 5, skillType: "pull_back_leader", skillValue: 1, 
                 price: 0, purchasable: false, unlockCondition: "加法 (簡單難度 + 隨機數字) 取得第一名解鎖" 
             },
             "Cinnamoroll": { 
@@ -445,7 +446,7 @@ opponents: [
     };
 
     let playerGold = parseInt(localStorage.getItem('mathRacerGold')) || 100;
-    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen", "Pikachu"];
+    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen", "Pompompurin"];
     let selectedCharId = "mcqueen";
 
     window.onload = function() {
@@ -594,7 +595,19 @@ function startRace() {
         
         playerStreak = 0; finishOrder = [];
 
-        let shuffledOpponents = [...GAME_DATA.opponents].sort(() => 0.5 - Math.random());
+        // 取得玩家目前使用的角色資料
+        let pData = GAME_DATA.characters[selectedCharId];
+
+        // ▼▼▼ 1. 修改對手抽籤池：過濾掉和玩家相同的角色 ▼▼▼
+        let availableOpponents = GAME_DATA.opponents.filter(opp => 
+            opp.name !== pData.name && opp.img !== pData.img
+        );
+        // 防呆機制：如果過濾後對手少於 3 個（通常不會發生），就恢復原狀避免報錯
+        if (availableOpponents.length < 3) {
+            availableOpponents = [...GAME_DATA.opponents];
+        }
+        let shuffledOpponents = availableOpponents.sort(() => 0.5 - Math.random());
+        // ▲▲▲ 修改結束 ▲▲▲
         
         // ▼▼▼ 正確的對手生成邏輯 ▼▼▼
         ["ai1", "ai2", "ai3"].forEach((aiKey, index) => {
@@ -617,11 +630,20 @@ function startRace() {
             }
             document.getElementById(`${aiKey}-name`).innerText = racers[aiKey].name;
             document.getElementById(`${aiKey}-name`).classList.remove('boss-lane');
-        }); // <--- forEach 迴圈在此正確結束
+        });
 
-        // ▼▼▼ 正確的 Boss 生成邏輯 ▼▼▼
+        // ▼▼▼ 2. 修改 Boss 生成邏輯：過濾掉和玩家相同的 Boss ▼▼▼
         if (currentLevel === maxLevels) {
-            let bossData = GAME_DATA.bosses[Math.floor(Math.random() * GAME_DATA.bosses.length)];
+            // 過濾掉和玩家同圖片或同名字的 Boss
+            let availableBosses = GAME_DATA.bosses.filter(boss => 
+                boss.name !== pData.name && boss.img !== pData.img
+            );
+            // 防呆機制：如果運氣太好，所有 Boss 都跟玩家一樣被濾光了，就退回使用全部 Boss
+            if (availableBosses.length === 0) {
+                availableBosses = [...GAME_DATA.bosses];
+            }
+            
+            let bossData = availableBosses[Math.floor(Math.random() * availableBosses.length)];
             
             // 1. 先重置基礎 Class 設定為 Boss 狀態
             racers.ai3.element.className = 'character boss-driving';
@@ -640,11 +662,12 @@ function startRace() {
             racers.ai3.name = bossData.name;
             document.getElementById('ai3-name').innerText = `🔥 ${bossData.name} 🔥`;
             document.getElementById('ai3-name').classList.add('boss-lane');
-        } // <--- if 判斷式在此正確結束
+        }
 
+        // 下面的 for (let key in racers) 重置狀態邏輯保持不變...
         for (let key in racers) {
             racers[key].step = 0; racers[key].stalled = false; racers[key].finished = false;
-            racers[key].element.classList.remove('finished'); // 移除衝線狀態
+            racers[key].element.classList.remove('finished'); 
             if(key === 'player') {
                 racers[key].element.classList.add('driving');
                 racers[key].element.classList.remove('stopped');
