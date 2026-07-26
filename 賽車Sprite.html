@@ -325,7 +325,8 @@
                 price: 0, purchasable: false, unlockCondition: "減法 (普通難度 + 隨機數字) 取得第一名解鎖" 
             },
             "black_mcqueen": { 
-                name: "閃電麥坤(黑色)", emoji: "🏎️✨", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Black_Mcqueen-removebg-preview.png", 
+                name: "閃電麥坤(黑色)", emoji: "🏎️✨", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Black Mcqueen (S).png", 
+			    isSprite: true, // 新增這行：告訴系統這是精靈圖
                 skillDesc: "連對 3 條推 2 步", streakReq: 3, skillType: "boost", skillValue: 2, 
                 price: 0, purchasable: false, unlockCondition: "乘法 (普通難度 + 隨機數字) 取得第一名解鎖" 
             },
@@ -407,7 +408,7 @@ opponents: [
     };
 
     let playerGold = parseInt(localStorage.getItem('mathRacerGold')) || 100;
-    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen", "sally"];
+    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen", ""black_mcqueen""];
     let selectedCharId = "mcqueen";
 
     window.onload = function() {
