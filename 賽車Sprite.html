@@ -338,9 +338,10 @@
                 price: 0, purchasable: false, unlockCondition: "除法 (普通難度 + 隨機數字) 取得第一名解鎖" 
             },
 
-			"mcmissile": { 
-                name: "「王者」理奇·培恩", emoji: "🚁", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/The Kings.png", 
-                skillDesc: "無視突發退後懲罰", streakReq: 999, skillType: "immune_backwards", skillValue: 0, 
+			"King": { 
+                name: "「王者」理奇·培恩", emoji: "🚁", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/The kings (S).png", 
+			    isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "無視突發退後懲罰", streakReq: 999, skillType: "immune_backwards", skillValue: 0, 
                 price: 20000, purchasable: true, unlockCondition: "花費 20000 金幣" 
             },
 			// ▼▼▼ 在這裡接續新增四個困難難度解鎖角色 ▼▼▼
@@ -408,7 +409,7 @@ opponents: [
     };
 
     let playerGold = parseInt(localStorage.getItem('mathRacerGold')) || 100;
-    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen", "black_mcqueen"];
+    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen", "King"];
     let selectedCharId = "mcqueen";
 
     window.onload = function() {
