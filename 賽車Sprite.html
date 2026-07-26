@@ -423,8 +423,9 @@
                 price: 12000, purchasable: true, unlockCondition: "花費 12000 金幣" 
             },
             "Messi": { 
-                name: "美斯", emoji: "⛽", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Messi.png", 
-                skillDesc: "連對 3 條淘金(+10金幣)", streakReq: 3, skillType: "gold_rush", skillValue: 10, 
+                name: "美斯", emoji: "⛽", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Messi (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 3 條淘金(+10金幣)", streakReq: 3, skillType: "gold_rush", skillValue: 10, 
                 price: 15000, purchasable: true, unlockCondition: "花費 15000 金幣" 
             }
             // ▲▲▲ 步驟 1 新增結束 ▲▲▲
@@ -440,7 +441,8 @@ opponents: [
 				{ name: "暴風傑森", emoji: "👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Jackson Storm (S).png", isSprite: true, speedMultiplier: 0.65, skillType: "stun_player", skillChance: 0.25 },
 				{ name: "弗朗西斯科·貝魯力", emoji: "", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Francesco (S).png", isSprite: true, speedMultiplier: 0.65, skillType: "stun_player", skillChance: 0.25 },
 			    { name: "閃電麥坤(黑色)", emoji: "🏎️👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Black Mcqueen (S).png", isSprite: true, speedMultiplier: 0.65, skillType: "boost", skillChance: 0.3 },
-			    { name: "路霸", emoji: "🏎️👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Chick Hick (S).png", isSprite: true, speedMultiplier: 0.65, skillType: "boost", skillChance: 0.3 }
+			    { name: "路霸", emoji: "🏎️👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Chick Hick (S).png", isSprite: true, speedMultiplier: 0.65, skillType: "boost", skillChance: 0.3 },
+				{ name: "美斯", emoji: "", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Messi (S).png", isSprite: true, speedMultiplier: 0.65, skillType: "boost", skillChance: 0.3 }
 			],
 		dialogues: {
             lead: ["太慢啦！", "吃我的沙吧！", "我是無敵的！", "看不到我的車尾燈！"],
