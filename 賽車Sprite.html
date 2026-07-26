@@ -430,7 +430,7 @@ opponents: [
             if (charData.img) {
                 if (charData.isSprite) {
                     // 精靈圖特製：因為頭像框是 60x60，4x4 精靈圖要放大 4 倍變成 240x240，並對齊左上角第一格
-                    avatarHtml = `<div class="img-avatar" style="background-image: url('${charData.img}'); background-size: 240px 240px; background-position: 0px 0px; background-repeat: no-repeat;"></div>`;
+                    avatarHtml = `<div class="img-avatar" style="background-image: url('${charData.img}'); background-size: 240px 240px; background-position: 0px -240px; background-repeat: no-repeat;"></div>`;
                 } else {
                     // 一般圖片維持原本的 contain 設定
                     avatarHtml = `<div class="img-avatar" style="background-image: url('${charData.img}')"></div>`;
