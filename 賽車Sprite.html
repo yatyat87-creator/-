@@ -403,8 +403,9 @@
                 price: 0, purchasable: false, unlockCondition: "加法 (簡單難度 + 隨機數字) 取得第一名解鎖" 
             },
             "Cinnamoroll": { 
-                name: "玉桂狗", emoji: "🛞", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Cinnamoroll.png", 
-                skillDesc: "連對 5 條對手停 1 秒", streakReq: 5, skillType: "stun_all", skillValue: 1000, 
+                name: "玉桂狗", emoji: "🛞", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Cinnamoroll (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 5 條對手停 1 秒", streakReq: 5, skillType: "stun_all", skillValue: 1000, 
                 price: 0, purchasable: false, unlockCondition: "減法 (簡單難度 + 隨機數字) 取得第一名解鎖" 
             },
 
@@ -415,8 +416,9 @@
             },
             // ▼▼▼ 步驟 1 新增：擴充護盾與淘金角色 ▼▼▼
             "Francesco": { 
-                name: "弗朗西斯科·貝魯力", emoji: "🚒", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Francesco.png", 
-                skillDesc: "連對 3 條獲得護盾", streakReq: 3, skillType: "shield", skillValue: 0, 
+                name: "弗朗西斯科·貝魯力", emoji: "🚒", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Francesco (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 3 條獲得護盾", streakReq: 3, skillType: "shield", skillValue: 0, 
                 price: 12000, purchasable: true, unlockCondition: "花費 12000 金幣" 
             },
             "Messi": { 
@@ -435,6 +437,7 @@ opponents: [
         ],
         bosses: [
 				{ name: "暴風傑森", emoji: "👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Jackson Storm (S).png", isSprite: true, speedMultiplier: 0.65, skillType: "stun_player", skillChance: 0.25 },
+				{ name: "弗朗西斯科·貝魯力", emoji: "", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Francesco (S).png", isSprite: true, speedMultiplier: 0.65, skillType: "stun_player", skillChance: 0.25 },
 			    { name: "閃電麥坤(黑色)", emoji: "🏎️👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Black Mcqueen (S).png", isSprite: true, speedMultiplier: 0.65, skillType: "boost", skillChance: 0.3 }
 			],
 		dialogues: {
@@ -446,7 +449,7 @@ opponents: [
     };
 
     let playerGold = parseInt(localStorage.getItem('mathRacerGold')) || 100;
-    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen", "Pompompurin"];
+    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen", "Cinnamoroll", "Francesco"];
     let selectedCharId = "mcqueen";
 
     window.onload = function() {
