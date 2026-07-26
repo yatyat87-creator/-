@@ -379,8 +379,9 @@
             },
 			// ▼▼▼ 在這裡接續新增四個困難難度解鎖角色 ▼▼▼
             "Doc Hudson": { 
-                name: "藍天博士", emoji: "🎨", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Doc_Hudson-removebg-preview.png", 
-                skillDesc: "連對 4 條推 2 步", streakReq: 4, skillType: "boost", skillValue: 2, 
+                name: "藍天博士", emoji: "🎨", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Doc Hudson (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 4 條推 2 步", streakReq: 4, skillType: "boost", skillValue: 2, 
                 price: 0, purchasable: false, unlockCondition: "加法 (困難難度 + 隨機數字) 取得第一名解鎖" 
             },
             "Chick Hicks": { 
@@ -442,7 +443,7 @@ opponents: [
     };
 
     let playerGold = parseInt(localStorage.getItem('mathRacerGold')) || 100;
-    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen", "King"];
+    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen", "Doc Hudson"];
     let selectedCharId = "mcqueen";
 
     window.onload = function() {
