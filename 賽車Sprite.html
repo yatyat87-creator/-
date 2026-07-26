@@ -72,7 +72,7 @@
 		
 		/* 第 1 列：停止 (Idle) - 只有 1 幀 */
 		.character.sprite-mode.idle, 
-		.character.sprite-mode:not(.driving):not(.stopped):not(.finished) {
+		.character.sprite-mode:not(.driving):not(.boss-driving):not(.stopped):not(.finished) {
 		    background-position-y: -240px !important;
 		    animation: none !important;
 		}
@@ -865,7 +865,17 @@ function startRace() {
 
     function checkAnswer(selected) {
         if (!gameActive || racers.player.finished) return;
-        let msgElement = document.getElementById('message');
+
+		// ▼▼▼ 修正 Bug：新增檢查玩家是否中了技能 (停駛狀態) ▼▼▼
+        if (racers.player.stalled) {
+            let msgElement = document.getElementById('message');
+            msgElement.style.color = "#ff4757";
+            msgElement.innerText = "💥 車輛被干擾停駛中，暫時無法作答！";
+            return; // 終止這段程式碼，不讓玩家前進，也不清除選項
+        }
+        // ▲▲▲ 修正 Bug 結束 ▲▲▲
+		
+		let msgElement = document.getElementById('message');
         document.getElementById('options-container').innerHTML = ""; 
 
 		// ▼▼▼ 步驟 3 新增：計算作答時間與記錄數據 ▼▼▼
