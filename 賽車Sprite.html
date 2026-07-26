@@ -519,10 +519,7 @@ opponents: [
 		    racers.player.element.style.backgroundImage = "none";
 		    racers.player.emoji.innerText = pData.emoji;
 		    racers.player.element.classList.remove('sprite-mode');
-		} else {
-            racers.player.element.style.backgroundImage = "none";
-            racers.player.emoji.innerText = pData.emoji;
-        }
+		} 
 
 		let diffNames = { super_easy: "🟢 超簡單", easy: "🟢 簡單", normal: "🟡 普通", hard: "🔴 困難" };
         document.getElementById('diff-display').innerText = `難度：${diffNames[difficultySetting]}`;
