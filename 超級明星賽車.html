@@ -55,21 +55,26 @@
 		    overflow: hidden; /* 👈 【關鍵】這會切齊邊界，讓整體看起來像你原本原圖那樣乾淨 */
 		}
 		
+		/* 頂部和底部的共用設定 */
 		#bg-top, #bg-bottom {
 		    width: 100%;
 		    background-repeat: no-repeat !important;
-		    background-size: 150% auto !important; /* 電腦版適度放大保留平移空間 */
 		    transition: background-position 0.4s ease-out;
 		}
-		#bg-top { background-position: 0% top; }
+		
+		/* 電腦版 (預設視覺比例) */
+		#bg-top { 
+		    background-size: 100% auto !important; 
+		    background-position-y: 20% !important; /* 👈 微調顯示天空與山脈 */
+		}
 		#bg-bottom { 
-		    background-position: 0% bottom; 
+		    background-size: 100% auto !important; 
+		    background-position-y: 100% !important; /* 👈 顯示最底部的泥地 */
 		    position: relative;
 		    z-index: 10;
 		    margin-top: -30px; 
 		    pointer-events: none;
-		}
-		
+		}		
 		/* 賽道 */
 		.track-container {
 		    width: 100%;
@@ -157,28 +162,30 @@
         #event-message { font-size: 18px; font-weight: bold; color: #e67e22; height: 25px; margin-bottom: 5px;}
         #leaderboard { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 16px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; flex-wrap: wrap; gap: 10px; }
 
-	/* 📱 移動端專屬響應式 (直立螢幕 Portrait) */
-	@media (max-width: 900px) and (orientation: portrait) {
-	    #bg-top { 
-	        height: 140px !important; 
-	        background-size: 300% auto !important; /* 👈 強制寬度放大 3 倍，消除縮圖，確保能橫移 */
-	    }
-	    #bg-bottom { 
-	        height: 50px !important; 
-	        margin-top: -20px !important; 
-	        background-size: 300% auto !important; 
-	    }
-	    .track-container { padding: 15px 0 10px 0; }
-	    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
-	    
-	    /* 隱藏越界車輛與泡泡 */
-	    .character.offscreen-ahead, .character.offscreen-behind { background-image: none !important; box-shadow: none !important; filter: none !important; }
-	    .character.offscreen-ahead .char-emoji, .character.offscreen-behind .char-emoji { display: none !important; }
-	    .character.offscreen-ahead .speech-bubble { display: block !important; top: 25px; left: -40px; background-color: #e74c3c; color: white; border-color: #c0392b; z-index: 100; }
-	    .character.offscreen-behind .speech-bubble { display: block !important; top: 25px; left: 30px; background-color: #95a5a6; color: white; border-color: #7f8c8d; z-index: 100; }
-	    .character.offscreen-ahead .speech-bubble::after, .character.offscreen-behind .speech-bubble::after { display: none; }
-	}
-	
+		/* 📱 移動端專屬響應式 (直立螢幕 Portrait) */
+		@media (max-width: 900px) and (orientation: portrait) {
+		    #bg-top { 
+		        height: 140px !important; 
+		        background-size: 200% auto !important; /* 縮小到 2 倍，不會過度起格 */
+		        background-position-y: 35% !important; /* 👈 將視角往下壓，完美露出山脈 */
+		    }
+		    #bg-bottom { 
+		        height: 50px !important; 
+		        margin-top: -20px !important; 
+		        background-size: 200% auto !important; 
+		        background-position-y: 100% !important; 
+		    }
+		    .track-container { padding: 15px 0 10px 0; }
+		    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
+		    
+		    /* 隱藏越界車輛與泡泡 */
+		    .character.offscreen-ahead, .character.offscreen-behind { background-image: none !important; box-shadow: none !important; filter: none !important; }
+		    .character.offscreen-ahead .char-emoji, .character.offscreen-behind .char-emoji { display: none !important; }
+		    .character.offscreen-ahead .speech-bubble { display: block !important; top: 25px; left: -40px; background-color: #e74c3c; color: white; border-color: #c0392b; z-index: 100; }
+		    .character.offscreen-behind .speech-bubble { display: block !important; top: 25px; left: 30px; background-color: #95a5a6; color: white; border-color: #7f8c8d; z-index: 100; }
+		    .character.offscreen-ahead .speech-bubble::after, .character.offscreen-behind .speech-bubble::after { display: none; }
+		}
+		
 	/* 📱 手機橫向螢幕 (Landscape) */
 	@media (max-height: 500px) and (orientation: landscape) {
 	    body { padding: 5px; }
@@ -202,15 +209,17 @@
 	        zoom: 0.65; 
 	    }
 	    
-	    #bg-top { 
-	        height: 90px !important; 
-	        background-size: 250% auto !important; /* 👈 橫向螢幕同樣放大消除縮圖 */
-	    }
-	    #bg-bottom { 
-	        height: 35px !important; 
-	        margin-top: -15px !important; 
-	        background-size: 250% auto !important; 
-	    }
+	#bg-top { 
+        height: 90px !important; 
+        background-size: 120% auto !important; /* 👈 橫屏本身已夠寬，放大 1.2 倍就足夠平移了 */
+        background-position-y: 25% !important; /* 👈 橫屏視角微調 */
+    }
+    #bg-bottom { 
+        height: 35px !important; 
+        margin-top: -15px !important; 
+        background-size: 120% auto !important; 
+        background-position-y: 100% !important;
+    }
 	    
 	    .track-container { padding: 10px 0 5px 0; }
 	    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
@@ -1201,15 +1210,19 @@ function startRace() {
     }
 
 function updatePositions() {
-    // 👈 只有在「手機」且「直立」的情況下，才啟動鏡頭平移模式
-    let isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
+    let isMobile = window.innerWidth <= 950; 
     let pStep = racers.player.step;
 
-    if (!isMobilePortrait) {
-        // ▼▼▼ 電腦版與手機「橫向」螢幕 (固定視角，無平移) ▼▼▼
-        document.getElementById('bg-top').style.backgroundPosition = `center top`;
-        document.getElementById('bg-bottom').style.backgroundPosition = `center bottom`;
+    // 計算 0% 到 100% 的進度
+    let bgPercent = Math.min(100, Math.max(0, (pStep / totalSteps) * 100));
 
+    // ▼▼▼ 關鍵修改：只改變 X 軸，不碰 Y 軸 ▼▼▼
+    document.getElementById('bg-top').style.backgroundPositionX = `${bgPercent}%`;
+    document.getElementById('bg-bottom').style.backgroundPositionX = `${bgPercent}%`;
+    // ▲▲▲ 修改結束 ▲▲▲
+
+    if (!isMobile) {
+        // 電腦版絕對位置邏輯
         for (let key in racers) { 
             let percentage = (racers[key].step / totalSteps) * 85; 
             racers[key].element.style.left = percentage + "%"; 
@@ -1218,11 +1231,7 @@ function updatePositions() {
         document.querySelector('.finish-line').style.left = 'auto';
         document.querySelector('.finish-line').style.right = '15px';
     } else {
-        // ▼▼▼ 手機「直立」螢幕 (啟用進度平移) ▼▼▼
-        let bgPercent = Math.min(100, Math.max(0, (pStep / totalSteps) * 100));
-        document.getElementById('bg-top').style.backgroundPosition = `${bgPercent}% top`;
-        document.getElementById('bg-bottom').style.backgroundPosition = `${bgPercent}% bottom`;
-        
+        // 手機版 (直立與橫向) 鏡頭跟隨邏輯
         let playerBasePos = 15 + (pStep / totalSteps) * 60;
         let stepWidth = 12;
 
