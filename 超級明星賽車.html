@@ -235,6 +235,50 @@
 	    .option-btn { font-size: 20px; padding: 10px; }
 	    #message { grid-column: 2 / 3; grid-row: 5; margin-top: 5px; font-size: 16px; height: 25px; }
 	}
+	/* ▼▼▼ 步驟 2 新增：學習成效報告 UI 樣式 ▼▼▼ */
+        .report-btn { background: #8e44ad; color: white; border: 2px solid #9b59b6; padding: 5px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.3s; margin-right: 10px; }
+        .report-btn:hover { background: #9b59b6; }
+        .top-buttons { display: flex; align-items: center; }
+
+        /* 模態框 (Modal) 遮罩層 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        
+        /* 模態框主體 */
+        .modal-content { background: #2c3e50; padding: 25px; border-radius: 15px; width: 90%; max-width: 800px; max-height: 85vh; display: flex; flex-direction: column; border: 4px solid #f1c40f; box-shadow: 0 10px 30px rgba(241,196,15,0.4); color: white; position: relative; }
+        .modal-content h2 { margin-top: 0; color: #f1c40f; text-align: center; font-size: 28px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        
+        /* 統計摘要區塊 */
+        .report-summary { display: flex; justify-content: space-around; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; font-size: 18px; flex-wrap: wrap; gap: 10px; }
+        
+        /* 表格容器 (帶捲動條) */
+        .table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 20px; border-radius: 8px; border: 1px solid #7f8c8d; background: #34495e; }
+        
+        /* 表格樣式 */
+        #report-table { width: 100%; border-collapse: collapse; text-align: center; }
+        #report-table th, #report-table td { padding: 12px 8px; border-bottom: 1px solid #7f8c8d; }
+        #report-table th { background: #2980b9; position: sticky; top: 0; z-index: 1; font-size: 16px; color: #fff; text-shadow: 1px 1px 2px #000; }
+        #report-table tbody tr:nth-child(even) { background: rgba(0,0,0,0.15); }
+        #report-table tbody tr:hover { background: rgba(52, 152, 219, 0.4); }
+        
+        .correct-text { color: #2ecc71; font-weight: bold; }
+        .wrong-text { color: #e74c3c; font-weight: bold; }
+
+        /* 底部按鈕區 */
+        .modal-actions { display: flex; justify-content: space-between; }
+        .btn-close { background: #7f8c8d; color: white; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.2s; }
+        .btn-close:hover { background: #95a5a6; transform: translateY(-2px); }
+        .btn-clear { background: #e74c3c; color: white; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.2s; }
+        .btn-clear:hover { background: #c0392b; transform: translateY(-2px); }
+
+        /* 手機版響應式 */
+        @media (max-width: 600px) {
+            .report-summary { flex-direction: column; align-items: center; font-size: 16px; }
+            #report-table th, #report-table td { padding: 8px 4px; font-size: 13px; }
+            .modal-content { padding: 15px; }
+            .modal-content h2 { font-size: 22px; }
+            .btn-close, .btn-clear { font-size: 15px; padding: 10px 15px; }
+        }
+        /* ▲▲▲ 步驟 2 新增結束 ▲▲▲ */	
     </style>
 </head>
 <body>
@@ -243,8 +287,13 @@
     <!-- 頂部資訊列：金幣與音效開關 -->
     <div class="top-bar">
         <div class="gold-display">💰 金幣: <span id="gold-count">0</span></div>
-        <button id="audio-toggle" class="audio-btn" onclick="AudioManager.toggleMute()">🔊 音效: 開</button>
-    </div>
+		<!-- ▼▼▼ 步驟 2 修改：加入報表按鈕 ▼▼▼ -->
+        <div class="top-buttons">
+            <button id="report-btn" class="report-btn" onclick="showReport()">📊 學習報告</button>
+            <button id="audio-toggle" class="audio-btn" onclick="AudioManager.toggleMute()">🔊 音效: 開</button>
+        </div>
+        <!-- ▲▲▲ 步驟 2 修改結束 ▲▲▲ -->
+	</div>
 
     <div id="setup-screen">
         <h2>🏎️ 活塞盃：數學大賽 </h2>
@@ -310,7 +359,7 @@
         </div>
         <div id="event-message"></div>
         
-<!-- ▼▼▼ 修改這裡：新增場景包裝器與前後景區塊 ▼▼▼ -->
+		<!-- ▼▼▼ 修改這裡：新增場景包裝器與前後景區塊 ▼▼▼ -->
        <!-- 遊戲畫面主要容器 -->
 		<div id="game-board">
 		    <!-- 頂部風景 (Top Background) -->
@@ -330,6 +379,38 @@
         <div class="options-grid" id="options-container"></div>
         <div id="message"></div>
     </div>
+<!-- ▼▼▼ 步驟 2 新增：學習成效報告 Modal 視窗 ▼▼▼ -->
+    <div id="report-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>📊 學習成效總結報告</h2>
+            <div id="report-summary" class="report-summary">
+                <!-- 數據摘要由 JS 動態生成 -->
+            </div>
+            <div class="table-container">
+                <table id="report-table">
+                    <thead>
+                        <tr>
+                            <th>時間</th>
+                            <th>題目</th>
+                            <th>你的答案</th>
+                            <th>正確答案</th>
+                            <th>結果</th>
+                            <th>作答時間</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-tbody">
+                        <!-- 表格資料由 JS 動態生成 -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-clear" onclick="clearReportData()">🗑️ 清除紀錄</button>
+                <button class="btn-close" onclick="hideReport()">返回遊戲大廳</button>
+            </div>
+        </div>
+    </div>
+    <!-- ▲▲▲ 步驟 2 新增結束 ▲▲▲ -->
+
 </div>
 
 <script>
@@ -1405,6 +1486,81 @@ function checkWinCondition() {
     }
 
     window.addEventListener('resize', () => { if(gameActive) updatePositions(); });
+// ▼▼▼ 步驟 2 新增：學習成效報告功能函數 ▼▼▼
+    function showReport() {
+        AudioManager.playSound('click');
+        const modal = document.getElementById('report-modal');
+        const tbody = document.getElementById('report-tbody');
+        const summary = document.getElementById('report-summary');
+        
+        // 讀取 localStorage 內的學習數據 (由步驟 3 儲存的 mathRacerLearningStats)
+        let stats = JSON.parse(localStorage.getItem('mathRacerLearningStats')) || [];
+        
+        // 計算統計數據
+        let total = stats.length;
+        let correctCount = stats.filter(s => s.isCorrect).length;
+        let accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+        
+        // 計算平均作答時間
+        let totalSeconds = 0;
+        stats.forEach(s => {
+            // 從 "1.23秒" 提取數字
+            totalSeconds += parseFloat(s.timeElapsed.replace('秒', ''));
+        });
+        let avgTime = total > 0 ? (totalSeconds / total).toFixed(2) : 0;
+        
+        // 渲染摘要區塊
+        summary.innerHTML = `
+            <div>📝 總答題數: <span style="color:#f1c40f">${total}</span> 題</div>
+            <div>✅ 答對題數: <span style="color:#2ecc71">${correctCount}</span> 題</div>
+            <div>🎯 正確率: <span style="color:${accuracy >= 80 ? '#2ecc71' : (accuracy >= 60 ? '#f1c40f' : '#e74c3c')}">${accuracy}%</span></div>
+            <div>⏱️ 平均耗時: <span style="color:#3498db">${avgTime}</span> 秒</div>
+        `;
+        
+        // 渲染表格 (將陣列反轉，最新的紀錄在最上面)
+        tbody.innerHTML = '';
+        if (total === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; font-size: 18px; color: #bdc3c7;">目前還沒有學習紀錄喔！趕快發動引擎去跑一場吧！</td></tr>';
+        } else {
+            let reversedStats = [...stats].reverse();
+            reversedStats.forEach(stat => {
+                let isRight = stat.isCorrect;
+                // 若沒有時間紀錄則給予預設值 (防呆)
+                let timeStr = stat.timestamp ? stat.timestamp.split(' ')[1] || stat.timestamp : '-'; 
+                
+                let rowHtml = `
+                    <tr>
+                        <td style="font-size: 12px; color: #bdc3c7;">${timeStr}</td>
+                        <td style="font-size: 18px;">${stat.question}</td>
+                        <td class="${isRight ? 'correct-text' : 'wrong-text'}">${stat.userAnswer}</td>
+                        <td style="color:#f1c40f;">${stat.correctAnswer}</td>
+                        <td style="font-size: 20px;">${isRight ? '✔️' : '❌'}</td>
+                        <td style="color: #3498db;">${stat.timeElapsed}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += rowHtml;
+            });
+        }
+        
+        // 顯示 Modal
+        modal.style.display = 'flex';
+    }
+
+    function hideReport() {
+        AudioManager.playSound('click');
+        document.getElementById('report-modal').style.display = 'none';
+    }
+
+    function clearReportData() {
+        AudioManager.playSound('click');
+        if (confirm('⚠️ 警告：確定要清除所有的學習紀錄嗎？這個動作無法復原喔！')) {
+            localStorage.removeItem('mathRacerLearningStats');
+            // 由於剛剛把數據刪了，重新呼叫一次 showReport() 來刷新畫面為空
+            showReport(); 
+            alert('🗑️ 學習紀錄已全部清除！');
+        }
+    }
+    // ▲▲▲ 步驟 2 新增結束 ▲▲▲
 </script>
 </body>
 </html>
