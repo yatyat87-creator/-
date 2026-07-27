@@ -46,23 +46,37 @@
         /* 遊戲畫面樣式 */
         #play-screen { display: none; }
 		
-		/* ▼▼▼ 補回這兩段不小心刪除的 CSS ▼▼▼ */
+		/* ▼▼▼ 修改這裡：新的場景佈局 CSS ▼▼▼ */
+        #race-scene-wrapper {
+            background-size: cover;
+            background-position: center bottom; /* 讓圖片重心靠下，馬路比較不容易跑位 */
+            border-radius: 10px;
+            position: relative;
+            margin-bottom: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column; /* 垂直排列：後景 -> 車道 -> 前景 */
+        }
+        
+        #scenery-top { width: 100%; transition: height 0.3s; }
+        #scenery-bottom { width: 100%; transition: height 0.3s; }
+
         .track-container { 
-            background-color: #333; 
-            border-radius: 10px; 
-            padding: 0; /* 高度交給 JS 控制 */
+            background-color: transparent; /* 改為透明，透出 wrapper 的底圖 */
+            padding: 0; 
             position: relative; 
-            margin-bottom: 20px; 
-            overflow: hidden; 
+            width: 100%;
         }
 
         .lane { 
-            position: relative; /* 👈 最關鍵的一行！把車子鎖在車道內 */
-            height: 90px;       /* 給予車道高度，讓車子有空間顯示 */
+            position: relative; 
+            height: 75px; /* 稍微縮小一點車道高度，讓 4 條車道能貼合圖片中的馬路寬度 */
             display: flex; 
             align-items: center;
+            background-color: rgba(0, 0, 0, 0.15); /* 微微的黑底，讓車子更清楚 */
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.2); /* 微弱的分界線 */
         }
-        /* ▲▲▲ 補回結束 ▲▲▲ */
+        /* ▲▲▲ 修改結束 ▲▲▲ */
 		
         .lane:last-child { border-bottom: none; }
         .lane-name { position: absolute; left: 10px; top: 25px; color: #fff; font-weight: bold; opacity: 0.6; z-index: 1; font-size: 14px; text-shadow: 1px 1px 0 #000; }
@@ -252,14 +266,22 @@
         </div>
         <div id="event-message"></div>
         
-        <div class="track-container">
-            <div class="finish-line"></div>
-            <div class="lane"><div class="lane-name" id="player-name">YOU</div><div id="player" class="character stopped"><span class="char-emoji">🏎️</span><div class="speech-bubble" id="bubble-player"></div></div></div>
-            <div class="lane"><div class="lane-name" id="ai1-name">對手 1</div><div id="ai1" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai1"></div></div></div>
-            <div class="lane"><div class="lane-name" id="ai2-name">對手 2</div><div id="ai2" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai2"></div></div></div>
-            <div class="lane"><div class="lane-name" id="ai3-name">對手 3</div><div id="ai3" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai3"></div></div></div>
-        </div>
+<!-- ▼▼▼ 修改這裡：新增場景包裝器與前後景區塊 ▼▼▼ -->
+        <div id="race-scene-wrapper">
+            <div id="scenery-top"></div> <!-- 後景 (天空、遠山) -->
+            
+            <div class="track-container">
+                <div class="finish-line"></div>
+                <div class="lane"><div class="lane-name" id="player-name">YOU</div><div id="player" class="character stopped"><span class="char-emoji">🏎️</span><div class="speech-bubble" id="bubble-player"></div></div></div>
+                <div class="lane"><div class="lane-name" id="ai1-name">對手 1</div><div id="ai1" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai1"></div></div></div>
+                <div class="lane"><div class="lane-name" id="ai2-name">對手 2</div><div id="ai2" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai2"></div></div></div>
+                <div class="lane"><div class="lane-name" id="ai3-name">對手 3</div><div id="ai3" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai3"></div></div></div>
+            </div>
 
+            <div id="scenery-bottom"></div> <!-- 前景 (馬路邊緣下方) -->
+        </div>
+        <!-- ▲▲▲ 修改結束 ▲▲▲ -->
+		
         <div id="question-area">準備中...</div>
         <div class="options-grid" id="options-container"></div>
         <div id="message"></div>
@@ -357,32 +379,33 @@
     // =====================================================================
     // 🎮 遊戲核心資料庫 (GAME_DATA)
     // =====================================================================
-const GAME_DATA = {
-    chapters: {
-        "chapter1": { 
-            name: "州際公路", 
-            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", 
-            border: "4px solid #7f8c8d",
-            skyHeight: "25%",    /* 👈 新增：上方天空與遠山佔的比例 (可依實際圖片微調) */
-            groundHeight: "2%"   /* 👈 新增：下方前景地面佔的比例 */
-        },
-        "chapter2": { 
-            name: "黑夜山道", 
-            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg2.png')", 
-            border: "4px solid #34495e",
-            skyHeight: "30%",    /* 👈 假設這張圖的馬路比較低，就把上方空間推多一點 */
-            groundHeight: "5%"
-        },
-        "chapter3": { 
-            name: "活塞盃競技場", 
-            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg3.png')", 
-            border: "4px solid #f1c40f",
-            skyHeight: "20%",
-            groundHeight: "8%"
-        }
-    },
-        // ▲▲▲ 步驟 1 修改結束 ▲▲▲
-		characters: {
+	// ▼▼▼ 修改這裡：更新 GAME_DATA 加入 topHeight 與 bottomHeight ▼▼▼
+	const GAME_DATA = {
+	    chapters: {
+	        "chapter1": { 
+	            name: "州際公路", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", 
+	            border: "4px solid #7f8c8d",
+	            topHeight: "220px",    /* 👈 後景(天空/遠山)的高度 (可根據實際圖片微調 px) */
+	            bottomHeight: "30px"   /* 👈 前景(馬路下方)的高度 (可根據實際圖片微調 px) */
+	        },
+	        "chapter2": { 
+	            name: "黑夜山道", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg2.png')", 
+	            border: "4px solid #34495e",
+	            topHeight: "250px",
+	            bottomHeight: "40px"
+	        },
+	        "chapter3": { 
+	            name: "活塞盃競技場", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg3.png')", 
+	            border: "4px solid #f1c40f",
+	            topHeight: "200px",
+	            bottomHeight: "50px"
+	        }
+	    },
+		// ▲▲▲ 修改結束 ▲▲▲
+	characters: {
             "mcqueen": { 
                 name: "閃電麥坤", emoji: "🏎️", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Mcqueen (S).png", 
 			    isSprite: true, // 新增這行：告訴系統這是精靈圖
@@ -614,23 +637,19 @@ opponents: [
         currentOperation = document.getElementById('operation-mode').value; 
         difficultySetting = document.getElementById('difficulty').value;
 
-		// ▼▼▼ 步驟 1 修改：讀取章節並套用背景圖片 ▼▼▼
+		// ▼▼▼ 修改這裡：讀取章節並套用到新的 wrapper 與前後景 ▼▼▼
         let selectedChapter = document.getElementById('chapter-select').value;
         let chapterData = GAME_DATA.chapters[selectedChapter];
-        let trackContainer = document.querySelector('.track-container');
         
-        // 套用背景圖片與邊框
-        trackContainer.style.backgroundImage = chapterData.bgImage;
-        trackContainer.style.backgroundSize = "cover"; // 讓圖片填滿容器
-        trackContainer.style.backgroundPosition = "center bottom"; // 讓重心對齊下方道路
-        trackContainer.style.border = chapterData.border;
-
-		// ▼▼▼ 新增這兩行：動態注入前景與後景的 padding 高度 ▼▼▼
-	    trackContainer.style.paddingTop = chapterData.skyHeight;
-	    trackContainer.style.paddingBottom = chapterData.groundHeight;
-	    // ▲▲▲ 新增結束 ▲▲▲
-		
-        // 確保賽道車道稍微透明，以免完全遮擋中後景
+        let sceneWrapper = document.getElementById('race-scene-wrapper');
+        sceneWrapper.style.backgroundImage = chapterData.bgImage;
+        sceneWrapper.style.border = chapterData.border;
+        
+        // 動態注入前景與後景的高度 (利用這兩個空間把 track-container 剛好推到馬路上)
+        document.getElementById('scenery-top').style.height = chapterData.topHeight;
+        document.getElementById('scenery-bottom').style.height = chapterData.bottomHeight;
+        // ▲▲▲ 修改結束 ▲▲▲		
+        
         let lanes = document.querySelectorAll('.lane');
         lanes.forEach(lane => {
             lane.style.backgroundColor = "rgba(0, 0, 0, 0.4)"; // 添加黑色半透明底，讓角色清晰同時透出背景
