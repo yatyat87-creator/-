@@ -45,8 +45,56 @@
 
         /* 遊戲畫面樣式 */
         #play-screen { display: none; }
-        .track-container { background-color: #333; border-radius: 10px; padding: 35px 0 10px 0; position: relative; margin-bottom: 20px; border: 4px solid #7f8c8d; overflow: hidden; }
-        .lane { height: 70px; position: relative; border-bottom: 3px dashed #f1c40f; }
+		
+		/* 讓遊戲容器垂直排列 */
+		#game-board {
+		    display: flex;
+		    flex-direction: column;
+		    width: 100%;
+		    /* 這裡不需要設定背景圖了，背景圖會交給上下兩個 div */
+		}
+		
+		/* 頂部和底部的共用設定 */
+		#bg-top, #bg-bottom {
+		    width: 100%;
+		    /* 讓圖片寬度填滿，高度自動依比例縮放 */
+		    background-size: 100% auto; 
+		    background-repeat: no-repeat;
+		}
+		
+		/* 頂部風景：從圖片最上面往下裁 */
+		#bg-top {
+		    background-position: top center;
+		}
+		
+		/* 底部前景：從圖片最下面往上裁 */
+		#bg-bottom {
+		    background-position: bottom center;
+		    position: relative;
+		    z-index: 10; /* 👈 設定為較高的層級，確保它能蓋住賽道 */
+		    margin-top: -40px; /* 👈 【關鍵】利用負數 margin 把前景往上拉，數值(如 -40px)可依據你的去背圖微調 */
+		    pointer-events: none; /* 確保前景圖層不會阻擋到滑鼠點擊 */
+		}
+		
+		/* 中間賽道 (系統生成的馬路) */
+		.track-container {
+		    width: 100%;
+		    background-color: #2c3e50; 
+		    position: relative;
+		    z-index: 1; /* 👈 設定為較低的層級，讓它乖乖待在後面 */
+		    padding-bottom: 20px; /* 稍微增加底部空間，預留給前景遮擋 */
+		}
+		
+		/* 車道設定 */
+		.lane {
+		    position: relative;
+		    height: 55px; /* 可根據你的需求微調車道高度 */
+		    display: flex;
+		    align-items: center;
+		    /* 這裡可以拿掉背景顏色，因為外層 .track-container 已經是深灰色了 */
+		    border-bottom: 3px dashed #f1c40f; /* 黃色虛線 */
+		}
+		
         .lane:last-child { border-bottom: none; }
         .lane-name { position: absolute; left: 10px; top: 25px; color: #fff; font-weight: bold; opacity: 0.6; z-index: 1; font-size: 14px; text-shadow: 1px 1px 0 #000; }
         .boss-lane { color: #ff4757 !important; opacity: 1 !important; text-shadow: 0 0 5px red; }
@@ -172,7 +220,16 @@
     <div id="setup-screen">
         <h2>🏎️ 活塞盃：數學大賽 </h2>
         <p>進行 3 個回合的積分排名賽！第 3 回合將有強大的 Boss 登場！</p>
-        
+
+		<div class="form-group">
+            <label>選擇賽季 / 章節：</label>
+            <select id="chapter-select" onclick="AudioManager.playSound('click')">
+                <option value="chapter1" selected>🛣️ 第 1 章：州際公路</option>
+                <option value="chapter2">🌙 第 2 章：黑夜山道</option>
+                <option value="chapter3">🏟️ 第 3 章：活塞盃競技場</option>
+            </select>
+        </div>
+		
         <div class="form-group">
             <label>選擇你的賽車手：</label>
             <div id="character-grid" class="char-grid"></div>
@@ -226,14 +283,22 @@
         </div>
         <div id="event-message"></div>
         
-        <div class="track-container">
-            <div class="finish-line"></div>
-            <div class="lane"><div class="lane-name" id="player-name">YOU</div><div id="player" class="character stopped"><span class="char-emoji">🏎️</span><div class="speech-bubble" id="bubble-player"></div></div></div>
-            <div class="lane"><div class="lane-name" id="ai1-name">對手 1</div><div id="ai1" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai1"></div></div></div>
-            <div class="lane"><div class="lane-name" id="ai2-name">對手 2</div><div id="ai2" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai2"></div></div></div>
-            <div class="lane"><div class="lane-name" id="ai3-name">對手 3</div><div id="ai3" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai3"></div></div></div>
-        </div>
-
+<!-- ▼▼▼ 修改這裡：新增場景包裝器與前後景區塊 ▼▼▼ -->
+       <!-- 遊戲畫面主要容器 -->
+		<div id="game-board">
+		    <!-- 頂部風景 (Top Background) -->
+		    <div id="bg-top"></div>
+            
+            <div class="track-container">
+                <div class="finish-line"></div>
+                <div class="lane"><div class="lane-name" id="player-name">YOU</div><div id="player" class="character stopped"><span class="char-emoji">🏎️</span><div class="speech-bubble" id="bubble-player"></div></div></div>
+                <div class="lane"><div class="lane-name" id="ai1-name">對手 1</div><div id="ai1" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai1"></div></div></div>
+                <div class="lane"><div class="lane-name" id="ai2-name">對手 2</div><div id="ai2" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai2"></div></div></div>
+                <div class="lane"><div class="lane-name" id="ai3-name">對手 3</div><div id="ai3" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai3"></div></div></div>
+            </div>
+		<!-- 底部前景 (Bottom Foreground) -->
+		    <div id="bg-bottom"></div>
+		</div>		
         <div id="question-area">準備中...</div>
         <div class="options-grid" id="options-container"></div>
         <div id="message"></div>
@@ -331,8 +396,33 @@
     // =====================================================================
     // 🎮 遊戲核心資料庫 (GAME_DATA)
     // =====================================================================
-    const GAME_DATA = {
-        characters: {
+	// ▼▼▼ 修改這裡：更新 GAME_DATA 加入 topHeight 與 bottomHeight ▼▼▼
+	const GAME_DATA = {
+	    chapters: {
+	        "chapter1": { 
+	            name: "州際公路", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", 
+	            border: "4px solid #7f8c8d",
+	            topHeight: "345px",    /* 👈 後景(天空/遠山)的高度 (可根據實際圖片微調 px) */
+	            bottomHeight: "60px"   /* 👈 前景(馬路下方)的高度 (可根據實際圖片微調 px) */
+	        },
+	        "chapter2": { 
+	            name: "黑夜山道", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg2.png')", 
+	            border: "4px solid #34495e",
+	            topHeight: "250px",
+	            bottomHeight: "40px"
+	        },
+	        "chapter3": { 
+	            name: "活塞盃競技場", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg3.png')", 
+	            border: "4px solid #f1c40f",
+	            topHeight: "200px",
+	            bottomHeight: "50px"
+	        }
+	    },
+		// ▲▲▲ 修改結束 ▲▲▲
+	characters: {
             "mcqueen": { 
                 name: "閃電麥坤", emoji: "🏎️", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Mcqueen (S).png", 
 			    isSprite: true, // 新增這行：告訴系統這是精靈圖
@@ -563,6 +653,33 @@ opponents: [
         currentMultiplierSetting = document.getElementById('multiplier').value;
         currentOperation = document.getElementById('operation-mode').value; 
         difficultySetting = document.getElementById('difficulty').value;
+
+		// ▼▼▼ 修改這裡：讀取章節並套用「三明治」裁切法 ▼▼▼
+        let selectedChapter = document.getElementById('chapter-select').value;
+        let chapterData = GAME_DATA.chapters[selectedChapter];
+        
+        // 【修正】你的 HTML 大外框叫做 'game-board'
+        let sceneWrapper = document.getElementById('game-board');
+        sceneWrapper.style.border = chapterData.border;
+        sceneWrapper.style.backgroundImage = 'none'; 
+        
+        // 1. 【修正】你的頂部風景 HTML 叫做 'bg-top'
+        let sceneryTop = document.getElementById('bg-top');
+        sceneryTop.style.backgroundImage = chapterData.bgImage;
+        sceneryTop.style.height = chapterData.topHeight;
+        
+        // 2. 【修正】你的底部前景 HTML 叫做 'bg-bottom'
+        let sceneryBottom = document.getElementById('bg-bottom');
+        sceneryBottom.style.backgroundImage = chapterData.bgImage;
+        sceneryBottom.style.height = chapterData.bottomHeight;
+        // ▲▲▲ 修改結束 ▲▲▲
+        
+        let lanes = document.querySelectorAll('.lane');
+        lanes.forEach(lane => {
+            lane.style.backgroundColor = "rgba(0, 0, 0, 0.4)"; // 添加黑色半透明底，讓角色清晰同時透出背景
+            lane.style.borderBottom = "3px dashed rgba(241, 196, 15, 0.5)"; // 讓虛線也稍微融入
+        });
+        // ▲▲▲ 步驟 1 修改結束 ▲▲▲		
         
         let pData = GAME_DATA.characters[selectedCharId];
         document.getElementById('player-name').innerText = pData.name;
