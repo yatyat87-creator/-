@@ -65,11 +65,11 @@
 		/* 電腦版 (預設視覺比例) */
 		#bg-top { 
 		    background-size: 100% auto !important; 
-		    background-position-y: bottom !important; /* 👈 改回 bottom，讓地平線完美貼齊賽道上方 */
+		    background-position-y: 0% !important; /* 👈 0% 代表對齊圖片最頂端 (天空與山脈) */
 		}
 		#bg-bottom { 
 		    background-size: 100% auto !important; 
-		    background-position-y: bottom !important; 
+		    background-position-y: 100% !important; /* 👈 100% 代表對齊圖片最底端 (前景泥地) */
 		    position: relative;
 		    z-index: 10;
 		    margin-top: -30px; 
@@ -167,15 +167,15 @@
 		    #bg-top { 
 		        height: 140px !important; 
 		        background-size: 200% auto !important; 
-		        background-position-y: bottom !important; /* 👈 改回 bottom，消除懸空感 */
+		        background-position-y: 40% !important; /* 👈 【關鍵】設為 40%，將鏡頭從純雲層往下壓，完美露出仙人掌與山脈 */
 		    }
 		    #bg-bottom { 
 		        height: 50px !important; 
 		        margin-top: -20px !important; 
 		        background-size: 200% auto !important; 
-		        background-position-y: bottom !important; 
+		        background-position-y: 100% !important; /* 下方維持 100% */
 		    }
-		    .track-container { padding: 15px 0 10px 0; }
+	.track-container { padding: 15px 0 10px 0; }
 		    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
 		    
 		    /* 隱藏越界車輛與泡泡 */
@@ -209,18 +209,17 @@
 	        zoom: 0.65; 
 	    }
 	    
-	#bg-top { 
+#bg-top { 
         height: 90px !important; 
         background-size: 120% auto !important; 
-        background-position-y: bottom !important; /* 👈 改回 bottom，讓橫向也無縫接軌 */
+        background-position-y: 15% !important; /* 👈 橫向只需微調 15%，即可避開頂部邊緣並展示風景 */
     }
     #bg-bottom { 
         height: 35px !important; 
         margin-top: -15px !important; 
         background-size: 120% auto !important; 
-        background-position-y: bottom !important;
-    }
-	    
+        background-position-y: 100% !important;
+    }	    
 	    .track-container { padding: 10px 0 5px 0; }
 	    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
 	    
