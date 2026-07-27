@@ -70,14 +70,19 @@
 		/* 底部前景：從圖片最下面往上裁 */
 		#bg-bottom {
 		    background-position: bottom center;
+		    position: relative;
+		    z-index: 10; /* 👈 設定為較高的層級，確保它能蓋住賽道 */
+		    margin-top: -40px; /* 👈 【關鍵】利用負數 margin 把前景往上拉，數值(如 -40px)可依據你的去背圖微調 */
+		    pointer-events: none; /* 確保前景圖層不會阻擋到滑鼠點擊 */
 		}
 		
 		/* 中間賽道 (系統生成的馬路) */
 		.track-container {
 		    width: 100%;
-		    background-color: #2c3e50; /* 👈 這是深灰色的實色馬路！完全遮蔽原圖 */
+		    background-color: #2c3e50; 
 		    position: relative;
-		    /* 不用再設定絕對定位 (absolute) 了，因為它是三明治的中間層 */
+		    z-index: 1; /* 👈 設定為較低的層級，讓它乖乖待在後面 */
+		    padding-bottom: 20px; /* 稍微增加底部空間，預留給前景遮擋 */
 		}
 		
 		/* 車道設定 */
