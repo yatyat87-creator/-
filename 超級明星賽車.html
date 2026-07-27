@@ -383,7 +383,18 @@
     <div id="report-modal" class="modal-overlay">
         <div class="modal-content">
             <h2>📊 學習成效總結報告</h2>
-            <div id="report-summary" class="report-summary">
+
+			<!-- 👇 新增：章節篩選器 -->
+            <div style="text-align: center; margin-bottom: 15px;">
+                <label for="report-filter" style="color: #bdc3c7; font-size: 16px; margin-right: 10px;">篩選紀錄：</label>
+                <select id="report-filter" onchange="renderReportData()" style="width: auto; display: inline-block; padding: 5px 10px; font-size: 16px; background: #34495e; color: #f1c40f; border: 1px solid #7f8c8d; border-radius: 5px;">
+                    <option value="all">📊 全部紀錄</option>
+                    <!-- 其他選項會由 JavaScript 動態生成 -->
+                </select>
+            </div>
+            <!-- 👆 新增結束 -->
+			
+			<div id="report-summary" class="report-summary">
                 <!-- 數據摘要由 JS 動態生成 -->
             </div>
             <div class="table-container">
@@ -391,6 +402,7 @@
                     <thead>
                         <tr>
                             <th>時間</th>
+							<th>模式</th> <!-- 👈 新增這個表頭 -->
                             <th>題目</th>
                             <th>你的答案</th>
                             <th>正確答案</th>
@@ -1366,7 +1378,16 @@ function generateQuestion() {
 		// ▼▼▼ 步驟 3 新增：計算作答時間與記錄數據 ▼▼▼
         let timeSpent = (Date.now() - questionStartTime) / 1000; // 計算毫秒差並轉為秒
         let isCorrect = (selected === currentAnswer);
-        learningStats.push({
+        
+		// 抓取目前的章節
+        let currentChapterName = document.getElementById('chapter-select').options[document.getElementById('chapter-select').selectedIndex].text;
+
+		// 👇 新增：抓取目前的「運算模式」名稱
+        let currentOpName = document.getElementById('operation-mode').options[document.getElementById('operation-mode').selectedIndex].text;
+		
+		learningStats.push({
+			chapter: currentChapterName,  // 👈 新增這行：把章節名稱存起來
+			operationMode: currentOpName, // 👈 新增這行：把運算模式存起來
             question: currentQuestionText,
             userAnswer: selected,
             correctAnswer: currentAnswer,
@@ -1682,51 +1703,97 @@ function checkWinCondition() {
 
     window.addEventListener('resize', () => { if(gameActive) updatePositions(); });
 // ▼▼▼ 步驟 2 新增：學習成效報告功能函數 ▼▼▼
-    function showReport() {
+function showReport() {
         AudioManager.playSound('click');
         const modal = document.getElementById('report-modal');
+        modal.style.display = 'flex';
+        
+        let stats = JSON.parse(localStorage.getItem('mathRacerLearningStats')) || [];
+        let filterSelect = document.getElementById('report-filter');
+        
+        // 保留 "all" 選項，清空其他
+        filterSelect.innerHTML = '<option value="all">📊 全部紀錄</option>';
+        
+        // 自動找出所有存在過的章節 (過濾掉舊版沒有存到章節的數據)
+        let uniqueChapters = [...new Set(stats.map(s => s.chapter).filter(c => c))];
+        uniqueChapters.forEach(chap => {
+            let option = document.createElement('option');
+            option.value = chap;
+            option.innerText = chap;
+            filterSelect.appendChild(option);
+        });
+        
+        // 渲染數據
+        renderReportData(); 
+    }
+
+    // 根據篩選器動態渲染數據的核心函數
+    function renderReportData() {
         const tbody = document.getElementById('report-tbody');
         const summary = document.getElementById('report-summary');
         
-        // 讀取 localStorage 內的學習數據 (由步驟 3 儲存的 mathRacerLearningStats)
-        let stats = JSON.parse(localStorage.getItem('mathRacerLearningStats')) || [];
+        let allStats = JSON.parse(localStorage.getItem('mathRacerLearningStats')) || [];
+        let filterValue = document.getElementById('report-filter').value;
+        
+        // 根據下拉選單進行過濾
+        let stats = (filterValue === 'all') ? allStats : allStats.filter(s => s.chapter === filterValue);
         
         // 計算統計數據
         let total = stats.length;
         let correctCount = stats.filter(s => s.isCorrect).length;
         let accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
         
-        // 計算平均作答時間
         let totalSeconds = 0;
         stats.forEach(s => {
-            // 從 "1.23秒" 提取數字
             totalSeconds += parseFloat(s.timeElapsed.replace('秒', ''));
         });
         let avgTime = total > 0 ? (totalSeconds / total).toFixed(2) : 0;
         
+        // 罩門分析：尋找最常答錯的題目
+        let wrongCounts = {};
+        stats.filter(s => !s.isCorrect).forEach(s => {
+            wrongCounts[s.question] = (wrongCounts[s.question] || 0) + 1;
+        });
+        let mostWrongQ = "無";
+        let maxWrong = 0;
+        for (let q in wrongCounts) {
+            if (wrongCounts[q] > maxWrong) {
+                maxWrong = wrongCounts[q];
+                mostWrongQ = q;
+            }
+        }
+        let weaknessHtml = maxWrong > 0 ? `<span style="color:#e74c3c">${mostWrongQ} (錯 ${maxWrong} 次)</span>` : `<span style="color:#2ecc71">完美！沒有常錯題</span>`;
+        
         // 渲染摘要區塊
         summary.innerHTML = `
-            <div>📝 總答題數: <span style="color:#f1c40f">${total}</span> 題</div>
-            <div>✅ 答對題數: <span style="color:#2ecc71">${correctCount}</span> 題</div>
+            <div>📝 答題數: <span style="color:#f1c40f">${total}</span> 題</div>
+            <div>✅ 答對: <span style="color:#2ecc71">${correctCount}</span> 題</div>
             <div>🎯 正確率: <span style="color:${accuracy >= 80 ? '#2ecc71' : (accuracy >= 60 ? '#f1c40f' : '#e74c3c')}">${accuracy}%</span></div>
             <div>⏱️ 平均耗時: <span style="color:#3498db">${avgTime}</span> 秒</div>
+            <div style="width: 100%; text-align: center; margin-top: 10px; border-top: 1px dashed #7f8c8d; padding-top: 10px;">
+                ⚠️ 罩門分析 (最常答錯): ${weaknessHtml}
+            </div>
         `;
         
         // 渲染表格 (將陣列反轉，最新的紀錄在最上面)
         tbody.innerHTML = '';
         if (total === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; font-size: 18px; color: #bdc3c7;">目前還沒有學習紀錄喔！趕快發動引擎去跑一場吧！</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; font-size: 18px; color: #bdc3c7;">目前這個章節還沒有學習紀錄喔！</td></tr>';
         } else {
             let reversedStats = [...stats].reverse();
             reversedStats.forEach(stat => {
                 let isRight = stat.isCorrect;
-                // 若沒有時間紀錄則給予預設值 (防呆)
-                let timeStr = stat.timestamp ? stat.timestamp.split(' ')[1] || stat.timestamp : '-'; 
+                
+                // 優化時間顯示：將日期與時間拆成兩行
+                let timeParts = stat.timestamp ? stat.timestamp.split(' ') : ['-'];
+                let timeStr = timeParts.length > 1 ? `${timeParts[0]}<br><span style="color:#95a5a6; font-size:10px;">${timeParts[1]}</span>` : stat.timestamp;
                 
                 let rowHtml = `
                     <tr>
                         <td style="font-size: 12px; color: #bdc3c7;">${timeStr}</td>
-                        <td style="font-size: 18px;">${stat.question}</td>
+                        <!-- 👇 新增這行：顯示運算模式 (加上 || '-' 避免舊資料報錯) -->
+                        <td style="font-size: 14px; color: #e67e22;">${stat.operationMode || '-'}</td>
+						<td style="font-size: 18px;">${stat.question}</td>
                         <td class="${isRight ? 'correct-text' : 'wrong-text'}">${stat.userAnswer}</td>
                         <td style="color:#f1c40f;">${stat.correctAnswer}</td>
                         <td style="font-size: 20px;">${isRight ? '✔️' : '❌'}</td>
@@ -1736,11 +1803,8 @@ function checkWinCondition() {
                 tbody.innerHTML += rowHtml;
             });
         }
-        
-        // 顯示 Modal
-        modal.style.display = 'flex';
     }
-
+	
     function hideReport() {
         AudioManager.playSound('click');
         document.getElementById('report-modal').style.display = 'none';
