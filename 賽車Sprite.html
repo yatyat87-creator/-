@@ -195,7 +195,7 @@
             .character.offscreen-ahead .speech-bubble::after, .character.offscreen-behind .speech-bubble::after { display: none; }
         }
 
-        /* 📱 手機橫向螢幕 (Landscape) 專屬佈局：左邊賽道，右邊題目 */
+		/* 📱 手機橫向螢幕 (Landscape) 專屬佈局：左邊賽道，右邊題目 */
         @media (max-height: 500px) and (orientation: landscape) {
             /* ▼ 保留你原本的設定 ▼ */
             body { padding: 5px; }
@@ -205,7 +205,8 @@
             #bg-top { height: 80px !important; }
             #bg-bottom { height: 40px !important; margin-top: -15px !important; }
             .track-container { min-height: 150px; } /* 確保賽道在橫置時不會被壓扁 */
-        }
+            
+            /* ⚠️ 注意：移除了這裡原本提早關閉的 } ⚠️ */
             
             /* 將遊戲畫面切換為左右雙欄 (Grid) */
             /* 注意：使用 !important 是為了覆蓋 JavaScript 寫入的 display: block */
@@ -234,8 +235,8 @@
             .options-grid { grid-column: 2 / 3; grid-row: 4; gap: 8px; }
             .option-btn { font-size: 20px; padding: 10px; }
             #message { grid-column: 2 / 3; grid-row: 5; margin-top: 5px; font-size: 16px; height: 25px; }
-        }
-    </style>
+        } /* 👈 這是整個 @media 真正的結尾括號 */
+	</style>
 </head>
 <body>
 
