@@ -46,28 +46,6 @@
         /* 遊戲畫面樣式 */
         #play-screen { display: none; }
 		
-		/* 頂部風景：從圖片最上面往下裁 */
-		#scenery-top {
-		    width: 100%;
-		    background-size: 100% auto; 
-		    background-repeat: no-repeat;
-		    background-position: top center; /* 👈 把天空對齊上面 */
-		}
-		
-		/* 底部前景：從圖片最下面往上裁 */
-		#scenery-bottom {
-		    width: 100%;
-		    background-size: 100% auto; 
-		    background-repeat: no-repeat;
-		    background-position: bottom center; /* 👈 把石頭泥土對齊下面 */
-		}
-		
-		/* 確保大外框垂直排列，這樣上下風景才能把賽道夾在中間 */
-		#race-scene-wrapper {
-		    display: flex;
-		    flex-direction: column;
-		    width: 100%;
-		}
 		/* 讓遊戲容器垂直排列 */
 		#game-board {
 		    display: flex;
@@ -675,22 +653,21 @@ opponents: [
         let selectedChapter = document.getElementById('chapter-select').value;
         let chapterData = GAME_DATA.chapters[selectedChapter];
         
-        // 依然可以保留外框設定
-        let sceneWrapper = document.getElementById('race-scene-wrapper');
+        // 【修正】你的 HTML 大外框叫做 'game-board'
+        let sceneWrapper = document.getElementById('game-board');
         sceneWrapper.style.border = chapterData.border;
-        // 【重要】取消原本設定在大外框的背景圖，因為現在圖片要交給上下兩個區塊
         sceneWrapper.style.backgroundImage = 'none'; 
         
-        // 1. 設定頂部風景：同時套用「背景圖片」與「你設定的高度」
-        let sceneryTop = document.getElementById('scenery-top');
+        // 1. 【修正】你的頂部風景 HTML 叫做 'bg-top'
+        let sceneryTop = document.getElementById('bg-top');
         sceneryTop.style.backgroundImage = chapterData.bgImage;
         sceneryTop.style.height = chapterData.topHeight;
         
-        // 2. 設定底部前景：同時套用「背景圖片」與「你設定的高度」
-        let sceneryBottom = document.getElementById('scenery-bottom');
+        // 2. 【修正】你的底部前景 HTML 叫做 'bg-bottom'
+        let sceneryBottom = document.getElementById('bg-bottom');
         sceneryBottom.style.backgroundImage = chapterData.bgImage;
         sceneryBottom.style.height = chapterData.bottomHeight;
-        // ▲▲▲ 修改結束 ▲▲▲		
+        // ▲▲▲ 修改結束 ▲▲▲
         
         let lanes = document.querySelectorAll('.lane');
         lanes.forEach(lane => {
