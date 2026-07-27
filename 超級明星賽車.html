@@ -45,7 +45,24 @@
 
         /* 遊戲畫面樣式 */
         #play-screen { display: none; }
+		
+		/* ▼▼▼ 補回這兩段不小心刪除的 CSS ▼▼▼ */
+        .track-container { 
+            background-color: #333; 
+            border-radius: 10px; 
+            padding: 0; /* 高度交給 JS 控制 */
+            position: relative; 
+            margin-bottom: 20px; 
+            overflow: hidden; 
+        }
 
+        .lane { 
+            position: relative; /* 👈 最關鍵的一行！把車子鎖在車道內 */
+            height: 90px;       /* 給予車道高度，讓車子有空間顯示 */
+            display: flex; 
+            align-items: center;
+        }
+        /* ▲▲▲ 補回結束 ▲▲▲ */
 		
         .lane:last-child { border-bottom: none; }
         .lane-name { position: absolute; left: 10px; top: 25px; color: #fff; font-weight: bold; opacity: 0.6; z-index: 1; font-size: 14px; text-shadow: 1px 1px 0 #000; }
