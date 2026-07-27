@@ -746,15 +746,17 @@ const QuestionEngine = {
 
 			"Hello Kitty": { 
                 name: "吉蒂貓", emoji: "🚗", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Hello Kitty (S).png", 
-                isSprite: true, // 新增這行：告訴系統這是精靈圖
-				skillDesc: "無視突發退後懲罰", streakReq: 999, skillType: "immune_backwards", skillValue: 0, 
-                price: 0, purchasable: false, unlockCondition: "除法 (簡單難度 + 隨機數字) 取得第一名解鎖" 
+                isSprite: true,
+                skillDesc: "無視突發退後懲罰", streakReq: 999, skillType: "immune_backwards", skillValue: 0, 
+                price: 0, purchasable: false, 
+                unlockCondition: "進位加數 (簡單難度) 取得第一名解鎖"  // <--- 修改這裡
             },
-			"Brown": { 
+            "Brown": { 
                 name: "熊大", emoji: "", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Brown.png", 
-                isSprite: true, // 新增這行：告訴系統這是精靈圖
-				skillDesc: "連對 3 條淘金(+10金幣)", streakReq: 3, skillType: "gold_rush", skillValue: 10, 
-                price: 0, purchasable: false, unlockCondition: "除法 (簡單難度 + 隨機數字) 取得第一名解鎖" 
+                isSprite: true,
+                skillDesc: "連對 3 條淘金(+10金幣)", streakReq: 3, skillType: "gold_rush", skillValue: 10, 
+                price: 0, purchasable: false, 
+                unlockCondition: "退位減數 (簡單難度) 取得第一名解鎖"  // <--- 修改這裡
             },
 
 		// ▼▼▼ 步驟 1 新增：擴充護盾與淘金角色 ▼▼▼
@@ -806,12 +808,17 @@ opponents: [
 	function updateOperationMode() {
 	    const chapter = document.getElementById('chapter-select').value;
 	    const opSelect = document.getElementById('operation-mode');
-	    
+	    // 抓取基準數字選單的外層 div
+	    const multiplierGroup = document.getElementById('multiplier').parentNode; 
+	
 	    // 清空現有選項
 	    opSelect.innerHTML = ''; 
 	
 	    if (chapter === 'chapter2') {
-	        // 當選擇 Chapter 2 時，顯示退位/進位相關選項
+	        // 【新增】當選擇 Chapter 2 時，隱藏基準數字選擇
+	        multiplierGroup.style.display = 'none';
+	
+	        // 顯示退位/進位相關選項
 	        opSelect.innerHTML = `
 	            <option value="2d_mix" selected>🔄 兩位數加減</option>
 	            <option value="add_no_carry">➕ 不進位加數</option>
@@ -822,7 +829,10 @@ opponents: [
 	            <option value="mix_sub">➖ 混合模式減數</option>
 	        `;
 	    } else {
-	        // 預設 (Chapter 1, 3)：恢復為原本的四則運算
+	        // 【新增】預設 (Chapter 1, 3)：顯示基準數字選擇
+	        multiplierGroup.style.display = 'block';
+	
+	        // 恢復為原本的四則運算
 	        opSelect.innerHTML = `
 	            <option value="add" selected>➕ 加法</option>
 	            <option value="sub">➖ 減法</option>
@@ -831,7 +841,7 @@ opponents: [
 	        `;
 	    }
 	}
-	
+		
 	// 確保網頁載入時根據預設選項初始化一次選單
 	document.addEventListener('DOMContentLoaded', updateOperationMode);
 	
@@ -1601,7 +1611,7 @@ function checkWinCondition() {
                 if (currentOperation === 'div' && !unlockedChars.includes('storm')) newlyUnlockedChar = 'storm';
             }
 
-	// ▼▼▼ 新增這一段困難難度解鎖邏輯 ▼▼▼
+			// ▼▼▼ 新增這一段困難難度解鎖邏輯 ▼▼▼
             if (difficultySetting === 'hard' && currentMultiplierSetting === 'random') {
                 if (currentOperation === 'add' && !unlockedChars.includes('Doc Hudson')) newlyUnlockedChar = 'Doc Hudson';
                 if (currentOperation === 'sub' && !unlockedChars.includes('Chick Hicks')) newlyUnlockedChar = 'Chick Hicks';
@@ -1609,12 +1619,17 @@ function checkWinCondition() {
 			}
             // ▲▲▲ 新增這一段困難難度解鎖邏輯 ▲▲▲
 
-	// ▼▼▼ 新增這一段簡單難度解鎖邏輯 ▼▼▼
-            if (difficultySetting === 'easy' && currentMultiplierSetting === 'random') {
-                if (currentOperation === 'add' && !unlockedChars.includes('Pompompurin')) newlyUnlockedChar = 'Pompompurin';
-                if (currentOperation === 'sub' && !unlockedChars.includes('Cinnamoroll')) newlyUnlockedChar = 'Cinnamoroll';
-                if (currentOperation === 'mul' && !unlockedChars.includes('Pikachu')) newlyUnlockedChar = 'Pikachu';
-                if (currentOperation === 'div' && !unlockedChars.includes('Hello Kitty')) newlyUnlockedChar = 'Hello Kitty';
+			// ▼▼▼ 新增這一段簡單難度解鎖邏輯 ▼▼▼
+            if (difficultySetting === 'easy') {
+                // 第一章的四則運算 (需要隨機數字)
+                if (currentMultiplierSetting === 'random') {
+                    if (currentOperation === 'add' && !unlockedChars.includes('Pompompurin')) newlyUnlockedChar = 'Pompompurin';
+                    if (currentOperation === 'sub' && !unlockedChars.includes('Cinnamoroll')) newlyUnlockedChar = 'Cinnamoroll';
+                    if (currentOperation === 'mul' && !unlockedChars.includes('Pikachu')) newlyUnlockedChar = 'Pikachu';
+                }
+                // 第二章的進退位運算 (不需檢查隨機數字)
+                if (currentOperation === 'add_carry' && !unlockedChars.includes('Hello Kitty')) newlyUnlockedChar = 'Hello Kitty';
+                if (currentOperation === 'sub_borrow' && !unlockedChars.includes('Brown')) newlyUnlockedChar = 'Brown';
             }
             // ▲▲▲ 新增這一段簡單難度解鎖邏輯 ▲▲▲
 			
