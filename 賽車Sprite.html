@@ -675,7 +675,10 @@ function startRace() {
         for (let key in racers) {
             racers[key].step = 0; racers[key].stalled = false; racers[key].finished = false;
             racers[key].element.classList.remove('finished'); 
-            if(key === 'player') {
+  			// ▼ 加入移除 'idle'，確保不會卡在靜止畫格
+            racers[key].element.classList.remove('finished', 'idle');
+			
+			if(key === 'player') {
                 racers[key].element.classList.add('driving');
                 racers[key].element.classList.remove('stopped');
             }
@@ -1121,7 +1124,7 @@ function startRace() {
         }
     }
 	
-    function checkWinCondition() {
+function checkWinCondition() {
         if (!gameActive) return;
 
         for (let key in racers) {
@@ -1129,10 +1132,17 @@ function startRace() {
                 racers[key].finished = true;
                 finishOrder.push(key);
 
-				// ▼▼▼ 新增這兩行：讓角色切換到勝利動畫並移除行駛狀態 ▼▼▼
-			    racers[key].element.classList.remove('driving', 'boss-driving');
-			    racers[key].element.classList.add('finished');
-			    // ▲▲▲ 新增結束 ▲▲▲
+                // ▼▼▼ 修改這裡：判斷名次來決定播放哪種精靈圖動畫 ▼▼▼
+                racers[key].element.classList.remove('driving', 'boss-driving');
+                
+                if (finishOrder.length === 1) {
+                    // 如果衝線名單長度是 1，代表他是第一名 -> 播放勝利衝線動畫
+                    racers[key].element.classList.add('finished');
+                } else {
+                    // 其他名次 (2, 3, 4名) -> 套用 idle 待機動畫 (停止狀態)
+                    racers[key].element.classList.add('idle');
+                }
+                // ▲▲▲ 修改結束 ▲▲▲
                 
                 // 1) 單獨車輛衝線音效
                 AudioManager.playSound('finish');
@@ -1149,7 +1159,8 @@ function startRace() {
                 }
             }
         }
-
+        
+        // ... 下面的全體結算邏輯保持不變 ...
         if (finishOrder.length === 4) {
             gameActive = false; clearInterval(eventInterval); clearInterval(speechInterval);
             ["ai1", "ai2", "ai3"].forEach(k => clearTimeout(aiTimers[k]));
