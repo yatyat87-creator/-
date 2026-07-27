@@ -65,11 +65,11 @@
 		/* 電腦版 (預設視覺比例) */
 		#bg-top { 
 		    background-size: 100% auto !important; 
-		    background-position-y: 20% !important; /* 👈 微調顯示天空與山脈 */
+		    background-position-y: bottom !important; /* 👈 改回 bottom，讓地平線完美貼齊賽道上方 */
 		}
 		#bg-bottom { 
 		    background-size: 100% auto !important; 
-		    background-position-y: 100% !important; /* 👈 顯示最底部的泥地 */
+		    background-position-y: bottom !important; 
 		    position: relative;
 		    z-index: 10;
 		    margin-top: -30px; 
@@ -166,14 +166,14 @@
 		@media (max-width: 900px) and (orientation: portrait) {
 		    #bg-top { 
 		        height: 140px !important; 
-		        background-size: 200% auto !important; /* 縮小到 2 倍，不會過度起格 */
-		        background-position-y: 35% !important; /* 👈 將視角往下壓，完美露出山脈 */
+		        background-size: 200% auto !important; 
+		        background-position-y: bottom !important; /* 👈 改回 bottom，消除懸空感 */
 		    }
 		    #bg-bottom { 
 		        height: 50px !important; 
 		        margin-top: -20px !important; 
 		        background-size: 200% auto !important; 
-		        background-position-y: 100% !important; 
+		        background-position-y: bottom !important; 
 		    }
 		    .track-container { padding: 15px 0 10px 0; }
 		    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
@@ -211,14 +211,14 @@
 	    
 	#bg-top { 
         height: 90px !important; 
-        background-size: 120% auto !important; /* 👈 橫屏本身已夠寬，放大 1.2 倍就足夠平移了 */
-        background-position-y: 25% !important; /* 👈 橫屏視角微調 */
+        background-size: 120% auto !important; 
+        background-position-y: bottom !important; /* 👈 改回 bottom，讓橫向也無縫接軌 */
     }
     #bg-bottom { 
         height: 35px !important; 
         margin-top: -15px !important; 
         background-size: 120% auto !important; 
-        background-position-y: 100% !important;
+        background-position-y: bottom !important;
     }
 	    
 	    .track-container { padding: 10px 0 5px 0; }
