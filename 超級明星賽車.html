@@ -45,7 +45,8 @@
 
         /* 遊戲畫面樣式 */
         #play-screen { display: none; }
-.track-container { background-color: #333; border-radius: 10px; padding: 180px 0 10px 0; position: relative; margin-bottom: 20px; border: 4px solid #7f8c8d; overflow: hidden; }        .lane { height: 70px; position: relative; border-bottom: 3px dashed #f1c40f; }
+
+		
         .lane:last-child { border-bottom: none; }
         .lane-name { position: absolute; left: 10px; top: 25px; color: #fff; font-weight: bold; opacity: 0.6; z-index: 1; font-size: 14px; text-shadow: 1px 1px 0 #000; }
         .boss-lane { color: #ff4757 !important; opacity: 1 !important; text-shadow: 0 0 5px red; }
@@ -341,23 +342,30 @@
     // =====================================================================
     const GAME_DATA = {
 		// ▼▼▼ 步驟 1 修改：支援背景圖片 ▼▼▼
-        chapters: {
-            "chapter1": { 
-                name: "州際公路", 
-                bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", 
-                border: "4px solid #7f8c8d" 
-            },
-            "chapter2": { 
-                name: "黑夜山道", 
-                bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg2.png')", 
-                border: "4px solid #34495e" 
-            },
-            "chapter3": { 
-                name: "活塞盃競技場", 
-                bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg3.png')", 
-                border: "4px solid #f1c40f" 
-            }
+const GAME_DATA = {
+    chapters: {
+        "chapter1": { 
+            name: "州際公路", 
+            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", 
+            border: "4px solid #7f8c8d",
+            skyHeight: "25%",    /* 👈 新增：上方天空與遠山佔的比例 (可依實際圖片微調) */
+            groundHeight: "2%"   /* 👈 新增：下方前景地面佔的比例 */
         },
+        "chapter2": { 
+            name: "黑夜山道", 
+            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg2.png')", 
+            border: "4px solid #34495e",
+            skyHeight: "30%",    /* 👈 假設這張圖的馬路比較低，就把上方空間推多一點 */
+            groundHeight: "5%"
+        },
+        "chapter3": { 
+            name: "活塞盃競技場", 
+            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg3.png')", 
+            border: "4px solid #f1c40f",
+            skyHeight: "20%",
+            groundHeight: "8%"
+        }
+    },
         // ▲▲▲ 步驟 1 修改結束 ▲▲▲
 		characters: {
             "mcqueen": { 
@@ -601,7 +609,12 @@ opponents: [
         trackContainer.style.backgroundSize = "cover"; // 讓圖片填滿容器
         trackContainer.style.backgroundPosition = "center bottom"; // 讓重心對齊下方道路
         trackContainer.style.border = chapterData.border;
-        
+
+		// ▼▼▼ 新增這兩行：動態注入前景與後景的 padding 高度 ▼▼▼
+	    trackContainer.style.paddingTop = chapterData.skyHeight;
+	    trackContainer.style.paddingBottom = chapterData.groundHeight;
+	    // ▲▲▲ 新增結束 ▲▲▲
+		
         // 確保賽道車道稍微透明，以免完全遮擋中後景
         let lanes = document.querySelectorAll('.lane');
         lanes.forEach(lane => {
