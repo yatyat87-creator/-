@@ -501,6 +501,89 @@
     };
     AudioManager.init();
 
+// =====================================================================
+// 🧠 題庫引擎系統 (QuestionEngine) - 支援多學科擴充
+// =====================================================================
+const QuestionEngine = {
+    // 當前的學科模式 (未來可在 setup-screen 新增下拉選單來切換)
+    currentSubject: 'math',
+
+    // 🔢 數學題庫模組
+    math: {
+        generate: function(settings) {
+            // 從設定中讀取參數
+            let activeMultiplier = settings.multiplier === 'random' ? Math.floor(Math.random() * 11) + 2 : parseInt(settings.multiplier);
+            let params = settings.diffParams[settings.difficulty];
+            let randomNum = Math.floor(Math.random() * params.maxNum) + 1;
+            
+            let questionText = "";
+            let currentAnswer = 0;
+
+            // 計算正確答案與題目字串
+            if (settings.operation === 'add') { currentAnswer = activeMultiplier + randomNum; questionText = `${activeMultiplier} + ${randomNum} = ?`; } 
+            else if (settings.operation === 'sub') { let total = activeMultiplier + randomNum; currentAnswer = randomNum; questionText = `${total} - ${activeMultiplier} = ?`; } 
+            else if (settings.operation === 'mul') { currentAnswer = activeMultiplier * randomNum; questionText = `${activeMultiplier} × ${randomNum} = ?`; } 
+            else if (settings.operation === 'div') { let product = activeMultiplier * randomNum; currentAnswer = randomNum; questionText = `${product} ÷ ${activeMultiplier} = ?`; }
+
+            // 產生干擾選項
+            let options = [currentAnswer];
+            while (options.length < 4) {
+                let offset = Math.floor(Math.random() * 5) + 1;
+                let fakeAnswer = Math.random() > 0.5 ? currentAnswer + offset : currentAnswer - offset;
+                if (fakeAnswer > 0 && !options.includes(fakeAnswer)) options.push(fakeAnswer);
+            }
+            // 打亂選項順序
+            options.sort(() => Math.random() - 0.5);
+
+            return {
+                questionText: questionText,
+                correctAnswer: currentAnswer,
+                options: options
+            };
+        }
+    },
+
+    // 🔤 英文題庫模組 (未來擴充預留範例)
+    english: {
+        generate: function(settings) {
+            // 這裡可以替換成您未來的 JSON 單字庫
+            const vocab = [
+                { en: "Apple", zh: "蘋果" }, { en: "Banana", zh: "香蕉" },
+                { en: "Car", zh: "車子" }, { en: "Engine", zh: "引擎" }
+            ];
+            
+            // 隨機抽一題
+            let correctItem = vocab[Math.floor(Math.random() * vocab.length)];
+            
+            // 產生干擾選項
+            let options = [correctItem.zh];
+            while (options.length < 4) {
+                let randomItem = vocab[Math.floor(Math.random() * vocab.length)].zh;
+                if (!options.includes(randomItem)) options.push(randomItem);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            return {
+                questionText: `「${correctItem.en}」的中文是？`,
+                correctAnswer: correctItem.zh,
+                options: options
+            };
+        }
+    },
+
+    // 🎯 統一對外呼叫的接口
+    getQuestion: function(settings) {
+        if (this.currentSubject === 'math') {
+            return this.math.generate(settings);
+        } else if (this.currentSubject === 'english') {
+            return this.english.generate(settings);
+        }
+        
+        // 防呆機制
+        return { questionText: "題目載入失敗", correctAnswer: "", options: [] };
+    }
+};
+	
     // =====================================================================
     // 🎮 遊戲核心資料庫 (GAME_DATA)
     // =====================================================================
@@ -1119,45 +1202,38 @@ function startRace() {
         });
     }
 
-    function generateQuestion() {
-        if (!gameActive || racers.player.finished) return;
-        racers.player.element.classList.remove('stopped');
-        racers.player.element.classList.add('driving');
-        document.getElementById('message').innerText = "踩油門作答！";
-        document.getElementById('message').style.color = "#ecf0f1";
+function generateQuestion() {
+    if (!gameActive || racers.player.finished) return;
+    racers.player.element.classList.remove('stopped');
+    racers.player.element.classList.add('driving');
+    document.getElementById('message').innerText = "踩油門作答！";
+    document.getElementById('message').style.color = "#ecf0f1";
 
-        let activeMultiplier = currentMultiplierSetting === 'random' ? Math.floor(Math.random() * 11) + 2 : parseInt(currentMultiplierSetting);
-        let params = diffParams[difficultySetting];
-        let randomNum = Math.floor(Math.random() * params.maxNum) + 1;
-        let questionText = "";
+    // 1. 將當前遊戲設定打包，傳遞給 QuestionEngine
+    const questionData = QuestionEngine.getQuestion({
+        operation: currentOperation,
+        difficulty: difficultySetting,
+        multiplier: currentMultiplierSetting,
+        diffParams: diffParams
+    });
 
-        if (currentOperation === 'add') { currentAnswer = activeMultiplier + randomNum; questionText = `${activeMultiplier} + ${randomNum} = ?`; } 
-        else if (currentOperation === 'sub') { let total = activeMultiplier + randomNum; currentAnswer = randomNum; questionText = `${total} - ${activeMultiplier} = ?`; } 
-        else if (currentOperation === 'mul') { currentAnswer = activeMultiplier * randomNum; questionText = `${activeMultiplier} × ${randomNum} = ?`; } 
-        else if (currentOperation === 'div') { let product = activeMultiplier * randomNum; currentAnswer = randomNum; questionText = `${product} ÷ ${activeMultiplier} = ?`; }
+    // 2. 接收引擎回傳的題目與答案
+    currentAnswer = questionData.correctAnswer;
+    currentQuestionText = questionData.questionText;
+    questionStartTime = Date.now();
 
-        document.getElementById('question-area').innerText = questionText;
+    // 3. 更新 UI
+    document.getElementById('question-area').innerText = currentQuestionText;
 
-		// ▼▼▼ 步驟 3 新增：記錄題目與出題時間 ▼▼▼
-        currentQuestionText = questionText;
-        questionStartTime = Date.now();
-        // ▲▲▲ 步驟 3 新增結束 ▲▲▲
-		
-        let options = [currentAnswer];
-        while (options.length < 4) {
-            let offset = Math.floor(Math.random() * 5) + 1;
-            let fakeAnswer = Math.random() > 0.5 ? currentAnswer + offset : currentAnswer - offset;
-            if (fakeAnswer > 0 && !options.includes(fakeAnswer)) options.push(fakeAnswer);
-        }
-        options.sort(() => Math.random() - 0.5);
-
-        let optionsHtml = '';
-        for (let op of options) {
-            optionsHtml += `<button class="option-btn" onclick="AudioManager.playSound('click'); checkAnswer(${op})">${op}</button>`;
-        }
-        document.getElementById('options-container').innerHTML = optionsHtml;
+    let optionsHtml = '';
+    for (let op of questionData.options) {
+        // 【關鍵修改】：為了相容未來英文等「字串」選項，使用 JSON.stringify(op) 安全地將選項傳入 checkAnswer
+        let safeValue = JSON.stringify(op); 
+        optionsHtml += `<button class="option-btn" onclick='AudioManager.playSound("click"); checkAnswer(${safeValue})'>${op}</button>`;
     }
-
+    document.getElementById('options-container').innerHTML = optionsHtml;
+}
+	
     function checkAnswer(selected) {
         if (!gameActive || racers.player.finished) return;
 
