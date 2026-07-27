@@ -51,7 +51,8 @@
 		    display: flex;
 		    flex-direction: column;
 		    width: 100%;
-		    /* 這裡不需要設定背景圖了，背景圖會交給上下兩個 div */
+		    position: relative;
+		    overflow: hidden; /* 👈 把超出邊界的東西（像飛出去的終點線）裁切掉 */
 		}
 		
 		/* 頂部和底部的共用設定 */
@@ -64,25 +65,33 @@
 		
 		/* 頂部風景：從圖片最上面往下裁 */
 		#bg-top {
-		    background-position: top center;
+		    width: 100%;
+		    background-repeat: no-repeat !important; /* 👈 嚴格禁止圖片重複拼貼 */
+		    background-size: cover !important;       /* 👈 讓圖片自動縮放填滿區塊 */
+		    background-position: bottom center !important; /* 👈 確保底部貼齊賽道邊緣 */
 		}
 		
 		/* 底部前景：從圖片最下面往上裁 */
 		#bg-bottom {
-		    background-position: bottom center;
+		    width: 100%;
+		    background-repeat: no-repeat !important; 
+		    background-size: cover !important;
+		    background-position: top center !important; /* 👈 確保頂部的石頭/草叢貼齊賽道 */
 		    position: relative;
-		    z-index: 10; /* 👈 設定為較高的層級，確保它能蓋住賽道 */
-		    margin-top: -40px; /* 👈 【關鍵】利用負數 margin 把前景往上拉，數值(如 -40px)可依據你的去背圖微調 */
-		    pointer-events: none; /* 確保前景圖層不會阻擋到滑鼠點擊 */
+		    z-index: 10;
+		    margin-top: -40px; /* 根據你的去背圖微調遮擋程度 */
+		    pointer-events: none;
 		}
 		
-		/* 中間賽道 (系統生成的馬路) */
+		/* 中間賽道區塊 */
 		.track-container {
 		    width: 100%;
-		    background-color: #2c3e50; 
-		    position: relative;
-		    z-index: 1; /* 👈 設定為較低的層級，讓它乖乖待在後面 */
-		    padding-bottom: 20px; /* 稍微增加底部空間，預留給前景遮擋 */
+		    flex-grow: 1; /* 👈 讓賽道像彈簧一樣，自動填滿上下風景間的所有空隙 */
+		    background-color: #2c3e50;
+		    position: relative !important; /* 👈 【關鍵】這會讓終點線以賽道為基準點來對齊 */
+		    z-index: 1;
+		    min-height: 250px; /* 確保在手機直立時，賽道不會被擠壓到太扁 */
+		    padding-bottom: 20px;
 		}
 		
 		/* 車道設定 */
@@ -98,7 +107,14 @@
         .lane:last-child { border-bottom: none; }
         .lane-name { position: absolute; left: 10px; top: 25px; color: #fff; font-weight: bold; opacity: 0.6; z-index: 1; font-size: 14px; text-shadow: 1px 1px 0 #000; }
         .boss-lane { color: #ff4757 !important; opacity: 1 !important; text-shadow: 0 0 5px red; }
-        .finish-line { position: absolute; right: 15px; top: 0; bottom: 0; width: 20px; background: repeating-linear-gradient(0deg, #fff, #fff 15px, #000 15px, #000 30px); z-index: 0; box-shadow: -5px 0 10px rgba(0,0,0,0.5); }
+		/* 終點線定位 */
+		.finish-line {
+		    position: absolute;
+		    right: 0px; /* 👈 緊緊貼在賽道最右側 */
+		    top: 0;
+		    height: 100%; /* 👈 高度與賽道一致 */
+		    z-index: 2;
+		}
 
         .character { position: absolute; left: 0; top: -5px; width: 80px; height: 80px; font-size: 40px; line-height: 80px; transition: left 0.4s ease-out; z-index: 2; background-size: contain; background-repeat: no-repeat; background-position: center; }
         .driving { animation: driveEngine 0.2s infinite alternate; }
@@ -163,8 +179,13 @@
         #event-message { font-size: 18px; font-weight: bold; color: #e67e22; height: 25px; margin-bottom: 5px;}
         #leaderboard { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 16px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; flex-wrap: wrap; gap: 10px; }
 
-        /* 📱 移動端專屬響應式 */
+		/* 📱 移動端專屬響應式 */
         @media (max-width: 768px) {
+            /* ▼ 新增：壓縮直立手機時的背景高度 ▼ */
+            #bg-top { height: 180px !important; }
+            #bg-bottom { height: 60px !important; margin-top: -20px !important; }
+            
+            /* ▼ 保留你原本的設定 ▼ */
             .track-container { padding: 20px 0 10px 0; }
             .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
             .character.offscreen-ahead, .character.offscreen-behind { background-image: none !important; box-shadow: none !important; filter: none !important; }
@@ -173,10 +194,18 @@
             .character.offscreen-behind .speech-bubble { display: block !important; top: 25px; left: 30px; background-color: #95a5a6; color: white; border-color: #7f8c8d; z-index: 100; }
             .character.offscreen-ahead .speech-bubble::after, .character.offscreen-behind .speech-bubble::after { display: none; }
         }
-		/* 📱 手機橫向螢幕 (Landscape) 專屬佈局：左邊賽道，右邊題目 */
+
+        /* 📱 手機橫向螢幕 (Landscape) 專屬佈局：左邊賽道，右邊題目 */
         @media (max-height: 500px) and (orientation: landscape) {
+            /* ▼ 保留你原本的設定 ▼ */
             body { padding: 5px; }
             #game-container { padding: 10px; }
+            
+            /* ▼ 新增：橫向螢幕高度極度缺乏，需大幅壓縮天空與前景 ▼ */
+            #bg-top { height: 80px !important; }
+            #bg-bottom { height: 40px !important; margin-top: -15px !important; }
+            .track-container { min-height: 150px; } /* 確保賽道在橫置時不會被壓扁 */
+        }
             
             /* 將遊戲畫面切換為左右雙欄 (Grid) */
             /* 注意：使用 !important 是為了覆蓋 JavaScript 寫入的 display: block */
