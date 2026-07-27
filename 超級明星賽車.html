@@ -384,16 +384,23 @@
         <div class="modal-content">
             <h2>📊 學習成效總結報告</h2>
 
-			<!-- 👇 新增：章節篩選器 -->
-            <div style="text-align: center; margin-bottom: 15px;">
-                <label for="report-filter" style="color: #bdc3c7; font-size: 16px; margin-right: 10px;">篩選紀錄：</label>
-                <select id="report-filter" onchange="renderReportData()" style="width: auto; display: inline-block; padding: 5px 10px; font-size: 16px; background: #34495e; color: #f1c40f; border: 1px solid #7f8c8d; border-radius: 5px;">
-                    <option value="all">📊 全部紀錄</option>
-                    <!-- 其他選項會由 JavaScript 動態生成 -->
+						<!-- 👇 新增：多重篩選器區塊 -->
+            <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                <select id="filter-chapter" onchange="renderReportData()" style="padding: 6px; font-size: 14px; background: #34495e; color: #f1c40f; border: 1px solid #7f8c8d; border-radius: 5px;">
+                    <option value="all">📚 所有章節</option>
+                </select>
+                
+                <select id="filter-operation" onchange="renderReportData()" style="padding: 6px; font-size: 14px; background: #34495e; color: #f1c40f; border: 1px solid #7f8c8d; border-radius: 5px;">
+                    <option value="all">🧮 所有模式</option>
+                </select>
+                
+                <select id="filter-result" onchange="renderReportData()" style="padding: 6px; font-size: 14px; background: #34495e; color: #f1c40f; border: 1px solid #7f8c8d; border-radius: 5px;">
+                    <option value="all">🎯 所有結果</option>
+                    <option value="correct">✔️ 答對</option>
+                    <option value="wrong">❌ 答錯</option>
                 </select>
             </div>
-            <!-- 👆 新增結束 -->
-			
+            <!-- 👆 新增結束 -->			
 			<div id="report-summary" class="report-summary">
                 <!-- 數據摘要由 JS 動態生成 -->
             </div>
@@ -1709,91 +1716,150 @@ function showReport() {
         modal.style.display = 'flex';
         
         let stats = JSON.parse(localStorage.getItem('mathRacerLearningStats')) || [];
-        let filterSelect = document.getElementById('report-filter');
         
-        // 保留 "all" 選項，清空其他
-        filterSelect.innerHTML = '<option value="all">📊 全部紀錄</option>';
+        let chapSelect = document.getElementById('filter-chapter');
+        let opSelect = document.getElementById('filter-operation');
         
-        // 自動找出所有存在過的章節 (過濾掉舊版沒有存到章節的數據)
+        // 1. 初始化並保留 "all" 選項
+        chapSelect.innerHTML = '<option value="all">📚 所有章節</option>';
+        opSelect.innerHTML = '<option value="all">🧮 所有模式</option>';
+        document.getElementById('filter-result').value = 'all'; // 重置結果篩選
+        
+        // 2. 動態抽出所有的「章節」並加入選項
         let uniqueChapters = [...new Set(stats.map(s => s.chapter).filter(c => c))];
         uniqueChapters.forEach(chap => {
-            let option = document.createElement('option');
-            option.value = chap;
-            option.innerText = chap;
-            filterSelect.appendChild(option);
+            chapSelect.innerHTML += `<option value="${chap}">${chap}</option>`;
         });
         
-        // 渲染數據
+        // 3. 動態抽出所有的「運算模式」並加入選項
+        let uniqueOps = [...new Set(stats.map(s => s.operationMode).filter(o => o && o !== '-'))];
+        uniqueOps.forEach(op => {
+            opSelect.innerHTML += `<option value="${op}">${op}</option>`;
+        });
+        
         renderReportData(); 
     }
 
-    // 根據篩選器動態渲染數據的核心函數
     function renderReportData() {
         const tbody = document.getElementById('report-tbody');
         const summary = document.getElementById('report-summary');
         
         let allStats = JSON.parse(localStorage.getItem('mathRacerLearningStats')) || [];
-        let filterValue = document.getElementById('report-filter').value;
         
-        // 根據下拉選單進行過濾
-        let stats = (filterValue === 'all') ? allStats : allStats.filter(s => s.chapter === filterValue);
+        let fChap = document.getElementById('filter-chapter').value;
+        let fOp = document.getElementById('filter-operation').value;
+        let fRes = document.getElementById('filter-result').value;
         
-        // 計算統計數據
-        let total = stats.length;
-        let correctCount = stats.filter(s => s.isCorrect).length;
-        let accuracy = total > 0 ? Math.round((correctCount / total) * 100) : 0;
-        
-        let totalSeconds = 0;
-        stats.forEach(s => {
-            totalSeconds += parseFloat(s.timeElapsed.replace('秒', ''));
+        // ========== 步驟一：執行三重數據過濾 ==========
+        let filteredStats = allStats.filter(s => {
+            let matchChap = (fChap === 'all' || s.chapter === fChap);
+            let matchOp = (fOp === 'all' || s.operationMode === fOp);
+            let matchRes = (fRes === 'all') || 
+                           (fRes === 'correct' && s.isCorrect) || 
+                           (fRes === 'wrong' && !s.isCorrect);
+            return matchChap && matchOp && matchRes;
         });
-        let avgTime = total > 0 ? (totalSeconds / total).toFixed(2) : 0;
         
-        // 罩門分析：尋找最常答錯的題目
+        // ========== 步驟二：拆分「本月」與「上月」數據 ==========
+        let now = new Date();
+        let currM = now.getMonth(), currY = now.getFullYear();
+        let lastM = currM === 0 ? 11 : currM - 1;
+        let lastY = currM === 0 ? currY - 1 : currY;
+        
+        let thisMonthStats = [];
+        let lastMonthStats = [];
+        
+        filteredStats.forEach(s => {
+            let d = new Date(s.timestamp);
+            // 防呆處理：若瀏覽器時間格式無法直接轉換，嘗試手動拆解
+            if(isNaN(d)) {
+                let parts = s.timestamp.split(/[\s,/]+/);
+                if(parts.length >= 3) {
+                    if(parts[0].length === 4) d = new Date(parts[0], parts[1]-1, parts[2]); // YYYY格式
+                    else d = new Date(parts[2], parts[1]-1, parts[0]); // DD/MM/YYYY 格式
+                }
+            }
+            if(!isNaN(d)) {
+                if(d.getMonth() === currM && d.getFullYear() === currY) thisMonthStats.push(s);
+                else if(d.getMonth() === lastM && d.getFullYear() === lastY) lastMonthStats.push(s);
+            }
+        });
+        
+        // ========== 步驟三：計算指標的小幫手 ==========
+        function calcMetrics(arr) {
+            let t = arr.length;
+            let c = arr.filter(x => x.isCorrect).length;
+            let a = t > 0 ? Math.round((c / t) * 100) : 0;
+            let secs = 0;
+            arr.forEach(x => secs += parseFloat(x.timeElapsed.replace('秒', '')));
+            let avg = t > 0 ? (secs / t).toFixed(2) : 0;
+            return { total: t, correct: c, acc: a, avg: avg };
+        }
+        
+        let tm = calcMetrics(thisMonthStats); // 本月指標 (This Month)
+        let lm = calcMetrics(lastMonthStats); // 上月指標 (Last Month)
+        
+        // 罩門分析 (基於目前篩選出的所有數據)
         let wrongCounts = {};
-        stats.filter(s => !s.isCorrect).forEach(s => {
+        filteredStats.filter(s => !s.isCorrect).forEach(s => {
             wrongCounts[s.question] = (wrongCounts[s.question] || 0) + 1;
         });
-        let mostWrongQ = "無";
-        let maxWrong = 0;
+        let mostWrongQ = "無", maxWrong = 0;
         for (let q in wrongCounts) {
-            if (wrongCounts[q] > maxWrong) {
-                maxWrong = wrongCounts[q];
-                mostWrongQ = q;
-            }
+            if (wrongCounts[q] > maxWrong) { maxWrong = wrongCounts[q]; mostWrongQ = q; }
         }
         let weaknessHtml = maxWrong > 0 ? `<span style="color:#e74c3c">${mostWrongQ} (錯 ${maxWrong} 次)</span>` : `<span style="color:#2ecc71">完美！沒有常錯題</span>`;
         
-        // 渲染摘要區塊
+        // ========== 步驟四：渲染摘要 UI (四宮格對比設計) ==========
+        summary.style.display = "flex";
+        summary.style.justifyContent = "space-between";
+        summary.style.gap = "10px";
+        summary.style.flexWrap = "wrap";
+        
         summary.innerHTML = `
-            <div>📝 答題數: <span style="color:#f1c40f">${total}</span> 題</div>
-            <div>✅ 答對: <span style="color:#2ecc71">${correctCount}</span> 題</div>
-            <div>🎯 正確率: <span style="color:${accuracy >= 80 ? '#2ecc71' : (accuracy >= 60 ? '#f1c40f' : '#e74c3c')}">${accuracy}%</span></div>
-            <div>⏱️ 平均耗時: <span style="color:#3498db">${avgTime}</span> 秒</div>
-            <div style="width: 100%; text-align: center; margin-top: 10px; border-top: 1px dashed #7f8c8d; padding-top: 10px;">
-                ⚠️ 罩門分析 (最常答錯): ${weaknessHtml}
+            <div style="flex:1; min-width:120px; background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">📝 答題數</div>
+                <div style="font-size:26px; color:#f1c40f; font-weight:bold;">${tm.total}</div>
+                <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.total}</div>
+            </div>
+            <div style="flex:1; min-width:120px; background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">✅ 答對</div>
+                <div style="font-size:26px; color:#2ecc71; font-weight:bold;">${tm.correct}</div>
+                <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.correct}</div>
+            </div>
+            <div style="flex:1; min-width:120px; background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">🎯 正確率</div>
+                <div style="font-size:26px; font-weight:bold; color:${tm.acc >= 80 ? '#2ecc71' : (tm.acc >= 60 ? '#f1c40f' : '#e74c3c')}">${tm.acc}%</div>
+                <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.acc}%</div>
+            </div>
+            <div style="flex:1; min-width:120px; background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">⏱️ 平均耗時</div>
+                <div style="font-size:26px; color:#3498db; font-weight:bold;">${tm.avg}s</div>
+                <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.avg}s</div>
+            </div>
+            <div style="width: 100%; text-align: center; margin-top: 5px; padding-top: 15px; border-top: 1px dashed #7f8c8d; font-size: 16px;">
+                ⚠️ 罩門分析: ${weaknessHtml}
             </div>
         `;
         
-        // 渲染表格 (將陣列反轉，最新的紀錄在最上面)
+        // ========== 步驟五：渲染下方詳細表格 ==========
         tbody.innerHTML = '';
-        if (total === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; font-size: 18px; color: #bdc3c7;">目前這個章節還沒有學習紀錄喔！</td></tr>';
+        if (filteredStats.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="padding: 30px; font-size: 18px; color: #bdc3c7;">目前篩選條件下沒有紀錄喔！</td></tr>';
         } else {
-            let reversedStats = [...stats].reverse();
+            let reversedStats = [...filteredStats].reverse();
             reversedStats.forEach(stat => {
                 let isRight = stat.isCorrect;
                 
-                // 優化時間顯示：將日期與時間拆成兩行
+                // 將日期與時間拆成兩行
                 let timeParts = stat.timestamp ? stat.timestamp.split(' ') : ['-'];
                 let timeStr = timeParts.length > 1 ? `${timeParts[0]}<br><span style="color:#95a5a6; font-size:10px;">${timeParts[1]}</span>` : stat.timestamp;
                 
                 let rowHtml = `
                     <tr>
                         <td style="font-size: 12px; color: #bdc3c7;">${timeStr}</td>
-                        <!-- 👇 新增這行：顯示運算模式 (加上 || '-' 避免舊資料報錯) -->
                         <td style="font-size: 14px; color: #e67e22;">${stat.operationMode || '-'}</td>
-						<td style="font-size: 18px;">${stat.question}</td>
+                        <td style="font-size: 18px;">${stat.question}</td>
                         <td class="${isRight ? 'correct-text' : 'wrong-text'}">${stat.userAnswer}</td>
                         <td style="color:#f1c40f;">${stat.correctAnswer}</td>
                         <td style="font-size: 20px;">${isRight ? '✔️' : '❌'}</td>
@@ -1803,8 +1869,7 @@ function showReport() {
                 tbody.innerHTML += rowHtml;
             });
         }
-    }
-	
+    }	
     function hideReport() {
         AudioManager.playSound('click');
         document.getElementById('report-modal').style.display = 'none';
