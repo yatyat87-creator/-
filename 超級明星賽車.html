@@ -45,39 +45,38 @@
 
         /* 遊戲畫面樣式 */
         #play-screen { display: none; }
-		
-		/* 讓遊戲容器垂直排列 */
+		/* 遊戲畫面主要容器 */
 		#game-board {
 		    display: flex;
 		    flex-direction: column;
 		    width: 100%;
-		    /* 這裡不需要設定背景圖了，背景圖會交給上下兩個 div */
+		    position: relative;
+		    border-radius: 12px;
+		    overflow: hidden; /* 👈 【關鍵】這會切齊邊界，讓整體看起來像你原本原圖那樣乾淨 */
 		}
 		
-		/* 頂部和底部的共用設定 */
 		#bg-top, #bg-bottom {
 		    width: 100%;
-		    /* 👈 電腦版維持 100% 寬度，不放大 */
-		    background-size: 100% auto !important; 
 		    background-repeat: no-repeat !important;
+		    background-size: 150% auto !important; /* 電腦版適度放大保留平移空間 */
 		    transition: background-position 0.4s ease-out;
 		}
-		#bg-top { background-position: center top; }
+		#bg-top { background-position: 0% top; }
 		#bg-bottom { 
-		    background-position: center bottom; 
-		    position: relative; 
-		    z-index: 10; 
-		    margin-top: -40px; 
-		    pointer-events: none; 
-		}		
-		/* 中間賽道 (系統生成的馬路) */
+		    background-position: 0% bottom; 
+		    position: relative;
+		    z-index: 10;
+		    margin-top: -30px; 
+		    pointer-events: none;
+		}
+		
+		/* 賽道 */
 		.track-container {
 		    width: 100%;
 		    background-color: #2c3e50; 
 		    position: relative;
 		    z-index: 1; 
 		    padding-bottom: 20px;
-		    overflow: hidden; /* 👈 【關鍵】裁切超出賽道的物件，解決終點線飛走到題目的問題 */
 		}
 		
 		/* 車道設定 */
@@ -158,61 +157,76 @@
         #event-message { font-size: 18px; font-weight: bold; color: #e67e22; height: 25px; margin-bottom: 5px;}
         #leaderboard { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 16px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; flex-wrap: wrap; gap: 10px; }
 
-/* 📱 移動端專屬響應式 (限定直立螢幕 portrait 才啟動平移邏輯) */
-@media (max-width: 768px) and (orientation: portrait) {
-    /* ▼ 讓圖片高度100%填滿，寬度按比例拉長延伸，製造可平移的長軸，不用硬 Zoom ▼ */
-    #bg-top { 
-        height: 180px !important; 
-        background-size: auto 100% !important; 
-    }
-    #bg-bottom { 
-        height: 60px !important; 
-        margin-top: -20px !important; 
-        background-size: auto 100% !important; 
-    }
-    
-    .track-container { padding: 20px 0 10px 0; }
-    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
-    .character.offscreen-ahead, .character.offscreen-behind { background-image: none !important; box-shadow: none !important; filter: none !important; }
-    .character.offscreen-ahead .char-emoji, .character.offscreen-behind .char-emoji { display: none !important; }
-    .character.offscreen-ahead .speech-bubble { display: block !important; top: 25px; left: -40px; background-color: #e74c3c; color: white; border-color: #c0392b; z-index: 100; }
-    .character.offscreen-behind .speech-bubble { display: block !important; top: 25px; left: 30px; background-color: #95a5a6; color: white; border-color: #7f8c8d; z-index: 100; }
-    .character.offscreen-ahead .speech-bubble::after, .character.offscreen-behind .speech-bubble::after { display: none; }
-}
-
-/* 📱 手機橫向螢幕 (Landscape) 專屬佈局：左邊賽道，右邊題目 */
-@media (max-height: 500px) and (orientation: landscape) {
-    body { padding: 5px; }
-    #game-container { padding: 10px; }
-    
-    /* 將遊戲畫面切換為左右雙欄 (Grid) */
-    /* 注意：使用 !important 是為了覆蓋 JavaScript 寫入的 display: block */
-    #play-screen[style*="block"] {
-        display: grid !important;
-        grid-template-columns: 55% 42%;
-        column-gap: 3%;
-        align-items: center;
-    }
-    
-    /* 頂部資訊欄跨越兩欄 */
-    #leaderboard { grid-column: 1 / 3; padding: 5px; margin-bottom: 5px; font-size: 14px; }
-    #event-message { grid-column: 1 / 3; font-size: 14px; height: 20px; margin: 0; }
-    
-    /* 賽道縮在左側 */
-    .track-container { 
-        grid-column: 1 / 2; 
-        grid-row: 3 / 6; 
-        margin-bottom: 0; 
-        padding: 15px 0 5px 0;
-        zoom: 0.65; /* 利用瀏覽器特性將賽道等比例縮小，騰出空間 */
-    }
-    
-    /* 題目、選項與提示訊息放在右側 */
-    #question-area { grid-column: 2 / 3; grid-row: 3; font-size: 22px; margin: 0 0 10px 0; }
-    .options-grid { grid-column: 2 / 3; grid-row: 4; gap: 8px; }
-    .option-btn { font-size: 20px; padding: 10px; }
-    #message { grid-column: 2 / 3; grid-row: 5; margin-top: 5px; font-size: 16px; height: 25px; }
-}
+	/* 📱 移動端專屬響應式 (直立螢幕 Portrait) */
+	@media (max-width: 900px) and (orientation: portrait) {
+	    #bg-top { 
+	        height: 140px !important; 
+	        background-size: 300% auto !important; /* 👈 強制寬度放大 3 倍，消除縮圖，確保能橫移 */
+	    }
+	    #bg-bottom { 
+	        height: 50px !important; 
+	        margin-top: -20px !important; 
+	        background-size: 300% auto !important; 
+	    }
+	    .track-container { padding: 15px 0 10px 0; }
+	    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
+	    
+	    /* 隱藏越界車輛與泡泡 */
+	    .character.offscreen-ahead, .character.offscreen-behind { background-image: none !important; box-shadow: none !important; filter: none !important; }
+	    .character.offscreen-ahead .char-emoji, .character.offscreen-behind .char-emoji { display: none !important; }
+	    .character.offscreen-ahead .speech-bubble { display: block !important; top: 25px; left: -40px; background-color: #e74c3c; color: white; border-color: #c0392b; z-index: 100; }
+	    .character.offscreen-behind .speech-bubble { display: block !important; top: 25px; left: 30px; background-color: #95a5a6; color: white; border-color: #7f8c8d; z-index: 100; }
+	    .character.offscreen-ahead .speech-bubble::after, .character.offscreen-behind .speech-bubble::after { display: none; }
+	}
+	
+	/* 📱 手機橫向螢幕 (Landscape) */
+	@media (max-height: 500px) and (orientation: landscape) {
+	    body { padding: 5px; }
+	    #game-container { padding: 10px; }
+	    
+	    #play-screen[style*="block"] {
+	        display: grid !important;
+	        grid-template-columns: 55% 42%;
+	        column-gap: 3%;
+	        align-items: center;
+	    }
+	    
+	    #leaderboard { grid-column: 1 / 3; padding: 5px; margin-bottom: 5px; font-size: 14px; }
+	    #event-message { grid-column: 1 / 3; font-size: 14px; height: 20px; margin: 0; }
+	    
+	    /* 🔥 修復核心：將整個大外框 game-board 放進左欄，完美恢復你原本橫向的版面比例！ */
+	    #game-board { 
+	        grid-column: 1 / 2; 
+	        grid-row: 3 / 6; 
+	        margin-bottom: 0; 
+	        zoom: 0.65; 
+	    }
+	    
+	    #bg-top { 
+	        height: 90px !important; 
+	        background-size: 250% auto !important; /* 👈 橫向螢幕同樣放大消除縮圖 */
+	    }
+	    #bg-bottom { 
+	        height: 35px !important; 
+	        margin-top: -15px !important; 
+	        background-size: 250% auto !important; 
+	    }
+	    
+	    .track-container { padding: 10px 0 5px 0; }
+	    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
+	    
+	    /* 橫向同樣需要隱藏越界的車輛 */
+	    .character.offscreen-ahead, .character.offscreen-behind { background-image: none !important; box-shadow: none !important; filter: none !important; }
+	    .character.offscreen-ahead .char-emoji, .character.offscreen-behind .char-emoji { display: none !important; }
+	    .character.offscreen-ahead .speech-bubble { display: block !important; top: 25px; left: -40px; background-color: #e74c3c; color: white; border-color: #c0392b; z-index: 100; }
+	    .character.offscreen-behind .speech-bubble { display: block !important; top: 25px; left: 30px; background-color: #95a5a6; color: white; border-color: #7f8c8d; z-index: 100; }
+	    .character.offscreen-ahead .speech-bubble::after, .character.offscreen-behind .speech-bubble::after { display: none; }
+	
+	    #question-area { grid-column: 2 / 3; grid-row: 3; font-size: 22px; margin: 0 0 10px 0; }
+	    .options-grid { grid-column: 2 / 3; grid-row: 4; gap: 8px; }
+	    .option-btn { font-size: 20px; padding: 10px; }
+	    #message { grid-column: 2 / 3; grid-row: 5; margin-top: 5px; font-size: 16px; height: 25px; }
+	}
     </style>
 </head>
 <body>
