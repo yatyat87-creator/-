@@ -650,6 +650,7 @@ const QuestionEngine = {
 	            border: "4px solid #7f8c8d",
 	            topHeight: "345px",    /* 👈 後景(天空/遠山)的高度 (可根據實際圖片微調 px) */
 	            bottomHeight: "60px"   /* 👈 前景(馬路下方)的高度 (可根據實際圖片微調 px) */
+				delayMultiplier: 1.0   // 👈 新增：正常速度
 	        },
 	        "chapter2": { 
 	            name: "黑夜山道", 
@@ -657,6 +658,7 @@ const QuestionEngine = {
 	            border: "4px solid #34495e",
 	            topHeight: "345px",
 	            bottomHeight: "60px"
+	    		delayMultiplier: 2.0   // 👈 新增：延遲兩倍，對手變慢 (適合需要思考的進退位)
 	        },
 	        "chapter3": { 
 	            name: "活塞盃競技場", 
@@ -664,6 +666,7 @@ const QuestionEngine = {
 	            border: "4px solid #f1c40f",
 	            topHeight: "200px",
 	            bottomHeight: "50px"
+	        	delayMultiplier: 1.0   // 👈 新增：正常速度
 	        }
 	    },
 		// ▲▲▲ 修改結束 ▲▲▲
@@ -1107,7 +1110,15 @@ function startRace() {
         
         let params = diffParams[difficultySetting];
         let delay = Math.floor(Math.random() * (params.aiSpeedMax - params.aiSpeedMin + 1)) + params.aiSpeedMin;
-        
+
+		// ▼▼▼ 修改：從 GAME_DATA 中讀取當前章節的延遲倍率 ▼▼▼
+        let currentChapter = document.getElementById('chapter-select').value;
+        let chapterData = GAME_DATA.chapters[currentChapter];
+        if (chapterData && chapterData.delayMultiplier) {
+            delay = delay * chapterData.delayMultiplier;
+        }
+        // ▲▲▲ 修改結束 ▲▲▲
+		
         // Boss 會有速度加成
         if (currentLevel === maxLevels && aiName === 'ai3') {
             delay = delay * GAME_DATA.bosses[0].speedMultiplier; 
