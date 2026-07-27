@@ -172,7 +172,16 @@
     <div id="setup-screen">
         <h2>🏎️ 活塞盃：數學大賽 </h2>
         <p>進行 3 個回合的積分排名賽！第 3 回合將有強大的 Boss 登場！</p>
-        
+
+		<div class="form-group">
+            <label>選擇賽季 / 章節：</label>
+            <select id="chapter-select" onclick="AudioManager.playSound('click')">
+                <option value="chapter1" selected>🛣️ 第 1 章：州際公路</option>
+                <option value="chapter2">🌙 第 2 章：黑夜山道</option>
+                <option value="chapter3">🏟️ 第 3 章：活塞盃競技場</option>
+            </select>
+        </div>
+		
         <div class="form-group">
             <label>選擇你的賽車手：</label>
             <div id="character-grid" class="char-grid"></div>
@@ -332,7 +341,28 @@
     // 🎮 遊戲核心資料庫 (GAME_DATA)
     // =====================================================================
     const GAME_DATA = {
-        characters: {
+		// ▼▼▼ 步驟 1 修改：支援背景圖片 ▼▼▼
+        chapters: {
+            "chapter1": { 
+                name: "州際公路", 
+                bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", 
+                border: "4px solid #7f8c8d" 
+            },
+            "chapter2": { 
+                name: "黑夜山道", 
+                bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg2.png')", 
+                border: "4px solid #34495e" 
+            },
+            "chapter3": { 
+                name: "活塞盃競技場", 
+                bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg3.png')", 
+                border: "4px solid #f1c40f" 
+            }
+        },
+        // ▲▲▲ 步驟 1 修改結束 ▲▲▲
+		characters: {
+            "mcqueen": {
+		characters: {
             "mcqueen": { 
                 name: "閃電麥坤", emoji: "🏎️", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Mcqueen (S).png", 
 			    isSprite: true, // 新增這行：告訴系統這是精靈圖
@@ -563,6 +593,25 @@ opponents: [
         currentMultiplierSetting = document.getElementById('multiplier').value;
         currentOperation = document.getElementById('operation-mode').value; 
         difficultySetting = document.getElementById('difficulty').value;
+
+		// ▼▼▼ 步驟 1 修改：讀取章節並套用背景圖片 ▼▼▼
+        let selectedChapter = document.getElementById('chapter-select').value;
+        let chapterData = GAME_DATA.chapters[selectedChapter];
+        let trackContainer = document.querySelector('.track-container');
+        
+        // 套用背景圖片與邊框
+        trackContainer.style.backgroundImage = chapterData.bgImage;
+        trackContainer.style.backgroundSize = "cover"; // 讓圖片填滿容器
+        trackContainer.style.backgroundPosition = "center bottom"; // 讓重心對齊下方道路
+        trackContainer.style.border = chapterData.border;
+        
+        // 確保賽道車道稍微透明，以免完全遮擋中後景
+        let lanes = document.querySelectorAll('.lane');
+        lanes.forEach(lane => {
+            lane.style.backgroundColor = "rgba(0, 0, 0, 0.4)"; // 添加黑色半透明底，讓角色清晰同時透出背景
+            lane.style.borderBottom = "3px dashed rgba(241, 196, 15, 0.5)"; // 讓虛線也稍微融入
+        });
+        // ▲▲▲ 步驟 1 修改結束 ▲▲▲		
         
         let pData = GAME_DATA.characters[selectedCharId];
         document.getElementById('player-name').innerText = pData.name;
