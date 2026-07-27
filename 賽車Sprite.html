@@ -57,43 +57,27 @@
 		/* 頂部和底部的共用設定 */
 		#bg-top, #bg-bottom {
 		    width: 100%;
-		    /* 讓圖片寬度填滿，高度自動依比例縮放 */
-		    background-size: 100% auto; 
-		    background-repeat: no-repeat;
+		    /* 👈 電腦版維持 100% 寬度，不放大 */
+		    background-size: 100% auto !important; 
+		    background-repeat: no-repeat !important;
+		    transition: background-position 0.4s ease-out;
 		}
-		
-		/* 頂部風景 */
-		#bg-top {
-		    width: 100%;
-		    background-repeat: no-repeat !important; 
-		    /* 👈 電腦版只需稍微放大 (例如 130%)，保留左右平移的空間，不會過度起格 */
-		    background-size: 130% auto !important; 
-		    /* 👈 修正：Y軸貼齊頂部 (top) */
-		    background-position: 0% top; 
-		    transition: background-position 0.4s ease-out; 
-		}
-		
-		/* 底部前景 */
-		#bg-bottom {
-		    width: 100%;
-		    background-repeat: no-repeat !important; 
-		    /* 👈 與頂部維持相同的電腦版放大比例 */
-		    background-size: 130% auto !important; 
-		    /* 👈 修正：Y軸貼齊底部 (bottom) */
-		    background-position: 0% bottom; 
-		    position: relative;
-		    z-index: 10;
+		#bg-top { background-position: center top; }
+		#bg-bottom { 
+		    background-position: center bottom; 
+		    position: relative; 
+		    z-index: 10; 
 		    margin-top: -40px; 
-		    pointer-events: none;
-		    transition: background-position 0.4s ease-out; 
+		    pointer-events: none; 
 		}		
 		/* 中間賽道 (系統生成的馬路) */
 		.track-container {
 		    width: 100%;
 		    background-color: #2c3e50; 
 		    position: relative;
-		    z-index: 1; /* 👈 設定為較低的層級，讓它乖乖待在後面 */
-		    padding-bottom: 20px; /* 稍微增加底部空間，預留給前景遮擋 */
+		    z-index: 1; 
+		    padding-bottom: 20px;
+		    overflow: hidden; /* 👈 【關鍵】裁切超出賽道的物件，解決終點線飛走到題目的問題 */
 		}
 		
 		/* 車道設定 */
@@ -174,60 +158,61 @@
         #event-message { font-size: 18px; font-weight: bold; color: #e67e22; height: 25px; margin-bottom: 5px;}
         #leaderboard { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 16px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; flex-wrap: wrap; gap: 10px; }
 
-		/* 📱 移動端專屬響應式 */
-		@media (max-width: 768px) {
-		    /* ▼ 手機螢幕較窄，維持 250% 才能撐滿高度並順利平移 ▼ */
-		    #bg-top { 
-		        height: 180px !important; 
-		        background-size: 250% auto !important; 
-		    }
-		    #bg-bottom { 
-		        height: 60px !important; 
-		        margin-top: -20px !important; 
-		        background-size: 250% auto !important; 
-		    }
-		    
-		    .track-container { padding: 20px 0 10px 0; }
-		    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
-		    .character.offscreen-ahead, .character.offscreen-behind { background-image: none !important; box-shadow: none !important; filter: none !important; }
-		    .character.offscreen-ahead .char-emoji, .character.offscreen-behind .char-emoji { display: none !important; }
-		    .character.offscreen-ahead .speech-bubble { display: block !important; top: 25px; left: -40px; background-color: #e74c3c; color: white; border-color: #c0392b; z-index: 100; }
-		    .character.offscreen-behind .speech-bubble { display: block !important; top: 25px; left: 30px; background-color: #95a5a6; color: white; border-color: #7f8c8d; z-index: 100; }
-		    .character.offscreen-ahead .speech-bubble::after, .character.offscreen-behind .speech-bubble::after { display: none; }
-		}
-		/* 📱 手機橫向螢幕 (Landscape) 專屬佈局：左邊賽道，右邊題目 */
-        @media (max-height: 500px) and (orientation: landscape) {
-            body { padding: 5px; }
-            #game-container { padding: 10px; }
-            
-            /* 將遊戲畫面切換為左右雙欄 (Grid) */
-            /* 注意：使用 !important 是為了覆蓋 JavaScript 寫入的 display: block */
-            #play-screen[style*="block"] {
-                display: grid !important;
-                grid-template-columns: 55% 42%;
-                column-gap: 3%;
-                align-items: center;
-            }
-            
-            /* 頂部資訊欄跨越兩欄 */
-            #leaderboard { grid-column: 1 / 3; padding: 5px; margin-bottom: 5px; font-size: 14px; }
-            #event-message { grid-column: 1 / 3; font-size: 14px; height: 20px; margin: 0; }
-            
-            /* 賽道縮在左側 */
-            .track-container { 
-                grid-column: 1 / 2; 
-                grid-row: 3 / 6; 
-                margin-bottom: 0; 
-                padding: 15px 0 5px 0;
-                zoom: 0.65; /* 利用瀏覽器特性將賽道等比例縮小，騰出空間 */
-            }
-            
-            /* 題目、選項與提示訊息放在右側 */
-            #question-area { grid-column: 2 / 3; grid-row: 3; font-size: 22px; margin: 0 0 10px 0; }
-            .options-grid { grid-column: 2 / 3; grid-row: 4; gap: 8px; }
-            .option-btn { font-size: 20px; padding: 10px; }
-            #message { grid-column: 2 / 3; grid-row: 5; margin-top: 5px; font-size: 16px; height: 25px; }
-        }
+/* 📱 移動端專屬響應式 (限定直立螢幕 portrait 才啟動平移邏輯) */
+@media (max-width: 768px) and (orientation: portrait) {
+    /* ▼ 讓圖片高度100%填滿，寬度按比例拉長延伸，製造可平移的長軸，不用硬 Zoom ▼ */
+    #bg-top { 
+        height: 180px !important; 
+        background-size: auto 100% !important; 
+    }
+    #bg-bottom { 
+        height: 60px !important; 
+        margin-top: -20px !important; 
+        background-size: auto 100% !important; 
+    }
+    
+    .track-container { padding: 20px 0 10px 0; }
+    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
+    .character.offscreen-ahead, .character.offscreen-behind { background-image: none !important; box-shadow: none !important; filter: none !important; }
+    .character.offscreen-ahead .char-emoji, .character.offscreen-behind .char-emoji { display: none !important; }
+    .character.offscreen-ahead .speech-bubble { display: block !important; top: 25px; left: -40px; background-color: #e74c3c; color: white; border-color: #c0392b; z-index: 100; }
+    .character.offscreen-behind .speech-bubble { display: block !important; top: 25px; left: 30px; background-color: #95a5a6; color: white; border-color: #7f8c8d; z-index: 100; }
+    .character.offscreen-ahead .speech-bubble::after, .character.offscreen-behind .speech-bubble::after { display: none; }
+}
+
+/* 📱 手機橫向螢幕 (Landscape) 專屬佈局：左邊賽道，右邊題目 */
+@media (max-height: 500px) and (orientation: landscape) {
+    body { padding: 5px; }
+    #game-container { padding: 10px; }
+    
+    /* 將遊戲畫面切換為左右雙欄 (Grid) */
+    /* 注意：使用 !important 是為了覆蓋 JavaScript 寫入的 display: block */
+    #play-screen[style*="block"] {
+        display: grid !important;
+        grid-template-columns: 55% 42%;
+        column-gap: 3%;
+        align-items: center;
+    }
+    
+    /* 頂部資訊欄跨越兩欄 */
+    #leaderboard { grid-column: 1 / 3; padding: 5px; margin-bottom: 5px; font-size: 14px; }
+    #event-message { grid-column: 1 / 3; font-size: 14px; height: 20px; margin: 0; }
+    
+    /* 賽道縮在左側 */
+    .track-container { 
+        grid-column: 1 / 2; 
+        grid-row: 3 / 6; 
+        margin-bottom: 0; 
+        padding: 15px 0 5px 0;
+        zoom: 0.65; /* 利用瀏覽器特性將賽道等比例縮小，騰出空間 */
+    }
+    
+    /* 題目、選項與提示訊息放在右側 */
+    #question-area { grid-column: 2 / 3; grid-row: 3; font-size: 22px; margin: 0 0 10px 0; }
+    .options-grid { grid-column: 2 / 3; grid-row: 4; gap: 8px; }
+    .option-btn { font-size: 20px; padding: 10px; }
+    #message { grid-column: 2 / 3; grid-row: 5; margin-top: 5px; font-size: 16px; height: 25px; }
+}
     </style>
 </head>
 <body>
@@ -1201,75 +1186,69 @@ function startRace() {
         }
     }
 
-	function updatePositions() {
-	    let isMobile = window.innerWidth <= 768;
-	    let pStep = racers.player.step;
-	
-	    // 根據玩家目前的步數計算進度百分比 (0 到 100)
-	    let bgPercent = Math.min(100, Math.max(0, (pStep / totalSteps) * 100));
-	    
-	    // ▼▼▼ 修正：這裡的 Y 軸參數必須對應 CSS (bg-top 配 top, bg-bottom 配 bottom) ▼▼▼
-	    document.getElementById('bg-top').style.backgroundPosition = `${bgPercent}% top`;
-	    document.getElementById('bg-bottom').style.backgroundPosition = `${bgPercent}% bottom`;
-	    // ▲▲▲ 修正結束 ▲▲▲
-	
-	    if (!isMobile) {
-	        // 電腦版保持原本的絕對位置邏輯
-	        for (let key in racers) { 
-	            let percentage = (racers[key].step / totalSteps) * 85; 
-	            racers[key].element.style.left = percentage + "%"; 
-	            racers[key].element.classList.remove('offscreen-ahead', 'offscreen-behind');
-	        }
-	        document.querySelector('.finish-line').style.left = 'auto';
-	        document.querySelector('.finish-line').style.right = '15px';
-	    } else {
-            // ▼▼▼ 修改這裡：按比例平滑移動鏡頭基準位置 ▼▼▼
-            // 公式解說：
-            // 起點 (pStep = 0) -> 15 + 0 = 15% (靠左)
-            // 中點 (pStep = 10) -> 15 + (10/20)*60 = 45% (置中)
-            // 終點 (pStep = 20) -> 15 + 60 = 75% (靠右)
-            let playerBasePos = 15 + (pStep / totalSteps) * 60;
-            // ▲▲▲ 修改結束 ▲▲▲
+function updatePositions() {
+    // 👈 只有在「手機」且「直立」的情況下，才啟動鏡頭平移模式
+    let isMobilePortrait = window.innerWidth <= 768 && window.innerHeight > window.innerWidth;
+    let pStep = racers.player.step;
 
-            let stepWidth = 12;
+    if (!isMobilePortrait) {
+        // ▼▼▼ 電腦版與手機「橫向」螢幕 (固定視角，無平移) ▼▼▼
+        document.getElementById('bg-top').style.backgroundPosition = `center top`;
+        document.getElementById('bg-bottom').style.backgroundPosition = `center bottom`;
 
-            for (let key in racers) {
-                let diff = racers[key].step - pStep;
-                let targetPos = playerBasePos + (diff * stepWidth);
-                let element = racers[key].element;
-                let bubble = document.getElementById(`bubble-${key}`);
-                
-                element.classList.remove('offscreen-ahead', 'offscreen-behind');
+        for (let key in racers) { 
+            let percentage = (racers[key].step / totalSteps) * 85; 
+            racers[key].element.style.left = percentage + "%"; 
+            racers[key].element.classList.remove('offscreen-ahead', 'offscreen-behind');
+        }
+        document.querySelector('.finish-line').style.left = 'auto';
+        document.querySelector('.finish-line').style.right = '15px';
+    } else {
+        // ▼▼▼ 手機「直立」螢幕 (啟用進度平移) ▼▼▼
+        let bgPercent = Math.min(100, Math.max(0, (pStep / totalSteps) * 100));
+        document.getElementById('bg-top').style.backgroundPosition = `${bgPercent}% top`;
+        document.getElementById('bg-bottom').style.backgroundPosition = `${bgPercent}% bottom`;
+        
+        let playerBasePos = 15 + (pStep / totalSteps) * 60;
+        let stepWidth = 12;
 
-                if (targetPos > 85) { 
-                    element.style.left = "85%";
-                    element.classList.add('offscreen-ahead');
-                    bubble.innerText = `${racers[key].name} ⏩`;
-                    bubble.style.display = "block";
-                } else if (targetPos < 0) { 
-                    element.style.left = "-5%";
-                    element.classList.add('offscreen-behind');
-                    bubble.innerText = `⏪ ${racers[key].name}`;
-                    bubble.style.display = "block";
-                } else {
-                    element.style.left = targetPos + "%";
-                    if (bubble.innerText.includes('⏩') || bubble.innerText.includes('⏪')) {
-                        bubble.style.display = "none";
-                    }
+        for (let key in racers) {
+            let diff = racers[key].step - pStep;
+            let targetPos = playerBasePos + (diff * stepWidth);
+            let element = racers[key].element;
+            let bubble = document.getElementById(`bubble-${key}`);
+            
+            element.classList.remove('offscreen-ahead', 'offscreen-behind');
+
+            if (targetPos > 85) { 
+                element.style.left = "85%";
+                element.classList.add('offscreen-ahead');
+                bubble.innerText = `${racers[key].name} ⏩`;
+                bubble.style.display = "block";
+            } else if (targetPos < 0) { 
+                element.style.left = "-5%";
+                element.classList.add('offscreen-behind');
+                bubble.innerText = `⏪ ${racers[key].name}`;
+                bubble.style.display = "block";
+            } else {
+                element.style.left = targetPos + "%";
+                if (bubble.innerText.includes('⏩') || bubble.innerText.includes('⏪')) {
+                    bubble.style.display = "none";
                 }
             }
+        }
 
-            let finishDiff = totalSteps - pStep;
-            let finishPos = playerBasePos + (finishDiff * stepWidth);
-            let finishLine = document.querySelector('.finish-line');
-            
-            if (finishPos > 90) {
-                finishLine.style.left = '120%';
-            } else {
-                finishLine.style.left = finishPos + '%';
-            }
+        let finishDiff = totalSteps - pStep;
+        let finishPos = playerBasePos + (finishDiff * stepWidth);
+        let finishLine = document.querySelector('.finish-line');
+        
+        if (finishPos > 90) {
+            finishLine.style.left = '120%';
+        } else {
+            finishLine.style.left = finishPos + '%';
         }
     }
+}
 	
 function checkWinCondition() {
         if (!gameActive) return;
