@@ -250,9 +250,9 @@
         /* 統計摘要區塊 */
         .report-summary { display: flex; justify-content: space-around; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; font-size: 18px; flex-wrap: wrap; gap: 10px; }
         
-        /* 表格容器 (帶捲動條) */
-        .table-container { overflow-y: auto; flex-grow: 1; margin-bottom: 20px; border-radius: 8px; border: 1px solid #7f8c8d; background: #34495e; }
-        
+/* 表格容器 (帶捲動條) */
+.table-container { overflow-y: auto; flex-grow: 1; flex-shrink: 0; min-height: 250px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #7f8c8d; background: #34495e; }   
+		
         /* 表格樣式 */
         #report-table { width: 100%; border-collapse: collapse; text-align: center; }
         #report-table th, #report-table td { padding: 12px 8px; border-bottom: 1px solid #7f8c8d; }
@@ -1810,38 +1810,38 @@ function showReport() {
         }
         let weaknessHtml = maxWrong > 0 ? `<span style="color:#e74c3c">${mostWrongQ} (錯 ${maxWrong} 次)</span>` : `<span style="color:#2ecc71">完美！沒有常錯題</span>`;
         
-        // ========== 步驟四：渲染摘要 UI (四宮格對比設計) ==========
-        summary.style.display = "flex";
-        summary.style.justifyContent = "space-between";
+// ========== 步驟四：渲染摘要 UI (四宮格對比設計) ==========
+        // 改用 Grid 網格排版，保證手機上是 2x2，節省空間
+        summary.style.display = "grid";
+        summary.style.gridTemplateColumns = "1fr 1fr"; 
         summary.style.gap = "10px";
-        summary.style.flexWrap = "wrap";
         
         summary.innerHTML = `
-            <div style="flex:1; min-width:120px; background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+            <div style="background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
                 <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">📝 答題數</div>
                 <div style="font-size:26px; color:#f1c40f; font-weight:bold;">${tm.total}</div>
                 <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.total}</div>
             </div>
-            <div style="flex:1; min-width:120px; background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+            <div style="background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
                 <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">✅ 答對</div>
                 <div style="font-size:26px; color:#2ecc71; font-weight:bold;">${tm.correct}</div>
                 <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.correct}</div>
             </div>
-            <div style="flex:1; min-width:120px; background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+            <div style="background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
                 <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">🎯 正確率</div>
                 <div style="font-size:26px; font-weight:bold; color:${tm.acc >= 80 ? '#2ecc71' : (tm.acc >= 60 ? '#f1c40f' : '#e74c3c')}">${tm.acc}%</div>
                 <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.acc}%</div>
             </div>
-            <div style="flex:1; min-width:120px; background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+            <div style="background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
                 <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">⏱️ 平均耗時</div>
                 <div style="font-size:26px; color:#3498db; font-weight:bold;">${tm.avg}s</div>
                 <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.avg}s</div>
             </div>
-            <div style="width: 100%; text-align: center; margin-top: 5px; padding-top: 15px; border-top: 1px dashed #7f8c8d; font-size: 16px;">
+            <div style="grid-column: 1 / -1; text-align: center; margin-top: 5px; padding-top: 15px; border-top: 1px dashed #7f8c8d; font-size: 16px;">
                 ⚠️ 罩門分析: ${weaknessHtml}
             </div>
         `;
-        
+		
         // ========== 步驟五：渲染下方詳細表格 ==========
         tbody.innerHTML = '';
         if (filteredStats.length === 0) {
