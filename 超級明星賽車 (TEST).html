@@ -507,9 +507,9 @@
 	            <h3 class="level-name">熱帶沙灘</h3>
 	        </div>
 	        <div class="difficulty">難度: 新秀級 <span class="boss-tag">+ Boss戰</span></div>
-	        <button class="challenge-btn" disabled>未解鎖</button>
-	    </div>
-	
+		<!-- 按鈕解除 disabled，並加入 onClick 事件 -->
+		    <button class="challenge-btn" onclick="event.stopPropagation(); initGame();">開始挑戰 🏁</button>
+		</div>	
 	    <!-- Ch3 -->
 	    <div class="card locked" id="card-chapter3" onclick="selectChapter('chapter3')">
 	        <div class="lock-overlay">🔒</div>
@@ -1770,8 +1770,9 @@ function generateQuestion() {
         let timeSpent = (Date.now() - questionStartTime) / 1000; // 計算毫秒差並轉為秒
         let isCorrect = (selected === currentAnswer);
         
-		// 抓取目前的章節
-        let currentChapterName = document.getElementById('chapter-select').options[document.getElementById('chapter-select').selectedIndex].text;
+		// 抓取目前的章節 (修復卡住的 Bug)
+		let currentChapterStr = document.getElementById('chapter-select').value;
+		let currentChapterName = GAME_DATA.chapters[currentChapterStr] ? GAME_DATA.chapters[currentChapterStr].name : "未知章節";
 
 		// 👇 新增：抓取目前的「運算模式」名稱
         let currentOpName = document.getElementById('operation-mode').options[document.getElementById('operation-mode').selectedIndex].text;
