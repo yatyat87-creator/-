@@ -530,7 +530,6 @@
 	
 	    <!-- Ch5 -->
 	    <div class="card unlocked" id="card-chapter5" onclick="selectChapter('chapter5')">
-	        <div class="lock-overlay">🔒</div>
 	        <div class="stage-name">🟡 第二階段 (位值概念)</div>
 	        <div class="chapter-header">
 	            <span class="chapter-num">Ch5</span>
@@ -1218,6 +1217,15 @@ function updateOperationMode() {
 }
 		
 	function selectChapter(chapterId) {
+
+		// ▼▼▼ 新增這段：檢查卡片是否為鎖定狀態 ▼▼▼
+	    let targetCard = document.getElementById('card-' + chapterId);
+	    if (targetCard && targetCard.classList.contains('locked')) {
+	        AudioManager.playSound('click'); 
+	        alert("🔒 此章節尚未解鎖！請先完成解鎖條件。");
+	        return; // 直接中斷函數，不讓系統選取這個章節也不會往下捲動
+	    }
+	    // ▲▲▲ 新增結束 ▲▲▲
 	    AudioManager.playSound('click'); // 播放點擊音效
 	    
 	    // 1. 更新我們剛剛在第一步建立的隱藏輸入框
