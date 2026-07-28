@@ -117,7 +117,7 @@
 		    background-position-x: 0px;
 		    border-radius: 0;
 		    box-shadow: none !important;
-		    filter: none !important; /* 移除預設的濾鏡效果 */
+		    filter: none; /* 移除預設的濾鏡效果 */
 		}
 		
 		/* 第 1 列：停止 (Idle) - 只有 1 幀 */
@@ -133,13 +133,12 @@
 		    animation: sprite-play 0.5s steps(4) infinite !important;
 		}
 		
-		/* 第 2 列：Boss 行駛 (疊加閃電濾鏡) */
+		/* 第 2 列：Boss 行駛 (疊加閃電濾鏡與震動) */
 		.character.sprite-mode.boss-driving {
 		    background-position-y: 0px !important;
-		    /* 保留精靈圖的車輪轉動，並加入閃電發光動畫 */
-		    animation: sprite-play 0.5s steps(4) infinite, lightningGlow 0.25s infinite alternate !important;
+		    /* 👈 【關鍵修改 2】加入 bossDriveEngine，讓 Boss 恢復放大與向上提的效果 */
+		    animation: sprite-play 0.5s steps(4) infinite, bossDriveEngine 0.15s infinite alternate, lightningGlow 0.25s infinite alternate !important;
 		}
-
 		/* ⚡ 高壓閃電圍身特效 */
 		@keyframes lightningGlow {
 		    0%   { filter: drop-shadow(0 0 5px #0ff) drop-shadow(0 0 15px #3498db); } /* 青藍色閃光 */
