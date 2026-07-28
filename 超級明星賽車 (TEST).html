@@ -862,7 +862,8 @@ const QuestionGenerator = {
         let opType = 'add'; // 用於決定干擾選項的生成策略
 
         const isAdd = Math.random() > 0.5;
-        const bossTrigger = Math.random() < 0.2; // 20% 機率觸發 Boss 題
+                // 只有在困難模式 ('hard') 之下，才有 20% 機率觸發突襲 (Boss題)
+        const bossTrigger = (difficultySetting === 'hard') && (Math.random() < 0.2);
 
         switch(parseInt(chapterNumber)) {
             case 1: // Ch1: 10 以內加減法
@@ -984,8 +985,14 @@ const QuestionGenerator = {
             case 9: // Ch9: 四則綜合大亂鬥 (遞迴呼叫前 8 章)
                 return this.generateQuestion(this.getRandom(1, 8));
 
-            case 10: // Ch10: 終極未知數挑戰 (All Boss)
+               case 10: // Ch10: 終極未知數挑戰 (All Boss)
+                // 如果不是困難模式，就關閉突襲，降級成一般的四則綜合大亂鬥
+                if (difficultySetting !== 'hard') {
+                    return this.generateQuestion(this.getRandom(1, 8));
+                }
+                
                 isBoss = true;
+
                 let op10 = this.getRandom(1, 4); // 1:+, 2:-, 3:x, 4:/
                 let n10_a, n10_b, n10_ans;
                 let hideFirst10 = Math.random() > 0.5; // 統一在這裡只抽籤一次
@@ -1259,17 +1266,18 @@ function updateOperationMode() {
     let optionsHtml = '';
     switch(chapter) {
         case 'chapter1': optionsHtml = '<option selected>🟢 10以內加減法</option>'; break;
-        case 'chapter2': optionsHtml = '<option selected>🟢 20以內 (湊十法) + 突襲</option>'; break;
+        case 'chapter2': optionsHtml = '<option selected>🟢 20以內 (湊十法) (困難含突襲)</option>'; break;
         case 'chapter3': optionsHtml = '<option selected>🟡 雙位數加減 (配一位/整十數)</option>'; break;
         case 'chapter4': optionsHtml = '<option selected>🟡 雙位數加減雙位數 (無進退位)</option>'; break;
-        case 'chapter5': optionsHtml = '<option selected>🟡 雙位數加減 (必定進退位) + 突襲</option>'; break;
+        case 'chapter5': optionsHtml = '<option selected>🟡 雙位數加減 (必定進退位) (困難含突襲)</option>'; break;
         case 'chapter6': optionsHtml = '<option selected>🟠 乘法起步 (2, 5, 10 的倍數)</option>'; break;
-        case 'chapter7': optionsHtml = '<option selected>🟠 進階乘法 (3,4,6,7,8,9)</option>'; break;
+        case 'chapter7': optionsHtml = '<option selected>🟠 進階乘法 (困難含突襲)</option>'; break;
         case 'chapter8': optionsHtml = '<option selected>🟠 基礎整除法</option>'; break;
         case 'chapter9': optionsHtml = '<option selected>🔴 四則運算綜合大亂鬥</option>'; break;
-        case 'chapter10': optionsHtml = '<option selected>🏆 終極未知數總冠軍戰</option>'; break;
+        case 'chapter10': optionsHtml = '<option selected>🏆 終極戰 (困難開啟全突襲)</option>'; break;
         default: optionsHtml = '<option selected>🎲 綜合練習</option>';
     }
+
     
     opSelect.innerHTML = optionsHtml;
     // 鎖定選單不讓玩家修改，因為這由章節強制決定
