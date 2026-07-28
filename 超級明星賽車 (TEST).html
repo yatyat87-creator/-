@@ -502,17 +502,16 @@
 	        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
 	        <div class="chapter-header">
 	            <span class="chapter-num">Ch2</span>
-	            <h3 class="level-name">熱帶沙灘</h3>
+	            <h3 class="level-name">屯門黃金海岸沙灘</h3>
 	        </div>
 	        <div class="difficulty">難度: 新秀級 <span class="boss-tag">+ Boss戰</span></div>
 		</div>	
 	    <!-- Ch3 -->
-	    <div class="card locked" id="card-chapter3" onclick="selectChapter('chapter3')">
-	        <div class="lock-overlay">🔒</div>
+	    <div class="card unlocked" id="card-chapter3" onclick="selectChapter('chapter3')">
 	        <div class="stage-name">🟡 第二階段 (位值概念)</div>
 	        <div class="chapter-header">
 	            <span class="chapter-num">Ch3</span>
-	            <h3 class="level-name">鄉村泥地</h3>
+	            <h3 class="level-name">青馬大橋</h3>
 	        </div>
 	        <div class="difficulty">難度: 業餘級</div>
 	    </div>
@@ -1022,20 +1021,20 @@ const QuestionGenerator = {
 				delayMultiplier: 1.0   // 👈 新增：正常速度
 	        },
 	        "chapter2": { 
-	            name: "Line Friend", 
-	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Chapter2a.png')", 
+	            name: "黃金海岸沙灘", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 2b.png')", 
 	            border: "4px solid #34495e",
 	            topHeight: "345px",
 	            bottomHeight: "60px",
-	    		delayMultiplier: 2.0   // 👈 新增：延遲兩倍，對手變慢 (適合需要思考的進退位)
+	    		delayMultiplier: 1.0   // 👈 新增：延遲兩倍，對手變慢 (適合需要思考的進退位)
 	        },
 	        "chapter3": { 
-	            name: "活塞盃競技場", 
-	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/placeholder_bg3.png')", 
+	            name: "香港青馬大橋", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 3a.png')", 
 	            border: "4px solid #f1c40f",
-	            topHeight: "200px",
-	            bottomHeight: "50px",
-	        	delayMultiplier: 1.0   // 👈 新增：正常速度
+	            topHeight: "345px",
+	            bottomHeight: "60px",
+	        	delayMultiplier: 2.0   // 👈 新增：正常速度
 	        },
 	        "chapter5": { 
 	            name: "Line Friend", 
