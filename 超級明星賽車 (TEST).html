@@ -5,7 +5,175 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>超級明星賽車</title>
     <style>
-        /* 基礎樣式 */
+
+		<style>
+    * {
+        box-sizing: border-box;
+    }
+    
+    /* 遊戲選單容器背景 */
+    .career-container {
+        width: 100%;
+        max-width: 800px;
+        background: #34495e;
+        border: 4px solid #f1c40f;
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        margin: 20px auto;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    /* 標題樣式 */
+    .menu-title {
+        grid-column: 1 / -1;
+        text-align: center;
+        color: #f1c40f;
+        margin: 0 0 10px 0;
+        font-size: 32px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* 卡片基本樣式 (已解鎖) */
+    .card {
+        background: linear-gradient(135deg, #2980b9, #2c3e50);
+        border: 3px solid #3498db;
+        border-radius: 15px;
+        padding: 20px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        color: white;
+    }
+
+    .card.unlocked:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.6);
+        border-color: #f1c40f;
+    }
+
+    /* 未解鎖 (鎖定) 樣式 */
+    .card.locked {
+        background: #7f8c8d;
+        border-color: #555;
+        filter: grayscale(80%);
+        opacity: 0.9;
+    }
+
+    .lock-overlay {
+        display: none;
+    }
+
+    .card.locked .lock-overlay {
+        display: flex;
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.55);
+        border-radius: 11px;
+        justify-content: center;
+        align-items: center;
+        font-size: 60px;
+        z-index: 10;
+    }
+
+    /* 卡片內部排版細節 */
+    .stage-name {
+        font-size: 14px;
+        font-weight: bold;
+        color: #f1c40f;
+        text-shadow: 1px 1px 2px #000;
+    }
+    
+    .card.locked .stage-name {
+        color: #ccc;
+    }
+
+    .chapter-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .chapter-num {
+        background: #f1c40f;
+        color: #2c3e50;
+        font-weight: 900;
+        padding: 5px 12px;
+        border-radius: 8px;
+        font-size: 20px;
+        box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+    }
+
+    .level-name {
+        margin: 0;
+        font-size: 24px;
+        font-weight: bold;
+        text-shadow: 1px 1px 3px #000;
+        line-height: 1.2;
+    }
+
+    .difficulty {
+        font-size: 14px;
+        background: rgba(0, 0, 0, 0.4);
+        padding: 6px 12px;
+        border-radius: 20px;
+        align-self: flex-start;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .boss-tag {
+        color: #ff4757;
+        font-weight: bold;
+        text-shadow: 0 0 5px #ff4757;
+    }
+
+    /* 挑戰按鈕樣式 */
+    .challenge-btn {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 12px;
+        font-size: 18px;
+        font-weight: bold;
+        border-radius: 10px;
+        cursor: pointer;
+        margin-top: auto;
+        box-shadow: 0 5px 0 #c0392b;
+        transition: 0.1s;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    .card.unlocked .challenge-btn:hover {
+        background: #ff5e4d;
+    }
+
+    .card.unlocked .challenge-btn:active {
+        transform: translateY(5px);
+        box-shadow: none;
+    }
+
+    .card.locked .challenge-btn {
+        background: #95a5a6;
+        box-shadow: 0 5px 0 #7f8c8d;
+        cursor: not-allowed;
+        color: #ecf0f1;
+    }
+
+    /* 響應式：螢幕變寬時自動改為 2 欄排版 */
+    @media (min-width: 600px) {
+        .career-container {
+            grid-template-columns: repeat(2, 1fr);
+            padding: 25px;
+        }
+    }
+</style>
+		
+		/* 基礎樣式 */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f39c12; color: #fff; text-align: center; margin: 0; padding: 20px; }
         #game-container { max-width: 900px; margin: 0 auto; background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); border: 4px solid #e74c3c; position: relative; }
         
@@ -299,6 +467,129 @@
 </head>
 <body>
 
+<div class="career-container">
+    <h1 class="menu-title">🏆 生涯模式</h1>
+
+    <!-- Ch1 (已解鎖) -->
+    <div class="card unlocked">
+        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
+        <div class="chapter-header">
+            <span class="chapter-num">Ch1</span>
+            <h3 class="level-name">州際公路</h3>
+        </div>
+        <div class="difficulty">難度: 卡丁車級</div>
+        <button class="challenge-btn">開始挑戰 🏁</button>
+    </div>
+
+    <!-- Ch2 -->
+    <div class="card locked">
+        <div class="lock-overlay">🔒</div>
+        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
+        <div class="chapter-header">
+            <span class="chapter-num">Ch2</span>
+            <h3 class="level-name">熱帶沙灘</h3>
+        </div>
+        <div class="difficulty">難度: 新秀級 <span class="boss-tag">+ Boss戰</span></div>
+        <button class="challenge-btn" disabled>未解鎖</button>
+    </div>
+
+    <!-- Ch3 -->
+    <div class="card locked">
+        <div class="lock-overlay">🔒</div>
+        <div class="stage-name">🟡 第二階段 (位值概念)</div>
+        <div class="chapter-header">
+            <span class="chapter-num">Ch3</span>
+            <h3 class="level-name">鄉村泥地</h3>
+        </div>
+        <div class="difficulty">難度: 業餘級</div>
+        <button class="challenge-btn" disabled>未解鎖</button>
+    </div>
+
+    <!-- Ch4 -->
+    <div class="card locked">
+        <div class="lock-overlay">🔒</div>
+        <div class="stage-name">🟡 第二階段 (位值概念)</div>
+        <div class="chapter-header">
+            <span class="chapter-num">Ch4</span>
+            <h3 class="level-name">城市高架橋</h3>
+        </div>
+        <div class="difficulty">難度: 職業級</div>
+        <button class="challenge-btn" disabled>未解鎖</button>
+    </div>
+
+    <!-- Ch5 -->
+    <div class="card locked">
+        <div class="lock-overlay">🔒</div>
+        <div class="stage-name">🟡 第二階段 (位值概念)</div>
+        <div class="chapter-header">
+            <span class="chapter-num">Ch5</span>
+            <h3 class="level-name">黑夜山道</h3>
+        </div>
+        <div class="difficulty">難度: 專家級 <span class="boss-tag">+ Boss戰</span></div>
+        <button class="challenge-btn" disabled>未解鎖</button>
+    </div>
+
+    <!-- Ch6 -->
+    <div class="card locked">
+        <div class="lock-overlay">🔒</div>
+        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
+        <div class="chapter-header">
+            <span class="chapter-num">Ch6</span>
+            <h3 class="level-name">巨石峽谷</h3>
+        </div>
+        <div class="difficulty">難度: 拉力級</div>
+        <button class="challenge-btn" disabled>未解鎖</button>
+    </div>
+
+    <!-- Ch7 -->
+    <div class="card locked">
+        <div class="lock-overlay">🔒</div>
+        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
+        <div class="chapter-header">
+            <span class="chapter-num">Ch7</span>
+            <h3 class="level-name">冰雪極地</h3>
+        </div>
+        <div class="difficulty">難度: 冠軍級 (特殊道具)</div>
+        <button class="challenge-btn" disabled>未解鎖</button>
+    </div>
+
+    <!-- Ch8 -->
+    <div class="card locked">
+        <div class="lock-overlay">🔒</div>
+        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
+        <div class="chapter-header">
+            <span class="chapter-num">Ch8</span>
+            <h3 class="level-name">科技工廠</h3>
+        </div>
+        <div class="difficulty">難度: 大師級</div>
+        <button class="challenge-btn" disabled>未解鎖</button>
+    </div>
+
+    <!-- Ch9 -->
+    <div class="card locked">
+        <div class="lock-overlay">🔒</div>
+        <div class="stage-name">🔴 第四階段 (大腦極限)</div>
+        <div class="chapter-header">
+            <span class="chapter-num">Ch9</span>
+            <h3 class="level-name">活塞盃競技場</h3>
+        </div>
+        <div class="difficulty">難度: 傳奇級</div>
+        <button class="challenge-btn" disabled>未解鎖</button>
+    </div>
+
+    <!-- Ch10 -->
+    <div class="card locked">
+        <div class="lock-overlay">🔒</div>
+        <div class="stage-name">🔴 第四階段 (大腦極限)</div>
+        <div class="chapter-header">
+            <span class="chapter-num">Ch10</span>
+            <h3 class="level-name">終極車神爭霸戰</h3>
+        </div>
+        <div class="difficulty">難度: 總冠軍 <span class="boss-tag">Boss</span></div>
+        <button class="challenge-btn" disabled>未解鎖</button>
+    </div>
+</div>
+	
 <div id="game-container">
     <!-- 頂部資訊列：金幣與音效開關 -->
     <div class="top-bar">
