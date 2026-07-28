@@ -465,129 +465,6 @@
     </style>
 </head>
 <body>
-
-<div class="career-container">
-    <h1 class="menu-title">🏆 生涯模式</h1>
-
-    <!-- Ch1 (已解鎖) -->
-    <div class="card unlocked">
-        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
-        <div class="chapter-header">
-            <span class="chapter-num">Ch1</span>
-            <h3 class="level-name">州際公路</h3>
-        </div>
-        <div class="difficulty">難度: 卡丁車級</div>
-        <button class="challenge-btn">開始挑戰 🏁</button>
-    </div>
-
-    <!-- Ch2 -->
-    <div class="card locked">
-        <div class="lock-overlay">🔒</div>
-        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
-        <div class="chapter-header">
-            <span class="chapter-num">Ch2</span>
-            <h3 class="level-name">熱帶沙灘</h3>
-        </div>
-        <div class="difficulty">難度: 新秀級 <span class="boss-tag">+ Boss戰</span></div>
-        <button class="challenge-btn" disabled>未解鎖</button>
-    </div>
-
-    <!-- Ch3 -->
-    <div class="card locked">
-        <div class="lock-overlay">🔒</div>
-        <div class="stage-name">🟡 第二階段 (位值概念)</div>
-        <div class="chapter-header">
-            <span class="chapter-num">Ch3</span>
-            <h3 class="level-name">鄉村泥地</h3>
-        </div>
-        <div class="difficulty">難度: 業餘級</div>
-        <button class="challenge-btn" disabled>未解鎖</button>
-    </div>
-
-    <!-- Ch4 -->
-    <div class="card locked">
-        <div class="lock-overlay">🔒</div>
-        <div class="stage-name">🟡 第二階段 (位值概念)</div>
-        <div class="chapter-header">
-            <span class="chapter-num">Ch4</span>
-            <h3 class="level-name">城市高架橋</h3>
-        </div>
-        <div class="difficulty">難度: 職業級</div>
-        <button class="challenge-btn" disabled>未解鎖</button>
-    </div>
-
-    <!-- Ch5 -->
-    <div class="card locked">
-        <div class="lock-overlay">🔒</div>
-        <div class="stage-name">🟡 第二階段 (位值概念)</div>
-        <div class="chapter-header">
-            <span class="chapter-num">Ch5</span>
-            <h3 class="level-name">黑夜山道</h3>
-        </div>
-        <div class="difficulty">難度: 專家級 <span class="boss-tag">+ Boss戰</span></div>
-        <button class="challenge-btn" disabled>未解鎖</button>
-    </div>
-
-    <!-- Ch6 -->
-    <div class="card locked">
-        <div class="lock-overlay">🔒</div>
-        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
-        <div class="chapter-header">
-            <span class="chapter-num">Ch6</span>
-            <h3 class="level-name">巨石峽谷</h3>
-        </div>
-        <div class="difficulty">難度: 拉力級</div>
-        <button class="challenge-btn" disabled>未解鎖</button>
-    </div>
-
-    <!-- Ch7 -->
-    <div class="card locked">
-        <div class="lock-overlay">🔒</div>
-        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
-        <div class="chapter-header">
-            <span class="chapter-num">Ch7</span>
-            <h3 class="level-name">冰雪極地</h3>
-        </div>
-        <div class="difficulty">難度: 冠軍級 (特殊道具)</div>
-        <button class="challenge-btn" disabled>未解鎖</button>
-    </div>
-
-    <!-- Ch8 -->
-    <div class="card locked">
-        <div class="lock-overlay">🔒</div>
-        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
-        <div class="chapter-header">
-            <span class="chapter-num">Ch8</span>
-            <h3 class="level-name">科技工廠</h3>
-        </div>
-        <div class="difficulty">難度: 大師級</div>
-        <button class="challenge-btn" disabled>未解鎖</button>
-    </div>
-
-    <!-- Ch9 -->
-    <div class="card locked">
-        <div class="lock-overlay">🔒</div>
-        <div class="stage-name">🔴 第四階段 (大腦極限)</div>
-        <div class="chapter-header">
-            <span class="chapter-num">Ch9</span>
-            <h3 class="level-name">活塞盃競技場</h3>
-        </div>
-        <div class="difficulty">難度: 傳奇級</div>
-        <button class="challenge-btn" disabled>未解鎖</button>
-    </div>
-
-    <!-- Ch10 -->
-    <div class="card locked">
-        <div class="lock-overlay">🔒</div>
-        <div class="stage-name">🔴 第四階段 (大腦極限)</div>
-        <div class="chapter-header">
-            <span class="chapter-num">Ch10</span>
-            <h3 class="level-name">終極車神爭霸戰</h3>
-        </div>
-        <div class="difficulty">難度: 總冠軍 <span class="boss-tag">Boss</span></div>
-        <button class="challenge-btn" disabled>未解鎖</button>
-    </div>
-</div>
 	
 <div id="game-container">
     <!-- 頂部資訊列：金幣與音效開關 -->
@@ -605,13 +482,129 @@
         <h2>🏎️ 活塞盃：數學大賽 </h2>
         <p>進行 3 個回合的積分排名賽！第 3 回合將有強大的 Boss 登場！</p>
 
-		<div class="form-group">
-		    <label>選擇賽季 / 章節：</label>
-		    <select id="chapter-select" onchange="updateOperationMode()" onclick="AudioManager.playSound('click')">
-		        <option value="chapter1" selected>🛣️ 第 1 章：州際公路 (四則運算)</option>
-		        <option value="chapter2">🌃 第 2 章：Line Friend (進退位挑戰)</option>
-		    </select>
-		</div>		
+	<div class="career-container">
+	    <h1 class="menu-title">🏆 生涯模式</h1>
+	
+	    <!-- Ch1 (已解鎖) -->
+	    <div class="card unlocked">
+	        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch1</span>
+	            <h3 class="level-name">州際公路</h3>
+	        </div>
+	        <div class="difficulty">難度: 卡丁車級</div>
+	        <button class="challenge-btn">開始挑戰 🏁</button>
+	    </div>
+	
+	    <!-- Ch2 -->
+	    <div class="card locked">
+	        <div class="lock-overlay">🔒</div>
+	        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch2</span>
+	            <h3 class="level-name">熱帶沙灘</h3>
+	        </div>
+	        <div class="difficulty">難度: 新秀級 <span class="boss-tag">+ Boss戰</span></div>
+	        <button class="challenge-btn" disabled>未解鎖</button>
+	    </div>
+	
+	    <!-- Ch3 -->
+	    <div class="card locked">
+	        <div class="lock-overlay">🔒</div>
+	        <div class="stage-name">🟡 第二階段 (位值概念)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch3</span>
+	            <h3 class="level-name">鄉村泥地</h3>
+	        </div>
+	        <div class="difficulty">難度: 業餘級</div>
+	        <button class="challenge-btn" disabled>未解鎖</button>
+	    </div>
+	
+	    <!-- Ch4 -->
+	    <div class="card locked">
+	        <div class="lock-overlay">🔒</div>
+	        <div class="stage-name">🟡 第二階段 (位值概念)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch4</span>
+	            <h3 class="level-name">城市高架橋</h3>
+	        </div>
+	        <div class="difficulty">難度: 職業級</div>
+	        <button class="challenge-btn" disabled>未解鎖</button>
+	    </div>
+	
+	    <!-- Ch5 -->
+	    <div class="card locked">
+	        <div class="lock-overlay">🔒</div>
+	        <div class="stage-name">🟡 第二階段 (位值概念)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch5</span>
+	            <h3 class="level-name">黑夜山道</h3>
+	        </div>
+	        <div class="difficulty">難度: 專家級 <span class="boss-tag">+ Boss戰</span></div>
+	        <button class="challenge-btn" disabled>未解鎖</button>
+	    </div>
+	
+	    <!-- Ch6 -->
+	    <div class="card locked">
+	        <div class="lock-overlay">🔒</div>
+	        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch6</span>
+	            <h3 class="level-name">巨石峽谷</h3>
+	        </div>
+	        <div class="difficulty">難度: 拉力級</div>
+	        <button class="challenge-btn" disabled>未解鎖</button>
+	    </div>
+	
+	    <!-- Ch7 -->
+	    <div class="card locked">
+	        <div class="lock-overlay">🔒</div>
+	        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch7</span>
+	            <h3 class="level-name">冰雪極地</h3>
+	        </div>
+	        <div class="difficulty">難度: 冠軍級 (特殊道具)</div>
+	        <button class="challenge-btn" disabled>未解鎖</button>
+	    </div>
+	
+	    <!-- Ch8 -->
+	    <div class="card locked">
+	        <div class="lock-overlay">🔒</div>
+	        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch8</span>
+	            <h3 class="level-name">科技工廠</h3>
+	        </div>
+	        <div class="difficulty">難度: 大師級</div>
+	        <button class="challenge-btn" disabled>未解鎖</button>
+	    </div>
+	
+	    <!-- Ch9 -->
+	    <div class="card locked">
+	        <div class="lock-overlay">🔒</div>
+	        <div class="stage-name">🔴 第四階段 (大腦極限)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch9</span>
+	            <h3 class="level-name">活塞盃競技場</h3>
+	        </div>
+	        <div class="difficulty">難度: 傳奇級</div>
+	        <button class="challenge-btn" disabled>未解鎖</button>
+	    </div>
+	
+	    <!-- Ch10 -->
+	    <div class="card locked">
+	        <div class="lock-overlay">🔒</div>
+	        <div class="stage-name">🔴 第四階段 (大腦極限)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch10</span>
+	            <h3 class="level-name">終極車神爭霸戰</h3>
+	        </div>
+	        <div class="difficulty">難度: 總冠軍 <span class="boss-tag">Boss</span></div>
+	        <button class="challenge-btn" disabled>未解鎖</button>
+	    </div>
+	</div>
+		
         <div class="form-group">
             <label>選擇你的賽車手：</label>
             <div id="character-grid" class="char-grid"></div>
