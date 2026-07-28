@@ -822,99 +822,201 @@
 // =====================================================================
 // 🧠 題庫引擎系統 (QuestionEngine) - 支援多學科擴充
 // =====================================================================
-const QuestionEngine = {
-    // 當前的學科模式 (未來可在 setup-screen 新增下拉選單來切換)
-    currentSubject: 'math',
-
-// 🔢 數學題庫模組
-    math: {
-        generate: function(settings) {
-            // 從設定中讀取原本的參數 (給第一章與第三章使用)[cite: 1]
-            let activeMultiplier = settings.multiplier === 'random' ? Math.floor(Math.random() * 11) + 2 : parseInt(settings.multiplier);
-            let params = settings.diffParams[settings.difficulty];
-            let randomNum = Math.floor(Math.random() * params.maxNum) + 1;
-            
-            let questionText = "";
-            let currentAnswer = 0;
-
-            // 處理「混合模式」：在出題前將運算符號隨機指定為具體的模式
-            let op = settings.operation;
-            if (op === '2d_mix') {
-                const modes = ['add_no_carry', 'add_carry', 'sub_no_borrow', 'sub_borrow'];
-                op = modes[Math.floor(Math.random() * modes.length)];
-            } else if (op === 'mix_add') {
-                op = Math.random() < 0.5 ? 'add_no_carry' : 'add_carry';
-            } else if (op === 'mix_sub') {
-                op = Math.random() < 0.5 ? 'sub_no_borrow' : 'sub_borrow';
-            }
-
-            // === 題型計算邏輯 ===
-            
-            // 1. 原本的基礎四則運算 (Chapter 1 & 3)[cite: 1]
-            if (op === 'add') { currentAnswer = activeMultiplier + randomNum; questionText = `${activeMultiplier} + ${randomNum} = ?`; } 
-            else if (op === 'sub') { let total = activeMultiplier + randomNum; currentAnswer = randomNum; questionText = `${total} - ${activeMultiplier} = ?`; } 
-            else if (op === 'mul') { currentAnswer = activeMultiplier * randomNum; questionText = `${activeMultiplier} × ${randomNum} = ?`; } 
-            else if (op === 'div') { let product = activeMultiplier * randomNum; currentAnswer = randomNum; questionText = `${product} ÷ ${activeMultiplier} = ?`; }
-            
-            // 2. 新增的兩位數加減法 (Chapter 2)
-            else if (op === 'add_no_carry') {
-                // 不進位加數：個位相加 < 10，十位相加 < 10
-                let u1 = Math.floor(Math.random() * 9); // 個位數 0~8
-                let t1 = Math.floor(Math.random() * 8) + 1; // 十位數 1~8
-                let u2 = Math.floor(Math.random() * (10 - u1)); // 個位數加起來不超過 9
-                let t2 = Math.floor(Math.random() * (9 - t1)) + 1; 
-                let n1 = t1 * 10 + u1, n2 = t2 * 10 + u2;
-                currentAnswer = n1 + n2; questionText = `${n1} + ${n2} = ?`;
-            }
-            else if (op === 'add_carry') {
-                // 進位加數：個位相加 >= 10，和不超過 99
-                let u1 = Math.floor(Math.random() * 9) + 1; // 個位數 1~9
-                let t1 = Math.floor(Math.random() * 7) + 1; // 十位數 1~7
-                let u2 = Math.floor(Math.random() * u1) + (10 - u1); // 確保 u1+u2 >= 10
-                let t2 = Math.floor(Math.random() * (8 - t1)) + 1; // 確保進位後十位和不超過 9
-                let n1 = t1 * 10 + u1, n2 = t2 * 10 + u2;
-                currentAnswer = n1 + n2; questionText = `${n1} + ${n2} = ?`;
-            }
-            else if (op === 'sub_no_borrow') {
-                // 不退位減數：被減數個位 >= 減數個位
-                let u1 = Math.floor(Math.random() * 9) + 1; // 1~9
-                let t1 = Math.floor(Math.random() * 8) + 2; // 2~9
-                let u2 = Math.floor(Math.random() * (u1 + 1)); // 0~u1 (確保不需要退位)
-                let t2 = Math.floor(Math.random() * (t1 - 1)) + 1; // 1~(t1-1)
-                let n1 = t1 * 10 + u1, n2 = t2 * 10 + u2;
-                currentAnswer = n1 - n2; questionText = `${n1} - ${n2} = ?`;
-            }
-            else if (op === 'sub_borrow') {
-                // 退位減數：被減數個位 < 減數個位
-                let u1 = Math.floor(Math.random() * 9); // 0~8
-                let t1 = Math.floor(Math.random() * 8) + 2; // 2~9
-                let u2 = Math.floor(Math.random() * (9 - u1)) + (u1 + 1); // 確保 u2 > u1 (強制退位)
-                let t2 = Math.floor(Math.random() * (t1 - 1)) + 1; 
-                let n1 = t1 * 10 + u1, n2 = t2 * 10 + u2;
-                currentAnswer = n1 - n2; questionText = `${n1} - ${n2} = ?`;
-            }
-
-            // 產生干擾選項 (這部分維持原本邏輯即可)[cite: 1]
-            let options = [currentAnswer];
-            while (options.length < 4) {
-                let offset = Math.floor(Math.random() * 5) + 1;
-                // 針對兩位數運算，偶爾產生十位數錯誤的誘答選項增加難度
-                if (op.includes('add') || op.includes('sub')) {
-                    if (Math.random() < 0.3) offset *= 10; 
-                }
-                let fakeAnswer = Math.random() > 0.5 ? currentAnswer + offset : currentAnswer - offset;
-                if (fakeAnswer > 0 && !options.includes(fakeAnswer)) options.push(fakeAnswer);
-            }
-            // 打亂選項順序[cite: 1]
-            options.sort(() => Math.random() - 0.5);
-
-            return {
-                questionText: questionText,
-                correctAnswer: currentAnswer,
-                options: options
-            };
-        }
+const QuestionGenerator = {
+    // 取得隨機整數 [min, max]
+    getRandom: function(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
     },
+
+    // 智能選項生成器 (產生 1 對 3 錯，包含迷惑性答案)
+    generateOptions: function(correctAnswer, operationType) {
+        let options = new Set([correctAnswer]);
+        
+        while (options.size < 4) {
+            let offset = 0;
+            let rand = Math.random();
+            
+            if (rand < 0.3) {
+                // 迷惑 1: 粗心算錯 1 或 2 (加減法常犯)
+                offset = this.getRandom(1, 2) * (Math.random() > 0.5 ? 1 : -1);
+            } else if (rand < 0.6 && correctAnswer > 10) {
+                // 迷惑 2: 十位數搞錯 (進退位常犯)
+                offset = 10 * (Math.random() > 0.5 ? 1 : -1);
+            } else if (rand < 0.8 && operationType === 'mul') {
+                // 迷惑 3: 乘法背錯相鄰的基數 (例如 6x7=42 變成 48)
+                offset = this.getRandom(1, 9) * (Math.random() > 0.5 ? 1 : -1);
+            } else {
+                // 迷惑 4: 隨機相近數字
+                offset = this.getRandom(-5, 5);
+            }
+
+            let fakeAnswer = correctAnswer + offset;
+            if (fakeAnswer >= 0 && fakeAnswer !== correctAnswer) {
+                options.add(fakeAnswer);
+            }
+        }
+        return Array.from(options).sort(() => Math.random() - 0.5);
+    },
+
+    // 主生成函數
+    generateQuestion: function(chapterNumber) {
+        let qText = "";
+        let cAnswer = 0;
+        let isBoss = false;
+        let opType = 'add'; // 用於決定干擾選項的生成策略
+
+        const isAdd = Math.random() > 0.5;
+        const bossTrigger = Math.random() < 0.2; // 20% 機率觸發 Boss 題
+
+        switch(parseInt(chapterNumber)) {
+            case 1: // Ch1: 10 以內加減法
+                if (isAdd) {
+                    let a = this.getRandom(1, 9);
+                    let b = this.getRandom(1, 10 - a);
+                    cAnswer = a + b; qText = `${a} + ${b} = ?`;
+                } else {
+                    let a = this.getRandom(2, 10);
+                    let b = this.getRandom(1, a - 1);
+                    cAnswer = a - b; qText = `${a} - ${b} = ?`; opType = 'sub';
+                }
+                break;
+
+            case 2: // Ch2: 20 以內，20% 加數未知
+                isBoss = bossTrigger;
+                let a2 = this.getRandom(5, 9);
+                let b2 = this.getRandom(11 - a2, 9); // 湊十法
+                let sum2 = a2 + b2;
+                if (isBoss) {
+                    qText = Math.random() > 0.5 ? `? + ${b2} = ${sum2}` : `${a2} + ? = ${sum2}`;
+                    cAnswer = Math.random() > 0.5 ? a2 : b2;
+                } else {
+                    if (isAdd) {
+                        cAnswer = sum2; qText = `${a2} + ${b2} = ?`;
+                    } else {
+                        cAnswer = a2; qText = `${sum2} - ${b2} = ?`; opType = 'sub';
+                    }
+                }
+                break;
+
+            case 3: // Ch3: 雙位數加減一位數/整十數
+                if (isAdd) {
+                    let a3 = this.getRandom(11, 89);
+                    let b3 = Math.random() > 0.5 ? this.getRandom(1, 9) : this.getRandom(1, Math.floor((99-a3)/10)) * 10;
+                    cAnswer = a3 + b3; qText = `${a3} + ${b3} = ?`;
+                } else {
+                    let a3 = this.getRandom(21, 99);
+                    let b3 = Math.random() > 0.5 ? this.getRandom(1, a3 % 10 || 9) : this.getRandom(1, Math.floor(a3/10)) * 10;
+                    cAnswer = a3 - b3; qText = `${a3} - ${b3} = ?`; opType = 'sub';
+                }
+                break;
+
+            case 4: // Ch4: 雙位數加減雙位數 (無進退位)
+                if (isAdd) {
+                    let u1 = this.getRandom(1, 8), u2 = this.getRandom(1, 9 - u1);
+                    let t1 = this.getRandom(1, 8), t2 = this.getRandom(1, 9 - t1);
+                    let n1 = t1 * 10 + u1, n2 = t2 * 10 + u2;
+                    cAnswer = n1 + n2; qText = `${n1} + ${n2} = ?`;
+                } else {
+                    let u1 = this.getRandom(2, 9), u2 = this.getRandom(1, u1);
+                    let t1 = this.getRandom(2, 9), t2 = this.getRandom(1, t1 - 1);
+                    let n1 = t1 * 10 + u1, n2 = t2 * 10 + u2;
+                    cAnswer = n1 - n2; qText = `${n1} - ${n2} = ?`; opType = 'sub';
+                }
+                break;
+
+            case 5: // Ch5: 雙位數加減雙位數 (必定進退位) + 20% Boss
+                isBoss = bossTrigger;
+                let isAdd5 = isAdd;
+                let n1_5, n2_5, sum_diff_5;
+                
+                if (isAdd5) {
+                    let u1 = this.getRandom(2, 9), u2 = this.getRandom(10 - u1, 9);
+                    let t1 = this.getRandom(1, 7), t2 = this.getRandom(1, 8 - t1);
+                    n1_5 = t1 * 10 + u1; n2_5 = t2 * 10 + u2; sum_diff_5 = n1_5 + n2_5;
+                } else {
+                    let u1 = this.getRandom(0, 8), u2 = this.getRandom(u1 + 1, 9);
+                    let t1 = this.getRandom(2, 9), t2 = this.getRandom(1, t1 - 1);
+                    n1_5 = t1 * 10 + u1; n2_5 = t2 * 10 + u2; sum_diff_5 = n1_5 - n2_5; opType = 'sub';
+                }
+
+                if (isBoss && !isAdd5) { // 減數/被減數未知
+                    if (Math.random() > 0.5) {
+                        qText = `? - ${n2_5} = ${sum_diff_5}`; cAnswer = n1_5;
+                    } else {
+                        qText = `${n1_5} - ? = ${sum_diff_5}`; cAnswer = n2_5;
+                    }
+                } else {
+                    cAnswer = sum_diff_5; 
+                    qText = isAdd5 ? `${n1_5} + ${n2_5} = ?` : `${n1_5} - ${n2_5} = ?`;
+                }
+                break;
+
+            case 6: // Ch6: 乘法起步 (2, 5, 10)
+                let bases6 = [2, 5, 10];
+                let a6 = bases6[this.getRandom(0, 2)];
+                let b6 = this.getRandom(2, 9);
+                if(Math.random() > 0.5) [a6, b6] = [b6, a6];
+                cAnswer = a6 * b6; qText = `${a6} × ${b6} = ?`; opType = 'mul';
+                break;
+
+            case 7: // Ch7: 進階乘法 (3, 4, 6, 7, 8, 9) + 20% Boss
+                isBoss = bossTrigger;
+                let bases7 = [3, 4, 6, 7, 8, 9];
+                let a7 = bases7[this.getRandom(0, 5)];
+                let b7 = this.getRandom(3, 9);
+                opType = 'mul';
+                
+                if (isBoss) {
+                    qText = Math.random() > 0.5 ? `? × ${b7} = ${a7*b7}` : `${a7} × ? = ${a7*b7}`;
+                    cAnswer = Math.random() > 0.5 ? a7 : b7;
+                } else {
+                    cAnswer = a7 * b7; qText = `${a7} × ${b7} = ?`;
+                }
+                break;
+
+            case 8: // Ch8: 基礎整除法
+                let div_b = this.getRandom(2, 9);
+                let div_ans = this.getRandom(2, 9);
+                let div_a = div_b * div_ans;
+                cAnswer = div_ans; qText = `${div_a} ÷ ${div_b} = ?`; opType = 'div';
+                break;
+
+            case 9: // Ch9: 四則綜合大亂鬥 (遞迴呼叫前 8 章)
+                return this.generateQuestion(this.getRandom(1, 8));
+
+            case 10: // Ch10: 終極未知數挑戰 (All Boss)
+                isBoss = true;
+                let op10 = this.getRandom(1, 4); // 1:+, 2:-, 3:x, 4:/
+                let n10_a, n10_b, n10_ans;
+                
+                if (op10 === 1) { // 加法未知
+                    n10_a = this.getRandom(11, 50); n10_b = this.getRandom(11, 49); n10_ans = n10_a + n10_b;
+                    qText = Math.random() > 0.5 ? `? + ${n10_b} = ${n10_ans}` : `${n10_a} + ? = ${n10_ans}`;
+                    cAnswer = Math.random() > 0.5 ? n10_a : n10_b;
+                } else if (op10 === 2) { // 減法未知
+                    n10_b = this.getRandom(11, 40); n10_ans = this.getRandom(11, 40); n10_a = n10_b + n10_ans;
+                    qText = Math.random() > 0.5 ? `? - ${n10_b} = ${n10_ans}` : `${n10_a} - ? = ${n10_ans}`;
+                    cAnswer = Math.random() > 0.5 ? n10_a : n10_b;
+                } else if (op10 === 3) { // 乘法未知
+                    n10_a = this.getRandom(3, 9); n10_b = this.getRandom(3, 9); n10_ans = n10_a * n10_b;
+                    qText = Math.random() > 0.5 ? `? × ${n10_b} = ${n10_ans}` : `${n10_a} × ? = ${n10_ans}`;
+                    cAnswer = Math.random() > 0.5 ? n10_a : n10_b; opType = 'mul';
+                } else { // 除法未知
+                    n10_ans = this.getRandom(3, 9); n10_b = this.getRandom(2, 9); n10_a = n10_ans * n10_b;
+                    qText = Math.random() > 0.5 ? `? ÷ ${n10_b} = ${n10_ans}` : `${n10_a} ÷ ? = ${n10_ans}`;
+                    cAnswer = Math.random() > 0.5 ? n10_a : n10_b; opType = 'div';
+                }
+                break;
+        }
+
+        return {
+            questionText: qText,
+            correctAnswer: cAnswer,
+            options: this.generateOptions(cAnswer, opType),
+            isBossMode: isBoss
+        };
+    }
+},
     // 🔤 英文題庫模組 (未來擴充預留範例)
     english: {
         generate: function(settings) {
@@ -943,14 +1045,17 @@ const QuestionEngine = {
         }
     },
 
-    // 🎯 統一對外呼叫的接口
+// 🎯 替換這裡的 getQuestion 接口：
     getQuestion: function(settings) {
-        if (this.currentSubject === 'math') {
-            return this.math.generate(settings);
-        } else if (this.currentSubject === 'english') {
-            return this.english.generate(settings);
-        }
+        // 從 DOM 取得目前選擇的章節，例如 "chapter2" 字串
+        let currentChapterStr = document.getElementById('chapter-select').value; 
         
+        // 將 "chapter2" 轉為數字 2
+        let chapterNumber = parseInt(currentChapterStr.replace('chapter', '')) || 1; 
+        
+        // 直接呼叫我們剛做好的新引擎
+        return QuestionGenerator.generateQuestion(chapterNumber);
+    }        
         // 防呆機制
         return { questionText: "題目載入失敗", correctAnswer: "", options: [] };
     }
@@ -1652,7 +1757,31 @@ function generateQuestion() {
     // 2. 接收引擎回傳的題目與答案
     currentAnswer = questionData.correctAnswer;
     currentQuestionText = questionData.questionText;
-    questionStartTime = Date.now();
+
+	// 渲染題目文字
+    let questionArea = document.getElementById('question-area');
+    questionArea.innerText = qData.questionText;
+
+    // ▼▼▼ 加入 Boss 題目的視覺變化 ▼▼▼
+    if (qData.isBossMode) {
+        questionArea.style.color = "#ff4757"; // 變成紅色
+        questionArea.innerText = "🔥 突襲！ " + qData.questionText;
+    } else {
+        questionArea.style.color = "#f1c40f"; // 恢復黃色
+    }
+
+    // 渲染按鈕選項
+    let optionsContainer = document.getElementById('options-container');
+    optionsContainer.innerHTML = '';
+    qData.options.forEach(opt => {
+        let btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt;
+        btn.onclick = () => checkAnswer(opt);
+        optionsContainer.appendChild(btn);
+    });
+
+	questionStartTime = Date.now();
 
     // 3. 更新 UI
     document.getElementById('question-area').innerText = currentQuestionText;
