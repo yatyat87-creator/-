@@ -1018,50 +1018,8 @@ const QuestionGenerator = {
         };
     }
 },
-    // 🔤 英文題庫模組 (未來擴充預留範例)
-    english: {
-        generate: function(settings) {
-            // 這裡可以替換成您未來的 JSON 單字庫
-            const vocab = [
-                { en: "Apple", zh: "蘋果" }, { en: "Banana", zh: "香蕉" },
-                { en: "Car", zh: "車子" }, { en: "Engine", zh: "引擎" }
-            ];
-            
-            // 隨機抽一題
-            let correctItem = vocab[Math.floor(Math.random() * vocab.length)];
-            
-            // 產生干擾選項
-            let options = [correctItem.zh];
-            while (options.length < 4) {
-                let randomItem = vocab[Math.floor(Math.random() * vocab.length)].zh;
-                if (!options.includes(randomItem)) options.push(randomItem);
-            }
-            options.sort(() => Math.random() - 0.5);
-
-            return {
-                questionText: `「${correctItem.en}」的中文是？`,
-                correctAnswer: correctItem.zh,
-                options: options
-            };
-        }
-    },
-
-// 🎯 替換這裡的 getQuestion 接口：
-    getQuestion: function(settings) {
-        // 從 DOM 取得目前選擇的章節，例如 "chapter2" 字串
-        let currentChapterStr = document.getElementById('chapter-select').value; 
-        
-        // 將 "chapter2" 轉為數字 2
-        let chapterNumber = parseInt(currentChapterStr.replace('chapter', '')) || 1; 
-        
-        // 直接呼叫我們剛做好的新引擎
-        return QuestionGenerator.generateQuestion(chapterNumber);
-    }        
-        // 防呆機制
-        return { questionText: "題目載入失敗", correctAnswer: "", options: [] };
-    }
-};
-	
+} // 這是用來關閉 case 10 的括號
+}; // 👈 直接用這個分號關閉 QuestionGenerator	
     // =====================================================================
     // 🎮 遊戲核心資料庫 (GAME_DATA)
     // =====================================================================
@@ -1232,42 +1190,35 @@ opponents: [
         renderCharacterGrid();
     };
 
-	function updateOperationMode() {
-	    const chapter = document.getElementById('chapter-select').value;
-	    const opSelect = document.getElementById('operation-mode');
-	    // 抓取基準數字選單的外層 div
-	    const multiplierGroup = document.getElementById('multiplier').parentNode; 
-	
-	    // 清空現有選項
-	    opSelect.innerHTML = ''; 
-	
-	    if (chapter === 'chapter2') {
-	        // 【新增】當選擇 Chapter 2 時，隱藏基準數字選擇
-	        multiplierGroup.style.display = 'none';
-	
-	        // 顯示退位/進位相關選項
-	        opSelect.innerHTML = `
-	            <option value="2d_mix" selected>🔄 兩位數加減</option>
-	            <option value="add_no_carry">➕ 不進位加數</option>
-	            <option value="add_carry">➕ 進位加數</option>
-	            <option value="sub_no_borrow">➖ 不退位減數</option>
-	            <option value="sub_borrow">➖ 退位減數</option>
-	            <option value="mix_add">➕ 混合模式加數</option>
-	            <option value="mix_sub">➖ 混合模式減數</option>
-	        `;
-	    } else {
-	        // 【新增】預設 (Chapter 1, 3)：顯示基準數字選擇
-	        multiplierGroup.style.display = 'block';
-	
-	        // 恢復為原本的四則運算
-	        opSelect.innerHTML = `
-	            <option value="add" selected>➕ 加法</option>
-	            <option value="sub">➖ 減法</option>
-	            <option value="mul">✖️ 乘法</option>
-	            <option value="div">➗ 除法</option>
-	        `;
-	    }
-	}
+function updateOperationMode() {
+    const chapter = document.getElementById('chapter-select').value;
+    const opSelect = document.getElementById('operation-mode');
+    const multiplierGroup = document.getElementById('multiplier').parentNode; 
+
+    // 生涯模式由系統自動出題，因此隱藏基準數字選單
+    multiplierGroup.style.display = 'none';
+    opSelect.innerHTML = ''; 
+
+    // 根據章節顯示對應的學習目標
+    let optionsHtml = '';
+    switch(chapter) {
+        case 'chapter1': optionsHtml = '<option selected>🟢 10以內加減法</option>'; break;
+        case 'chapter2': optionsHtml = '<option selected>🟢 20以內 (湊十法) + 突襲</option>'; break;
+        case 'chapter3': optionsHtml = '<option selected>🟡 雙位數加減 (配一位/整十數)</option>'; break;
+        case 'chapter4': optionsHtml = '<option selected>🟡 雙位數加減雙位數 (無進退位)</option>'; break;
+        case 'chapter5': optionsHtml = '<option selected>🟡 雙位數加減 (必定進退位) + 突襲</option>'; break;
+        case 'chapter6': optionsHtml = '<option selected>🟠 乘法起步 (2, 5, 10 的倍數)</option>'; break;
+        case 'chapter7': optionsHtml = '<option selected>🟠 進階乘法 (3,4,6,7,8,9)</option>'; break;
+        case 'chapter8': optionsHtml = '<option selected>🟠 基礎整除法</option>'; break;
+        case 'chapter9': optionsHtml = '<option selected>🔴 四則運算綜合大亂鬥</option>'; break;
+        case 'chapter10': optionsHtml = '<option selected>🏆 終極未知數總冠軍戰</option>'; break;
+        default: optionsHtml = '<option selected>🎲 綜合練習</option>';
+    }
+    
+    opSelect.innerHTML = optionsHtml;
+    // 鎖定選單不讓玩家修改，因為這由章節強制決定
+    opSelect.disabled = true; 
+}
 		
 	function selectChapter(chapterId) {
 	    AudioManager.playSound('click'); // 播放點擊音效
@@ -1770,49 +1721,32 @@ function generateQuestion() {
     document.getElementById('message').innerText = "踩油門作答！";
     document.getElementById('message').style.color = "#ecf0f1";
 
-    // 1. 將當前遊戲設定打包，傳遞給 QuestionEngine
-    const questionData = QuestionEngine.getQuestion({
-        operation: currentOperation,
-        difficulty: difficultySetting,
-        multiplier: currentMultiplierSetting,
-        diffParams: diffParams
-    });
+    // 1. 取得目前的章節數字
+    let currentChapterStr = document.getElementById('chapter-select').value;
+    let chapterNumber = parseInt(currentChapterStr.replace('chapter', '')) || 1;
 
-    // 2. 接收引擎回傳的題目與答案
+    // 2. 呼叫新的題庫引擎生成題目
+    const questionData = QuestionGenerator.generateQuestion(chapterNumber);
+
     currentAnswer = questionData.correctAnswer;
     currentQuestionText = questionData.questionText;
-
-	// 渲染題目文字
+    
     let questionArea = document.getElementById('question-area');
-    questionArea.innerText = qData.questionText;
 
-    // ▼▼▼ 加入 Boss 題目的視覺變化 ▼▼▼
-    if (qData.isBossMode) {
+    // 3. 處理 Boss 題型的視覺變化
+    if (questionData.isBossMode) {
         questionArea.style.color = "#ff4757"; // 變成紅色
-        questionArea.innerText = "🔥 突襲！ " + qData.questionText;
+        questionArea.innerText = "🔥 突襲！ " + currentQuestionText;
     } else {
         questionArea.style.color = "#f1c40f"; // 恢復黃色
+        questionArea.innerText = currentQuestionText;
     }
 
-    // 渲染按鈕選項
-    let optionsContainer = document.getElementById('options-container');
-    optionsContainer.innerHTML = '';
-    qData.options.forEach(opt => {
-        let btn = document.createElement('button');
-        btn.className = 'option-btn';
-        btn.innerText = opt;
-        btn.onclick = () => checkAnswer(opt);
-        optionsContainer.appendChild(btn);
-    });
+    questionStartTime = Date.now();
 
-	questionStartTime = Date.now();
-
-    // 3. 更新 UI
-    document.getElementById('question-area').innerText = currentQuestionText;
-
+    // 4. 渲染按鈕選項 (安全傳遞數值)
     let optionsHtml = '';
     for (let op of questionData.options) {
-        // 【關鍵修改】：為了相容未來英文等「字串」選項，使用 JSON.stringify(op) 安全地將選項傳入 checkAnswer
         let safeValue = JSON.stringify(op); 
         optionsHtml += `<button class="option-btn" onclick='AudioManager.playSound("click"); checkAnswer(${safeValue})'>${op}</button>`;
     }
