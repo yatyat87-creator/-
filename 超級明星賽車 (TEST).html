@@ -342,6 +342,12 @@
         .option-btn:hover { background-color: #3498db; transform: scale(1.02); }
         
         #message { font-size: 20px; font-weight: bold; height: 35px; margin-top: 15px; }
+                /* 💡 提示功能樣式 */
+        .hint-btn { background-color: #f39c12; color: white; border: 2px solid #e67e22; padding: 5px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 16px; margin-bottom: 15px; transition: 0.2s; }
+        .hint-btn:hover { background-color: #e67e22; transform: scale(1.05); }
+        #hint-area { display: none; margin-bottom: 15px; font-size: 18px; color: #ecf0f1; background: rgba(0,0,0,0.5); padding: 12px; border-radius: 10px; line-height: 1.5; border: 1px dashed #f1c40f; text-align: left; }
+        .hint-highlight { color: #f1c40f; font-weight: bold; font-size: 22px; }
+
         #event-message { font-size: 18px; font-weight: bold; color: #e67e22; height: 25px; margin-bottom: 5px;}
         #leaderboard { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 16px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; flex-wrap: wrap; gap: 10px; }
 
@@ -658,7 +664,14 @@
 		    <div id="bg-bottom"></div>
 		</div>		
         <div id="question-area">準備中...</div>
+        
+        <!-- ▼▼▼ 新增：提示按鈕與顯示區塊 ▼▼▼ -->
+        <button id="btn-hint" class="hint-btn" onclick="showHint()">💡 唔識計？按我睇提示</button>
+        <div id="hint-area"></div>
+        <!-- ▲▲▲ 新增結束 ▲▲▲ -->
+        
         <div class="options-grid" id="options-container"></div>
+
         <div id="message"></div>
     </div>
 <!-- ▼▼▼ 步驟 2 新增：學習成效報告 Modal 視窗 ▼▼▼ -->
@@ -1778,6 +1791,12 @@ function startRace() {
 
 function generateQuestion() {
     if (!gameActive || racers.player.finished) return;
+    
+    // ▼▼▼ 新增：重置提示按鈕狀態 ▼▼▼
+    document.getElementById('hint-area').style.display = 'none';
+    document.getElementById('btn-hint').style.display = 'inline-block';
+    
+    // ... 原本嘅 racers.player.element.classList.remove... 保持不變
     racers.player.element.classList.remove('stopped');
     racers.player.element.classList.add('driving');
     document.getElementById('message').innerText = "踩油門作答！";
@@ -2155,6 +2174,47 @@ if (playerRank === 1) {
             location.reload(); 
         }, 800);
     }
+
+// ▼▼▼ 新增：智能提示系統 ▼▼▼
+function showHint() {
+    AudioManager.playSound('click');
+    let hintArea = document.getElementById('hint-area');
+    let btnHint = document.getElementById('btn-hint');
+    
+    // 預設提示訊息
+    let hintMsg = "慢慢嚟，唔使急！試吓用手指或者心算拆開佢。"; 
+
+    let qStr = currentQuestionText;
+
+    // 智能判斷：如果係一般減法 (而且唔係 Boss 未知數題)
+    if (qStr.includes('-') && !qStr.includes('?')) {
+        let parts = qStr.split('-');
+        let num1 = parseInt(parts[0].trim());
+        let num2 = parseInt(parts[1].split('=')[0].trim());
+
+        // 觸發條件：11~19 減單數，而且需要退位 (例如 12 - 8)
+        if (num1 > 10 && num1 < 20 && (num1 % 10 < num2)) {
+            let r = num1 - 10;      // 拆出來嘅尾數 (12 -> 2)
+            let diff = 10 - num2;   // 10 減去後面嗰個數 (10 - 8 = 2)
+            
+            hintMsg = `💡 <b>【拆大數法】</b><br>
+            1️⃣ 將 ${num1} 拆做 <span class="hint-highlight">10</span> 同 <span class="hint-highlight">${r}</span><br>
+            2️⃣ 先用 10 減： 10 - ${num2} = <span class="hint-highlight">${diff}</span><br>
+            3️⃣ 加返埋尾數： ${diff} + ${r} = <span class="hint-highlight">${diff + r}</span>`;
+        }
+    } 
+    else if (qStr.includes('+') && !qStr.includes('?')) {
+        // 如果係加法，都可以畀個通用提示
+        hintMsg = "💡 <b>【加法小貼士】</b><br>將大啲嗰個數字擺喺心入面，然後伸出手指數上去！";
+    }
+
+    // 顯示提示，隱藏按鈕
+    hintArea.innerHTML = hintMsg;
+    hintArea.style.display = 'block';
+    btnHint.style.display = 'none';
+}
+// ▲▲▲ 智能提示系統結束 ▲▲▲
+
 
     window.addEventListener('resize', () => { if(gameActive) updatePositions(); });
 // ▼▼▼ 步驟 2 新增：學習成效報告功能函數 ▼▼▼
