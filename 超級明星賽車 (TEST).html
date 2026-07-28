@@ -495,7 +495,6 @@
 	            <h3 class="level-name">州際公路</h3>
 	        </div>
 	        <div class="difficulty">難度: 卡丁車級</div>
-	        <button class="challenge-btn" onclick="event.stopPropagation(); initGame();">開始挑戰 🏁</button>
 	    </div>
 	
 	    <!-- Ch2 -->
@@ -506,8 +505,6 @@
 	            <h3 class="level-name">熱帶沙灘</h3>
 	        </div>
 	        <div class="difficulty">難度: 新秀級 <span class="boss-tag">+ Boss戰</span></div>
-		<!-- 按鈕解除 disabled，並加入 onClick 事件 -->
-		    <button class="challenge-btn" onclick="event.stopPropagation(); initGame();">開始挑戰 🏁</button>
 		</div>	
 	    <!-- Ch3 -->
 	    <div class="card locked" id="card-chapter3" onclick="selectChapter('chapter3')">
@@ -518,7 +515,6 @@
 	            <h3 class="level-name">鄉村泥地</h3>
 	        </div>
 	        <div class="difficulty">難度: 業餘級</div>
-	        <button class="challenge-btn" disabled>未解鎖</button>
 	    </div>
 	
 	    <!-- Ch4 -->
@@ -530,7 +526,6 @@
 	            <h3 class="level-name">城市高架橋</h3>
 	        </div>
 	        <div class="difficulty">難度: 職業級</div>
-	        <button class="challenge-btn" disabled>未解鎖</button>
 	    </div>
 	
 	    <!-- Ch5 -->
@@ -542,7 +537,6 @@
 	            <h3 class="level-name">黑夜山道</h3>
 	        </div>
 	        <div class="difficulty">難度: 專家級 <span class="boss-tag">+ Boss戰</span></div>
-	        <button class="challenge-btn" disabled>未解鎖</button>
 	    </div>
 	
 	    <!-- Ch6 -->
@@ -554,7 +548,6 @@
 	            <h3 class="level-name">巨石峽谷</h3>
 	        </div>
 	        <div class="difficulty">難度: 拉力級</div>
-	        <button class="challenge-btn" disabled>未解鎖</button>
 	    </div>
 	
 	    <!-- Ch7 -->
@@ -566,7 +559,6 @@
 	            <h3 class="level-name">冰雪極地</h3>
 	        </div>
 	        <div class="difficulty">難度: 冠軍級 (特殊道具)</div>
-	        <button class="challenge-btn" disabled>未解鎖</button>
 	    </div>
 	
 	    <!-- Ch8 -->
@@ -578,7 +570,6 @@
 	            <h3 class="level-name">科技工廠</h3>
 	        </div>
 	        <div class="difficulty">難度: 大師級</div>
-	        <button class="challenge-btn" disabled>未解鎖</button>
 	    </div>
 	
 	    <!-- Ch9 -->
@@ -590,7 +581,6 @@
 	            <h3 class="level-name">活塞盃競技場</h3>
 	        </div>
 	        <div class="difficulty">難度: 傳奇級</div>
-	        <button class="challenge-btn" disabled>未解鎖</button>
 	    </div>
 	
 	    <!-- Ch10 -->
@@ -602,7 +592,6 @@
 	            <h3 class="level-name">終極車神爭霸戰</h3>
 	        </div>
 	        <div class="difficulty">難度: 總冠軍 <span class="boss-tag">Boss</span></div>
-	        <button class="challenge-btn" disabled>未解鎖</button>
 	    </div>
 	</div>
 		
@@ -646,9 +635,11 @@
                 <option value="10">數字 10</option>
             </select>
         </div>
+	<!-- 👇 請在基準數字的下拉選單下方，加回這個唯一的開始按鈕 -->
+        <button class="btn-start" onclick="initGame()">🏁 發動引擎！</button>
         
-    </div>
-
+    </div> <!-- 這裡是 setup-screen 的結尾 -->
+	
     <div id="play-screen">
         <div id="leaderboard">
             <span id="diff-display" style="color:#3498db">難度：普通</span>
@@ -1238,6 +1229,10 @@ function updateOperationMode() {
 	    
 	    // 4. 呼叫你原本就寫好的函數，動態更新下方的「運算模式」與「基準數字」
 	    updateOperationMode();
+		// 👇 加入這段：延遲 0.2 秒後，平滑捲動到車手網格
+	    setTimeout(() => {
+	        document.getElementById('character-grid').scrollIntoView({ behavior: 'smooth', block: 'center' });
+	    }, 200);
 	}
 	
 	// 確保網頁載入時根據預設選項初始化一次選單
@@ -1289,7 +1284,13 @@ function updateOperationMode() {
         if (isUnlocked) {
             selectedCharId = key;
             renderCharacterGrid();
-        } else {
+        
+		// 👇 加入這段：選完解鎖的角色後，平滑捲動到難度下拉選單
+        setTimeout(() => {
+            document.getElementById('difficulty').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 200);
+			
+		} else {
             if (charData.purchasable) {
                 if (playerGold >= charData.price) {
                     let confirmBuy = confirm(`是否花費 ${charData.price} 金幣解鎖【${charData.name}】？`);
