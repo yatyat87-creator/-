@@ -482,22 +482,24 @@
         <h2>🏎️ 活塞盃：數學大賽 </h2>
         <p>進行 3 個回合的積分排名賽！第 3 回合將有強大的 Boss 登場！</p>
 
+	<input type="hidden" id="chapter-select" value="chapter1">
+		
 	<div class="career-container">
 	    <h1 class="menu-title">🏆 生涯模式</h1>
 	
 	    <!-- Ch1 (已解鎖) -->
-	    <div class="card unlocked">
+	    <div class="card unlocked" id="card-chapter1" onclick="selectChapter('chapter1')">
 	        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
 	        <div class="chapter-header">
 	            <span class="chapter-num">Ch1</span>
 	            <h3 class="level-name">州際公路</h3>
 	        </div>
 	        <div class="difficulty">難度: 卡丁車級</div>
-	        <button class="challenge-btn">開始挑戰 🏁</button>
+	        <button class="challenge-btn" onclick="event.stopPropagation(); initGame();">開始挑戰 🏁</button>
 	    </div>
 	
 	    <!-- Ch2 -->
-	    <div class="card locked">
+	    <div class="card locked" id="card-chapter2" onclick="selectChapter('chapter2')">
 	        <div class="lock-overlay">🔒</div>
 	        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
 	        <div class="chapter-header">
@@ -509,7 +511,7 @@
 	    </div>
 	
 	    <!-- Ch3 -->
-	    <div class="card locked">
+	    <div class="card locked" id="card-chapter3" onclick="selectChapter('chapter3')">
 	        <div class="lock-overlay">🔒</div>
 	        <div class="stage-name">🟡 第二階段 (位值概念)</div>
 	        <div class="chapter-header">
@@ -521,7 +523,7 @@
 	    </div>
 	
 	    <!-- Ch4 -->
-	    <div class="card locked">
+	    <div class="card locked" id="card-chapter4" onclick="selectChapter('chapter4')">
 	        <div class="lock-overlay">🔒</div>
 	        <div class="stage-name">🟡 第二階段 (位值概念)</div>
 	        <div class="chapter-header">
@@ -533,7 +535,7 @@
 	    </div>
 	
 	    <!-- Ch5 -->
-	    <div class="card locked">
+	    <div class="card locked" id="card-chapter5" onclick="selectChapter('chapter5')">
 	        <div class="lock-overlay">🔒</div>
 	        <div class="stage-name">🟡 第二階段 (位值概念)</div>
 	        <div class="chapter-header">
@@ -545,7 +547,7 @@
 	    </div>
 	
 	    <!-- Ch6 -->
-	    <div class="card locked">
+	    <div class="card locked" id="card-chapter6" onclick="selectChapter('chapter6')">
 	        <div class="lock-overlay">🔒</div>
 	        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
 	        <div class="chapter-header">
@@ -557,7 +559,7 @@
 	    </div>
 	
 	    <!-- Ch7 -->
-	    <div class="card locked">
+	    <div class="card locked" id="card-chapter7" onclick="selectChapter('chapter7')">
 	        <div class="lock-overlay">🔒</div>
 	        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
 	        <div class="chapter-header">
@@ -569,7 +571,7 @@
 	    </div>
 	
 	    <!-- Ch8 -->
-	    <div class="card locked">
+	    <div class="card locked" id="card-chapter8" onclick="selectChapter('chapter8')">
 	        <div class="lock-overlay">🔒</div>
 	        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
 	        <div class="chapter-header">
@@ -581,7 +583,7 @@
 	    </div>
 	
 	    <!-- Ch9 -->
-	    <div class="card locked">
+	    <div class="card locked" id="card-chapter9" onclick="selectChapter('chapter9')">
 	        <div class="lock-overlay">🔒</div>
 	        <div class="stage-name">🔴 第四階段 (大腦極限)</div>
 	        <div class="chapter-header">
@@ -593,7 +595,7 @@
 	    </div>
 	
 	    <!-- Ch10 -->
-	    <div class="card locked">
+	    <div class="card locked" id="card-chapter10" onclick="selectChapter('chapter10')">
 	        <div class="lock-overlay">🔒</div>
 	        <div class="stage-name">🔴 第四階段 (大腦極限)</div>
 	        <div class="chapter-header">
@@ -645,8 +647,7 @@
                 <option value="10">數字 10</option>
             </select>
         </div>
-
-        <button class="btn-start" onclick="initGame()">🏁 發動引擎！</button>
+        
     </div>
 
     <div id="play-screen">
@@ -1268,6 +1269,29 @@ opponents: [
 	    }
 	}
 		
+	function selectChapter(chapterId) {
+	    AudioManager.playSound('click'); // 播放點擊音效
+	    
+	    // 1. 更新我們剛剛在第一步建立的隱藏輸入框
+	    document.getElementById('chapter-select').value = chapterId;
+	    
+	    // 2. 清除所有卡片的發光邊框 (重置狀態)
+	    document.querySelectorAll('.card').forEach(card => {
+	        card.style.borderColor = '';
+	        card.style.boxShadow = '';
+	    });
+	    
+	    // 3. 讓被點擊的卡片亮起綠色邊框，提示玩家目前選了哪一關
+	    let selectedCard = document.getElementById('card-' + chapterId);
+	    if(selectedCard) {
+	        selectedCard.style.borderColor = '#2ecc71';
+	        selectedCard.style.boxShadow = '0 0 15px rgba(46, 204, 113, 0.5)';
+	    }
+	    
+	    // 4. 呼叫你原本就寫好的函數，動態更新下方的「運算模式」與「基準數字」
+	    updateOperationMode();
+	}
+	
 	// 確保網頁載入時根據預設選項初始化一次選單
 	document.addEventListener('DOMContentLoaded', updateOperationMode);
 	
