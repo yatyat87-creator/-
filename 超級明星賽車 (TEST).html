@@ -869,10 +869,12 @@ const QuestionGenerator = {
                 let a2 = this.getRandom(5, 9);
                 let b2 = this.getRandom(11 - a2, 9); // 湊十法
                 let sum2 = a2 + b2;
-                if (isBoss) {
-                    qText = Math.random() > 0.5 ? `? + ${b2} = ${sum2}` : `${a2} + ? = ${sum2}`;
-                    cAnswer = Math.random() > 0.5 ? a2 : b2;
-                } else {
+      // ✅ 正確新代碼
+                    if (isBoss) {
+                        let hideFirst = Math.random() > 0.5; // 只擲一次硬幣
+                        qText = hideFirst ? `? + ${b2} = ${sum2}` : `${a2} + ? = ${sum2}`;
+                        cAnswer = hideFirst ? a2 : b2;
+                    } else {
                     if (isAdd) {
                         cAnswer = sum2; qText = `${a2} + ${b2} = ?`;
                     } else {
@@ -949,9 +951,11 @@ const QuestionGenerator = {
                 let b7 = this.getRandom(3, 9);
                 opType = 'mul';
                 
+                // ✅ 正確新代碼
                 if (isBoss) {
-                    qText = Math.random() > 0.5 ? `? × ${b7} = ${a7*b7}` : `${a7} × ? = ${a7*b7}`;
-                    cAnswer = Math.random() > 0.5 ? a7 : b7;
+                    let hideFirst = Math.random() > 0.5;
+                    qText = hideFirst ? `? × ${b7} = ${a7*b7}` : `${a7} × ? = ${a7*b7}`;
+                    cAnswer = hideFirst ? a7 : b7;
                 } else {
                     cAnswer = a7 * b7; qText = `${a7} × ${b7} = ?`;
                 }
@@ -971,25 +975,27 @@ const QuestionGenerator = {
                 isBoss = true;
                 let op10 = this.getRandom(1, 4); // 1:+, 2:-, 3:x, 4:/
                 let n10_a, n10_b, n10_ans;
+                let hideFirst10 = Math.random() > 0.5; // 統一在這裡只抽籤一次
                 
                 if (op10 === 1) { // 加法未知
                     n10_a = this.getRandom(11, 50); n10_b = this.getRandom(11, 49); n10_ans = n10_a + n10_b;
-                    qText = Math.random() > 0.5 ? `? + ${n10_b} = ${n10_ans}` : `${n10_a} + ? = ${n10_ans}`;
-                    cAnswer = Math.random() > 0.5 ? n10_a : n10_b;
+                    qText = hideFirst10 ? `? + ${n10_b} = ${n10_ans}` : `${n10_a} + ? = ${n10_ans}`;
+                    cAnswer = hideFirst10 ? n10_a : n10_b;
                 } else if (op10 === 2) { // 減法未知
                     n10_b = this.getRandom(11, 40); n10_ans = this.getRandom(11, 40); n10_a = n10_b + n10_ans;
-                    qText = Math.random() > 0.5 ? `? - ${n10_b} = ${n10_ans}` : `${n10_a} - ? = ${n10_ans}`;
-                    cAnswer = Math.random() > 0.5 ? n10_a : n10_b;
+                    qText = hideFirst10 ? `? - ${n10_b} = ${n10_ans}` : `${n10_a} - ? = ${n10_ans}`;
+                    cAnswer = hideFirst10 ? n10_a : n10_b;
                 } else if (op10 === 3) { // 乘法未知
                     n10_a = this.getRandom(3, 9); n10_b = this.getRandom(3, 9); n10_ans = n10_a * n10_b;
-                    qText = Math.random() > 0.5 ? `? × ${n10_b} = ${n10_ans}` : `${n10_a} × ? = ${n10_ans}`;
-                    cAnswer = Math.random() > 0.5 ? n10_a : n10_b; opType = 'mul';
+                    qText = hideFirst10 ? `? × ${n10_b} = ${n10_ans}` : `${n10_a} × ? = ${n10_ans}`;
+                    cAnswer = hideFirst10 ? n10_a : n10_b; opType = 'mul';
                 } else { // 除法未知
                     n10_ans = this.getRandom(3, 9); n10_b = this.getRandom(2, 9); n10_a = n10_ans * n10_b;
-                    qText = Math.random() > 0.5 ? `? ÷ ${n10_b} = ${n10_ans}` : `${n10_a} ÷ ? = ${n10_ans}`;
-                    cAnswer = Math.random() > 0.5 ? n10_a : n10_b; opType = 'div';
+                    qText = hideFirst10 ? `? ÷ ${n10_b} = ${n10_ans}` : `${n10_a} ÷ ? = ${n10_ans}`;
+                    cAnswer = hideFirst10 ? n10_a : n10_b; opType = 'div';
                 }
                 break;
+
         }
 
         return {
