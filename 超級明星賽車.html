@@ -102,7 +102,10 @@
         .character { position: absolute; left: 0; top: -5px; width: 80px; height: 80px; font-size: 40px; line-height: 80px; transition: left 0.4s ease-out; z-index: 2; background-size: contain; background-repeat: no-repeat; background-position: center; }
         .driving { animation: driveEngine 0.2s infinite alternate; }
         @keyframes driveEngine { from { transform: translateY(0px) rotate(-2deg); } to { transform: translateY(-3px) rotate(2deg); } }
-        .boss-driving { animation: bossDriveEngine 0.15s infinite alternate; filter: drop-shadow(0 0 8px red); }
+		.boss-driving { 
+		    /* 疊加原本的引擎震動與全新的閃電特效 */
+		    animation: bossDriveEngine 0.15s infinite alternate, lightningGlow 0.25s infinite alternate !important; 
+		}
         @keyframes bossDriveEngine { from { transform: translateY(0px) scale(1.1); } to { transform: translateY(-4px) scale(1.1); } }
         .stopped { animation: none !important; filter: grayscale(80%) drop-shadow(0 0 5px red); transform: scale(0.9); }
 		
@@ -124,11 +127,25 @@
 		    animation: none !important;
 		}
 		
-		/* 第 2 列：行駛 (Driving) - 4 幀動畫 */
-		.character.sprite-mode.driving,
-		.character.sprite-mode.boss-driving {
+		/* 第 2 列：一般行駛 (Driving) - 4 幀動畫 */
+		.character.sprite-mode.driving {
 		    background-position-y: 0px !important;
 		    animation: sprite-play 0.5s steps(4) infinite !important;
+		}
+		
+		/* 第 2 列：Boss 行駛 (疊加閃電濾鏡) */
+		.character.sprite-mode.boss-driving {
+		    background-position-y: 0px !important;
+		    /* 保留精靈圖的車輪轉動，並加入閃電發光動畫 */
+		    animation: sprite-play 0.5s steps(4) infinite, lightningGlow 0.25s infinite alternate !important;
+		}
+
+		/* ⚡ 高壓閃電圍身特效 */
+		@keyframes lightningGlow {
+		    0%   { filter: drop-shadow(0 0 5px #0ff) drop-shadow(0 0 15px #3498db); } /* 青藍色閃光 */
+		    33%  { filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 25px #f1c40f); } /* 黃白色爆閃 */
+		    66%  { filter: drop-shadow(0 0 2px #3498db) drop-shadow(0 0 10px #0ff); } /* 微弱電光 */
+		    100% { filter: drop-shadow(0 0 12px #fff) drop-shadow(0 0 35px #f1c40f); } /* 強烈黃白電光 */
 		}
 		
 		/* 第 3 列：拋錨 (Stalled) - 4 幀動畫 */
