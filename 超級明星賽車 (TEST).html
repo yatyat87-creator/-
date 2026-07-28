@@ -2183,7 +2183,7 @@ if (playerRank === 1) {
         }, 800);
     }
 
-// ▼▼▼ 新增：智能提示系統 ▼▼▼
+// ▼▼▼ 修正版：智能提示系統 ▼▼▼
 function showHint() {
     AudioManager.playSound('click');
     let hintArea = document.getElementById('hint-area');
@@ -2194,26 +2194,37 @@ function showHint() {
 
     let qStr = currentQuestionText;
 
-    // 智能判斷：如果係一般減法 (而且唔係 Boss 未知數題)
-    if (qStr.includes('-') && !qStr.includes('?')) {
+    // 智能判斷：如果係減法
+    if (qStr.includes('-')) {
         let parts = qStr.split('-');
-        let num1 = parseInt(parts[0].trim());
-        let num2 = parseInt(parts[1].split('=')[0].trim());
+        let leftPart = parts[0].trim();
+        let rightPart = parts[1].split('=')[0].trim();
 
-        // 觸發條件：11~19 減單數，而且需要退位 (例如 12 - 8)
-        if (num1 > 10 && num1 < 20 && (num1 % 10 < num2)) {
-            let r = num1 - 10;      // 拆出來嘅尾數 (12 -> 2)
-            let diff = 10 - num2;   // 10 減去後面嗰個數 (10 - 8 = 2)
-            
-            hintMsg = `💡 <b>【拆大數法】</b><br>
-            1️⃣ 將 ${num1} 拆做 <span class="hint-highlight">10</span> 同 <span class="hint-highlight">${r}</span><br>
-            2️⃣ 先用 10 減： 10 - ${num2} = <span class="hint-highlight">${diff}</span><br>
-            3️⃣ 加返埋尾數： ${diff} + ${r} = <span class="hint-highlight">${diff + r}</span>`;
+        // 確保唔係 Boss 題（即係被減數同減數都唔係 '?'）
+        if (leftPart !== '?' && rightPart !== '?') {
+            let num1 = parseInt(leftPart);
+            let num2 = parseInt(rightPart);
+
+            // 觸發條件：11~19 減單數，而且需要退位 (例如 17 - 9)
+            if (num1 > 10 && num1 < 20 && (num1 % 10 < num2)) {
+                let r = num1 - 10;      // 拆出來嘅尾數 (17 -> 7)
+                let diff = 10 - num2;   // 10 減去後面嗰個數 (10 - 9 = 1)
+                
+                hintMsg = `💡 <b>【拆大數法】</b><br>
+                1️⃣ 將 ${num1} 拆做 <span class="hint-highlight">10</span> 同 <span class="hint-highlight">${r}</span><br>
+                2️⃣ 先用 10 減： 10 - ${num2} = <span class="hint-highlight">${diff}</span><br>
+                3️⃣ 加返埋尾數： ${diff} + ${r} = <span class="hint-highlight">${diff + r}</span>`;
+            }
         }
     } 
-    else if (qStr.includes('+') && !qStr.includes('?')) {
-        // 如果係加法，都可以畀個通用提示
-        hintMsg = "💡 <b>【加法小貼士】</b><br>將大啲嗰個數字擺喺心入面，然後伸出手指數上去！";
+    else if (qStr.includes('+')) {
+        let parts = qStr.split('+');
+        let leftPart = parts[0].trim();
+        let rightPart = parts[1].split('=')[0].trim();
+        
+        if (leftPart !== '?' && rightPart !== '?') {
+            hintMsg = "💡 <b>【加法小貼士】</b><br>將大啲嗰個數字擺喺心入面，然後伸出手指數上去！";
+        }
     }
 
     // 顯示提示，隱藏按鈕
@@ -2222,6 +2233,7 @@ function showHint() {
     btnHint.style.display = 'none';
 }
 // ▲▲▲ 智能提示系統結束 ▲▲▲
+
 
 
     window.addEventListener('resize', () => { if(gameActive) updatePositions(); });
