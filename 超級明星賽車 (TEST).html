@@ -2183,47 +2183,117 @@ if (playerRank === 1) {
         }, 800);
     }
 
-// ▼▼▼ 修正版：智能提示系統 ▼▼▼
+// ▼▼▼ 加入兩位數直式思維：智能提示系統 ▼▼▼
 function showHint() {
     AudioManager.playSound('click');
     let hintArea = document.getElementById('hint-area');
     let btnHint = document.getElementById('btn-hint');
     
-    // 預設提示訊息
+    let qStr = currentQuestionText;
     let hintMsg = "慢慢嚟，唔使急！試吓用手指或者心算拆開佢。"; 
 
-    let qStr = currentQuestionText;
+    // 判斷係咪突襲題 (Boss 題)
+    let isBoss = qStr.split('=')[0].includes('?');
 
-    // 智能判斷：如果係減法
-    if (qStr.includes('-')) {
-        let parts = qStr.split('-');
-        let leftPart = parts[0].trim();
-        let rightPart = parts[1].split('=')[0].trim();
+    if (isBoss) {
+        // 🔴【突襲題提示區】保持不變...
+        if (qStr.includes('+')) {
+            hintMsg = "💡 <b>【突襲拆解：加法變減法】</b><br>要搵返唔見咗嘅數，將答案減去另一個已知嘅數字就得啦！";
+        } 
+        else if (qStr.includes('-')) {
+            let leftPart = qStr.split('-')[0].trim();
+            if (leftPart === '?') {
+                hintMsg = "💡 <b>【突襲拆解：搵返最大數】</b><br>減法最前面嗰個係最大嘅數！將後面兩個數字<b>加埋一齊</b>就搵到佢啦！";
+            } else {
+                hintMsg = "💡 <b>【突襲拆解：調位減法】</b><br>用最前面嗰個大數，<b>減去最後嘅答案</b>，就可以搵出中間隻壞蛋！";
+            }
+        } 
+        else if (qStr.includes('×') || qStr.includes('*')) {
+            hintMsg = "💡 <b>【突襲拆解：乘法反推】</b><br>諗吓乘數表！另一個數字乘幾多，先會變成最後嘅答案呢？";
+        } 
+        else if (qStr.includes('÷') || qStr.includes('/')) {
+            hintMsg = "💡 <b>【突襲拆解：除法變乘法】</b><br>除法調轉就係乘法！試吓將數字乘埋一齊，或者用乘數表反推。";
+        }
+    } 
+    else {
+        // 🟢【普通題提示區】 (A + B = ?)
+        if (qStr.includes('-')) {
+            let parts = qStr.split('-');
+            let num1 = parseInt(parts[0].trim());
+            let num2 = parseInt(parts[1].split('=')[0].trim());
 
-        // 確保唔係 Boss 題（即係被減數同減數都唔係 '?'）
-        if (leftPart !== '?' && rightPart !== '?') {
-            let num1 = parseInt(leftPart);
-            let num2 = parseInt(rightPart);
+            if (num1 >= 10 && num2 >= 10) {
+                // 【兩位數減法：十位個位分開減】
+                let t1 = Math.floor(num1 / 10) * 10;
+                let t2 = Math.floor(num2 / 10) * 10;
+                let o1 = num1 % 10;
+                let o2 = num2 % 10;
 
-            // 觸發條件：11~19 減單數，而且需要退位 (例如 17 - 9)
-            if (num1 > 10 && num1 < 20 && (num1 % 10 < num2)) {
-                let r = num1 - 10;      // 拆出來嘅尾數 (17 -> 7)
-                let diff = 10 - num2;   // 10 減去後面嗰個數 (10 - 9 = 1)
-                
+                if (o1 < o2) {
+                    // 需要退位 (借位)
+                    let t1_borrow = t1 - 10;
+                    let o1_borrow = o1 + 10;
+                    let diff_t = t1_borrow - t2;
+                    let diff_o = o1_borrow - o2;
+                    
+                    hintMsg = `💡 <b>【分開處理法 (需要借位)】</b><br>
+                    個位 ${o1} 唔夠減 ${o2}，要問十位借 10！<br>
+                    1️⃣ 十位減十位： ${t1_borrow} - ${t2} = <span class="hint-highlight">${diff_t}</span><br>
+                    2️⃣ 個位減個位： ${o1_borrow} - ${o2} = <span class="hint-highlight">${diff_o}</span><br>
+                    3️⃣ 加返埋一齊： ${diff_t} + ${diff_o} = <span class="hint-highlight">?</span>`;
+                } else {
+                    // 唔使退位
+                    let diff_t = t1 - t2;
+                    let diff_o = o1 - o2;
+                    
+                    hintMsg = `💡 <b>【分開處理法】</b><br>
+                    1️⃣ 十位減十位： ${t1} - ${t2} = <span class="hint-highlight">${diff_t}</span><br>
+                    2️⃣ 個位減個位： ${o1} - ${o2} = <span class="hint-highlight">${diff_o}</span><br>
+                    3️⃣ 加返埋一齊： ${diff_t} + ${diff_o} = <span class="hint-highlight">?</span>`;
+                }
+            }
+            // 【11~19減單數：保留拆大數法】
+            else if (num1 > 10 && num1 < 20 && (num1 % 10 < num2)) {
+                let r = num1 - 10;      
+                let diff = 10 - num2;   
                 hintMsg = `💡 <b>【拆大數法】</b><br>
                 1️⃣ 將 ${num1} 拆做 <span class="hint-highlight">10</span> 同 <span class="hint-highlight">${r}</span><br>
                 2️⃣ 先用 10 減： 10 - ${num2} = <span class="hint-highlight">${diff}</span><br>
-                3️⃣ 加返埋尾數： ${diff} + ${r} = <span class="hint-highlight">？</span>`;
+                3️⃣ 加返埋尾數： ${diff} + ${r} = <span class="hint-highlight">?</span>`;
+            } else {
+                hintMsg = "💡 <b>【減法小貼士】</b><br>慢慢減，可以用手指幫手，或者將數字拆細啲嚟計！";
             }
-        }
-    } 
-    else if (qStr.includes('+')) {
-        let parts = qStr.split('+');
-        let leftPart = parts[0].trim();
-        let rightPart = parts[1].split('=')[0].trim();
-        
-        if (leftPart !== '?' && rightPart !== '?') {
-            hintMsg = "💡 <b>【加法小貼士】</b><br>將大啲嗰個數字擺喺心入面，然後伸出手指數上去！";
+        } 
+        else if (qStr.includes('+')) {
+            let parts = qStr.split('+');
+            let num1 = parseInt(parts[0].trim());
+            let num2 = parseInt(parts[1].split('=')[0].trim());
+
+            if (num1 >= 10 && num2 >= 10) {
+                // 【兩位數加法：十位個位分開加】
+                let t1 = Math.floor(num1 / 10) * 10;
+                let t2 = Math.floor(num2 / 10) * 10;
+                let o1 = num1 % 10;
+                let o2 = num2 % 10;
+                
+                hintMsg = `💡 <b>【分開處理法】</b><br>
+                1️⃣ 先加十位： ${t1} + ${t2} = <span class="hint-highlight">${t1 + t2}</span><br>
+                2️⃣ 再加個位： ${o1} + ${o2} = <span class="hint-highlight">${o1 + o2}</span><br>
+                3️⃣ 最後合體： ${t1 + t2} + ${o1 + o2} = <span class="hint-highlight">?</span>`;
+            } else {
+                hintMsg = "💡 <b>【加法小貼士】</b><br>將大啲嗰個數字擺喺心入面，然後伸出手指數上去！";
+            }
+        } 
+        else if (qStr.includes('×') || qStr.includes('*')) {
+            let parts = qStr.includes('×') ? qStr.split('×') : qStr.split('*');
+            let num1 = parts[0].trim();
+            let num2 = parts[1].split('=')[0].trim();
+            hintMsg = `💡 <b>【乘法小貼士】</b><br>試吓背 <b>${num1}</b> 或者 <b>${num2}</b> 嘅乘數表！<br>諗吓 ${num1} 個 ${num2} 加埋一齊係幾多？`;
+        } 
+        else if (qStr.includes('÷') || qStr.includes('/')) {
+            let parts = qStr.includes('÷') ? qStr.split('÷') : qStr.split('/');
+            let num2 = parts[1].split('=')[0].trim();
+            hintMsg = `💡 <b>【除法小貼士】</b><br>除法即係乘法嘅相反！<br>試吓背 <b>${num2}</b> 嘅乘數表，諗吓 ${num2} 乘幾多會等於前面個大數？`;
         }
     }
 
@@ -2232,7 +2302,8 @@ function showHint() {
     hintArea.style.display = 'block';
     btnHint.style.display = 'none';
 }
-// ▲▲▲ 智能提示系統結束 ▲▲▲
+// ▲▲▲ 加入兩位數直式思維：智能提示系統結束 ▲▲▲
+
 
 
 
