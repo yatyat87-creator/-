@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropbox BGM 播放器 (極簡維護版)</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .player-container {
+            background-color: #fff;
+            width: 380px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-top: 0;
+            font-size: 22px;
+        }
+        audio {
+            width: 100%;
+            margin-bottom: 15px;
+            outline: none;
+        }
+        /* 控制按鈕區域 */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .controls button {
+            background-color: #f1f3f5;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #495057;
+            transition: all 0.2s ease;
+            flex: 1;
+            margin: 0 5px;
+        }
+        .controls button:hover {
+            background-color: #e2e6ea;
+        }
+        .controls button.active-btn {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        /* 搜尋列樣式 */
+        #search-box {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        #search-box:focus {
+            border-color: #007bff;
+        }
+        .playlist {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .playlist li {
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            font-size: 14px;
+            color: #555;
+            display: flex;
+            align-items: center;
+        }
+        .playlist li:hover {
+            background-color: #e9ecef;
+        }
+        .playlist li.active {
+            background-color: #007bff;
+            color: white;
+            font-weight: bold;
+        }
+        .playlist::-webkit-scrollbar {
+            width: 6px;
+        }
+        .playlist::-webkit-scrollbar-thumb {
+            background-color: #ccc;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="player-container">
+    <h2>🎵 BGM 播放器</h2>
+    
+    <audio id="audio-player" controls></audio>
+
+    <!-- 播放控制按鈕 -->
+    <div class="controls">
+        <button id="btn-prev">⏮ 上一首</button>
+        <button id="btn-shuffle">🔀 隨機: 關</button>
+        <button id="btn-next">下一首 ⏭</button>
+    </div>
+
+    <!-- 搜尋列 -->
+    <input type="text" id="search-box" placeholder="🔍 搜尋歌名...">
+    
+    <!-- 播放清單 (現在這裡是空的，交給 JS 自動生成) -->
+    <ul class="playlist" id="playlist"></ul>
+</div>
+
+<script>
+    // ==========================================
+    // 🎵 你的歌曲庫 (你以後只需在這裡貼上連結)
+    // ==========================================
+    const songLinks = [
+        "https://www.dropbox.com/scl/fi/4fo8pbgkqck27qq59gmb2/How-Far-I-ll-Go-From-Moana-Audio-Only.mp3?rlkey=sbdn1hxqsnjl2l210a9qf8fwi&dl=0",
+        "https://www.dropbox.com/scl/fi/6lf1klrbnm3sarxnk7d1z/You-re-Welcome-From-Moana-Audio-Only.mp3?rlkey=bh2b5zgxs3u8llv40wfllm5jy&dl=0",
+        "https://www.dropbox.com/scl/fi/42u12vlq3tpbfs21tjd7c/The-Cars-You-Might-Think-Official-Music-Video.mp3?rlkey=xeyni34lk6h90nq7l8azh2lv8&dl=0",
+        "https://www.dropbox.com/scl/fi/wfso0h5vtyw5646995jon/Real-Gone-by-Sheryl-Crow-from-the-Cars-Soundtrack-HIGH-QUALITY-AUDIO.mp3?rlkey=5vvthnzg59nqffijz3icud9gp&st=1l2ni7xw&dl=0",
+        "https://www.dropbox.com/scl/fi/8fkd0vzfawhwu5d1x826y/Toy-Story-You-ve-got-a-friend-in-me-lyrics.mp3?rlkey=3qtieh6661n1nu3ztozujk5du&st=gnn904u2&dl=0",
+        "https://www.dropbox.com/scl/fi/c87lj8u1kb62zretf0abo/Moana-Where-You-Are-Lyrics.mp3?rlkey=km19wsa5darbtxavlx5nqotry&st=ayq7iagr&dl=0",
+        "https://www.dropbox.com/scl/fi/ptw7nzhn9d1zu74lhitue/Rascal-Flatts-Life-is-a-Highway-CARS-Guitar-Tab-Cover-GRLD.mp3?rlkey=rt8ghjl0hxf9waznbyp6243xb&st=d19zy6sj&dl=0",
+        "https://www.dropbox.com/scl/fi/k1myfzch9vvz4r0n0c01w/Golden-Official-Lyric-Video-KPop-Demon-Hunters-Sony-Animation.mp3?rlkey=7lwbl2zy1hf05gw4e7r4mhoxi&st=yvo9v5e3&dl=0"
+    ];
+    // ==========================================
+
+    const audioPlayer = document.getElementById('audio-player');
+    const playlistElement = document.getElementById('playlist');
+    const searchBox = document.getElementById('search-box');
+    
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const btnShuffle = document.getElementById('btn-shuffle');
+
+    let currentTrackIndex = 0;
+    let isShuffle = false;
+    let tracksData = []; // 用來儲存處理好的歌曲資訊
+
+    // 1. 自動生成播放清單
+    songLinks.forEach((rawUrl, index) => {
+        let url = rawUrl.trim();
+        
+        // 自動轉換 dl=0 為 raw=1
+        if (url.includes('dl=0')) {
+            url = url.replace('dl=0', 'raw=1');
+        } else if (!url.includes('raw=1')) {
+            url += (url.includes('?') ? '&raw=1' : '?raw=1');
+        }
+        
+        // 擷取並美化檔名
+        let urlObj = new URL(url);
+        let pathname = urlObj.pathname;
+        let fileName = pathname.substring(pathname.lastIndexOf('/') + 1);
+        let cleanName = decodeURIComponent(fileName).replace(/\.mp3/i, '').replace(/-/g, ' ');
+        
+        // 建立 HTML <li> 元素
+        let li = document.createElement('li');
+        li.textContent = (index + 1) + '. ' + cleanName;
+        
+        // 點擊播放事件
+        li.addEventListener('click', function() {
+            loadTrack(index);
+        });
+
+        playlistElement.appendChild(li);
+        
+        // 儲存資料供後續使用
+        tracksData.push({
+            url: url,
+            name: cleanName.toLowerCase(),
+            element: li
+        });
+    });
+
+    // 2. 載入指定歌曲函數
+    function loadTrack(index) {
+        // 移除所有 active 標籤
+        tracksData.forEach(track => track.element.classList.remove('active'));
+        
+        // 加上 active 標籤
+        tracksData[index].element.classList.add('active');
+        
+        audioPlayer.src = tracksData[index].url;
+        audioPlayer.play();
+        currentTrackIndex = index;
+    }
+
+    // 3. 播放控制邏輯
+    function playNext() {
+        if (isShuffle && tracksData.length > 1) {
+            // 隨機播放：抽取一首不是當前播放的歌
+            let nextIndex = currentTrackIndex;
+            while (nextIndex === currentTrackIndex) {
+                nextIndex = Math.floor(Math.random() * tracksData.length);
+            }
+            loadTrack(nextIndex);
+        } else {
+            // 順序播放
+            let nextIndex = currentTrackIndex + 1;
+            if (nextIndex >= tracksData.length) nextIndex = 0; // 回到第一首
+            loadTrack(nextIndex);
+        }
+    }
+
+    function playPrev() {
+        let prevIndex = currentTrackIndex - 1;
+        if (prevIndex < 0) prevIndex = tracksData.length - 1; // 跳到最後一首
+        loadTrack(prevIndex);
+    }
+
+    // 綁定按鈕事件
+    btnNext.addEventListener('click', playNext);
+    btnPrev.addEventListener('click', playPrev);
+    
+    // 隨機播放按鈕開關
+    btnShuffle.addEventListener('click', function() {
+        isShuffle = !isShuffle;
+        if (isShuffle) {
+            btnShuffle.textContent = '🔀 隨機: 開';
+            btnShuffle.classList.add('active-btn');
+        } else {
+            btnShuffle.textContent = '🔀 隨機: 關';
+            btnShuffle.classList.remove('active-btn');
+        }
+    });
+
+    // 歌曲播完自動下一首 (會根據隨機狀態決定)
+    audioPlayer.addEventListener('ended', playNext);
+
+    // 4. 搜尋功能
+    searchBox.addEventListener('input', function() {
+        const filterText = searchBox.value.toLowerCase();
+        tracksData.forEach(track => {
+            if (track.name.includes(filterText)) {
+                track.element.style.display = 'flex';
+            } else {
+                track.element.style.display = 'none';
+            }
+        });
+    });
+
+    // 5. 初始化：預設載入第一首歌
+    if (tracksData.length > 0) {
+        tracksData[0].element.classList.add('active');
+        audioPlayer.src = tracksData[0].url;
+    }
+</script>
+
+</body>
+</html>
