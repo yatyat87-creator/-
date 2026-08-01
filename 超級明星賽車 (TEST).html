@@ -468,7 +468,25 @@
             .btn-close, .btn-clear { font-size: 15px; padding: 10px 15px; }
         }
         /* ▲▲▲ 步驟 2 新增結束 ▲▲▲ */	
-    </style>
+		/* =========================================
+		   中文寫字模組專用樣式
+		   ========================================= */
+		.writing-board-container {
+		    position: relative; width: 300px; height: 300px;
+		    background-color: #fff; border: 4px solid #3498db;
+		    border-radius: 10px; margin: 20px auto; /* 改為 auto 置中 */
+		}
+		.grid-lines {
+		    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+		    pointer-events: none;
+		    background-image: linear-gradient(to right, transparent 49%, #aed6f1 49%, #aed6f1 51%, transparent 51%), linear-gradient(to bottom, transparent 49%, #aed6f1 49%, #aed6f1 51%, transparent 51%);
+		}
+		#character-target {
+		    position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: pointer;
+		}
+	</style>
+<!-- 引入 Hanzi Writer 開源引擎 -->
+<script src="https://cdn.jsdelivr.net/npm/hanzi-writer@3.5/dist/hanzi-writer.min.js"></script>
 </head>
 <body>
 	
@@ -591,6 +609,51 @@
 	        </div>
 	        <div class="difficulty">難度: 總冠軍 <span class="boss-tag">Boss</span></div>
 	    </div>
+		<!-- Ch11 中文寫字關卡 -->
+			<div class="card unlocked" id="card-chapter11" onclick="selectChapter('chapter11')">
+			    <div class="stage-name">🟣 第五階段 (語文訓練)</div>
+			    <div class="chapter-header">
+			        <span class="chapter-num">Ch11</span>
+			        <h3 class="level-name">漢字賽道</h3>
+			    </div>
+			    <div class="difficulty">難度: 寫字初級</div>
+			</div>
+		<!-- Ch12 -->
+			<div class="card unlocked" id="card-chapter12" onclick="selectChapter('chapter12')">
+			    <div class="stage-name">🟣 第五階段 (語文訓練)</div>
+			    <div class="chapter-header">
+			        <span class="chapter-num">Ch12</span>
+			        <h3 class="level-name">初階部首道</h3>
+			    </div>
+			    <div class="difficulty">難度: 見習生</div>
+			</div>
+			<!-- Ch13 -->
+			<div class="card unlocked" id="card-chapter13" onclick="selectChapter('chapter13')">
+			    <div class="stage-name">🟣 第五階段 (語文訓練)</div>
+			    <div class="chapter-header">
+			        <span class="chapter-num">Ch13</span>
+			        <h3 class="level-name">進階詞彙路</h3>
+			    </div>
+			    <div class="difficulty">難度: 書法家</div>
+			</div>
+			<!-- Ch14 -->
+			<div class="card unlocked" id="card-chapter14" onclick="selectChapter('chapter14')">
+			    <div class="stage-name">🟣 第五階段 (語文訓練)</div>
+			    <div class="chapter-header">
+			        <span class="chapter-num">Ch14</span>
+			        <h3 class="level-name">高階筆畫灣</h3>
+			    </div>
+			    <div class="difficulty">難度: 大師級</div>
+			</div>
+			<!-- Ch15 -->
+			<div class="card unlocked" id="card-chapter15" onclick="selectChapter('chapter15')">
+			    <div class="stage-name">🟣 第五階段 (語文訓練)</div>
+			    <div class="chapter-header">
+			        <span class="chapter-num">Ch15</span>
+			        <h3 class="level-name">終極漢字山</h3>
+			    </div>
+			    <div class="difficulty">難度: 狀元</div>
+			</div>
 	</div>
 		
         <div class="form-group">
@@ -664,7 +727,16 @@
 		    <div id="bg-bottom"></div>
 		</div>		
         <div id="question-area">準備中...</div>
-        
+		<!-- ▼ 新增：中文寫字區域 (預設隱藏) ▼ -->
+		<div id="chinese-writing-area" style="display: none; text-align: center;">
+		    <div id="message-box" style="font-size: 20px; font-weight: bold; margin: 10px 0;">等待開始...</div>
+		    <div class="writing-board-container">
+		        <div class="grid-lines"></div>
+		        <div id="character-target"></div>
+		    </div>
+		    <button class="btn-play" onclick="animateCharacter()" style="padding: 10px; border-radius: 8px;">▶️ 示範筆順</button>
+		</div>
+		<!-- ▲ 新增結束 ▲ -->
         <!-- ▼▼▼ 新增：提示按鈕與顯示區塊 ▼▼▼ -->
         <button id="btn-hint" class="hint-btn" onclick="showHint()">💡 唔識計？按我睇提示</button>
         <div id="hint-area"></div>
@@ -1113,7 +1185,18 @@ const QuestionGenerator = {
 	            bottomHeight: "86px",
 	        	delayMultiplier: 2.0   // 👈 新增：正常速度
 	        },
-			
+			"chapter11": { 
+			    name: "漢字賽道", 
+			    bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 1.png')", // 可換成新的背景
+			    border: "4px solid #9b59b6", // 紫色邊框
+			    topHeight: "315px",
+			    bottomHeight: "86px",
+			    delayMultiplier: 1.5   // 對手速度微調
+			},
+			"chapter12": { name: "初階部首道", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 2b.png')", border: "4px solid #9b59b6", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.5 },
+			"chapter13": { name: "進階詞彙路", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 3a.png')", border: "4px solid #9b59b6", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.2 },
+			"chapter14": { name: "高階筆畫灣", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 4.png')", border: "4px solid #9b59b6", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.0 },
+			"chapter15": { name: "終極漢字山", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 5.png')", border: "4px solid #9b59b6", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 0.8 },
 	    },
 		// ▲▲▲ 修改結束 ▲▲▲
 	characters: {
@@ -1276,7 +1359,12 @@ function updateOperationMode() {
         case 'chapter8': optionsHtml = '<option selected>🟠 基礎整除法</option>'; break;
         case 'chapter9': optionsHtml = '<option selected>🔴 四則運算綜合大亂鬥</option>'; break;
         case 'chapter10': optionsHtml = '<option selected>🏆 終極戰 (困難開啟全突襲)</option>'; break;
-        default: optionsHtml = '<option selected>🎲 綜合練習</option>';
+        case 'chapter11': optionsHtml = '<option selected>✍️ 漢字訓練 (入門 - 最淺)</option>'; break;
+		case 'chapter12': optionsHtml = '<option selected>✍️ 漢字訓練 (初階)</option>'; break;
+		case 'chapter13': optionsHtml = '<option selected>✍️ 漢字訓練 (進階)</option>'; break;
+		case 'chapter14': optionsHtml = '<option selected>✍️ 漢字訓練 (高階)</option>'; break;
+		case 'chapter15': optionsHtml = '<option selected>✍️ 漢字訓練 (狀元 - 最深)</option>'; break;
+		default: optionsHtml = '<option selected>🎲 綜合練習</option>';
     }
 
     
@@ -1800,7 +1888,46 @@ function startRace() {
 
 function generateQuestion() {
     if (!gameActive || racers.player.finished) return;
-    
+
+    let currentChapterStr = document.getElementById('chapter-select').value;
+    let chapterNumber = parseInt(currentChapterStr.replace('chapter', '')) || 1;
+
+	// ▼▼▼ 修改：支援 11 到 15 章的中文關卡 ▼▼▼
+	if (chapterNumber >= 11 && chapterNumber <= 15) {
+	    document.getElementById('hint-area').style.display = 'none';
+	    document.getElementById('btn-hint').style.display = 'none';
+	    document.getElementById('options-container').style.display = 'none';
+	
+	    racers.player.element.classList.remove('stopped');
+	    racers.player.element.classList.add('driving');
+	
+	    document.getElementById('question-area').style.color = "#f1c40f";
+	    document.getElementById('question-area').innerText = "請跟著虛線寫出這個字！";
+	    document.getElementById('message').innerText = "";
+	
+	    let chineseArea = document.getElementById('chinese-writing-area');
+	    if(chineseArea) chineseArea.style.display = 'block';
+	
+	    // 根據玩家選擇的章節 (11-15)，抓取對應的 30 字字庫
+	    let wordList = ChineseWordBank[chapterNumber];
+	    // 隨機抽一個字
+	    currentCharacter = wordList[Math.floor(Math.random() * wordList.length)];
+	
+	    initWriter(currentCharacter);
+	    startQuiz();
+	
+	    questionStartTime = Date.now();
+	    return; // 終止函數，不執行數學題庫
+	}
+
+    // ▲▲▲ 中文關卡分流結束 ▲▲▲
+
+    // === 以下保留你原本的數學邏輯 ===
+    // (請確保加入這一行，讓數學模式時隱藏寫字板)
+    let chineseArea = document.getElementById('chinese-writing-area');
+    if(chineseArea) chineseArea.style.display = 'none';
+    document.getElementById('options-container').style.display = 'grid'; // 確保數學按鈕顯示 
+	
     // ▼▼▼ 新增：重置提示按鈕狀態 ▼▼▼
     document.getElementById('hint-area').style.display = 'none';
     document.getElementById('btn-hint').style.display = 'inline-block';
@@ -1917,6 +2044,32 @@ function generateQuestion() {
             if (!racers.player.finished) setTimeout(generateQuestion, 1200); 
         }
     }
+	function handleChineseCorrectAnswer() {
+	    if (!gameActive || racers.player.finished) return;
+	    if (racers.player.stalled) return; // 如果中了技能停駛中就忽略
+	
+	    let msgElement = document.getElementById('message');
+	
+	    // 清除寫字板準備下一題
+	    document.getElementById('character-target').innerHTML = ''; 
+	
+	    playerStreak++;
+	    document.getElementById('streak-display').innerText = `🔥 連勝: ${playerStreak}`;
+	    msgElement.style.color = "#2ecc71";
+	    msgElement.innerText = `⚡ 筆順正確！加速衝刺！ (連續答對 ${playerStreak} 題)`;
+	
+	    racers.player.step++;
+	
+	    // 觸發角色技能與更新位置
+	    applyPlayerSkill();
+	    updatePositions(); 
+	    checkWinCondition();
+	
+	    // 延遲 0.8 秒後，自動出下一個中文字
+	    if (gameActive && !racers.player.finished) {
+	        setTimeout(generateQuestion, 800);
+	    }
+	}
 
     function applyPlayerSkill() {
         let pData = GAME_DATA.characters[selectedCharId];
@@ -2485,6 +2638,56 @@ function showReport() {
         }
     }
     // ▲▲▲ 步驟 2 新增結束 ▲▲▲
+// ==========================================
+// 中文寫字引擎系統
+// ==========================================
+let currentCharacter = '車'; 
+let writer;
+const ChineseWordBank = {
+    11: ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '日', '月', '木', '水', '火', '土', '人', '口', '目', '耳', '手', '足', '大', '小', '多', '少', '上', '下', '左', '右'],
+    12: ['山', '石', '田', '土', '星', '雲', '雨', '風', '春', '夏', '秋', '冬', '草', '花', '葉', '樹', '魚', '鳥', '蟲', '牛', '羊', '馬', '車', '船', '門', '戶', '衣', '食', '住', '行'],
+    13: ['爸', '媽', '哥', '姐', '弟', '妹', '爺', '奶', '朋', '友', '學', '校', '書', '包', '筆', '紙', '桌', '椅', '黑', '白', '紅', '黃', '藍', '綠', '跑', '跳', '走', '坐', '立', '停'],
+    14: ['喜', '怒', '哀', '樂', '愛', '惡', '歡', '迎', '謝', '歉', '聰', '明', '愚', '笨', '勤', '奮', '懶', '惰', '勇', '敢', '害', '怕', '快', '慢', '早', '晚', '新', '舊', '美', '醜'],
+    15: ['龜', '龍', '鳳', '麟', '贏', '輸', '藏', '露', '繁', '簡', '醫', '藥', '警', '察', '藝', '術', '翻', '譯', '辯', '論', '競', '賽', '獎', '勵', '嚴', '肅', '活', '潑', '驚', '訝']
+};	
+
+function initWriter(char) {
+    document.getElementById('character-target').innerHTML = '';
+    writer = HanziWriter.create('character-target', char, {
+        width: 300, height: 300, padding: 20, showOutline: true,
+        strokeAnimationSpeed: 1, delayBetweenStrokes: 200,
+        strokeColor: '#ff4757', outlineColor: '#dfdfdf', drawingWidth: 25,
+        showHintAfterMisses: 2
+    });
+}
+
+function animateCharacter() {
+    let msgBox = document.getElementById('message-box');
+    if(msgBox) { msgBox.innerText = "👀 請仔細看筆順示範..."; msgBox.style.color = "#2980b9"; }
+    writer.animateCharacter({
+        onComplete: function() { setTimeout(() => { startQuiz(); }, 1000); }
+    });
+}
+
+function startQuiz() {
+    let msgBox = document.getElementById('message-box');
+    if(msgBox) { msgBox.innerText = "✍️ 請開始寫字！"; msgBox.style.color = "#e67e22"; }
+
+    writer.quiz({
+        onMistake: function(strokeData) {
+            if(msgBox) { msgBox.innerText = "❌ 寫錯囉！請注意筆順或方向！"; msgBox.style.color = "#c0392b"; }
+        },
+        onCorrectStroke: function(strokeData) {
+            if(msgBox) { msgBox.innerText = "✨ 漂亮！繼續下一筆！"; msgBox.style.color = "#27ae60"; }
+        },
+        onComplete: function(summaryData) {
+            if(msgBox) { msgBox.innerText = "🎉 太棒了！賽車加速！ 🏎️💨"; msgBox.style.color = "#f39c12"; }
+
+            // 這裡觸發賽車前進！(直接呼叫原有遊戲的邏輯)
+            handleChineseCorrectAnswer(); 
+        }
+    });
+}
 </script>
 </body>
 </html>
