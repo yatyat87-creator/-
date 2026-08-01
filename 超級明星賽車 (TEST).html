@@ -1938,10 +1938,6 @@ function generateQuestion() {
     document.getElementById('message').innerText = "踩油門作答！";
     document.getElementById('message').style.color = "#ecf0f1";
 
-    // 1. 取得目前的章節數字
-    let currentChapterStr = document.getElementById('chapter-select').value;
-    let chapterNumber = parseInt(currentChapterStr.replace('chapter', '')) || 1;
-
     // 2. 呼叫新的題庫引擎生成題目
     const questionData = QuestionGenerator.generateQuestion(chapterNumber);
 
