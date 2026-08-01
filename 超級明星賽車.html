@@ -1,0 +1,2490 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>超級明星賽車</title>
+    <style>
+	
+    * {
+        box-sizing: border-box;
+    }
+    
+    /* 遊戲選單容器背景 */
+    .career-container {
+        width: 100%;
+        max-width: 800px;
+        background: #34495e;
+        border: 4px solid #f1c40f;
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        margin: 20px auto;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    /* 標題樣式 */
+    .menu-title {
+        grid-column: 1 / -1;
+        text-align: center;
+        color: #f1c40f;
+        margin: 0 0 10px 0;
+        font-size: 32px;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    /* 卡片基本樣式 (已解鎖) */
+    .card {
+        background: linear-gradient(135deg, #2980b9, #2c3e50);
+        border: 3px solid #3498db;
+        border-radius: 15px;
+        padding: 20px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: transform 0.2s, box-shadow 0.2s;
+        color: white;
+    }
+
+    .card.unlocked:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(52, 152, 219, 0.6);
+        border-color: #f1c40f;
+    }
+
+    /* 未解鎖 (鎖定) 樣式 */
+    .card.locked {
+        background: #7f8c8d;
+        border-color: #555;
+        filter: grayscale(80%);
+        opacity: 0.9;
+    }
+
+    .lock-overlay {
+        display: none;
+    }
+
+    .card.locked .lock-overlay {
+        display: flex;
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.55);
+        border-radius: 11px;
+        justify-content: center;
+        align-items: center;
+        font-size: 60px;
+        z-index: 10;
+    }
+
+    /* 卡片內部排版細節 */
+    .stage-name {
+        font-size: 14px;
+        font-weight: bold;
+        color: #f1c40f;
+        text-shadow: 1px 1px 2px #000;
+    }
+    
+    .card.locked .stage-name {
+        color: #ccc;
+    }
+
+    .chapter-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .chapter-num {
+        background: #f1c40f;
+        color: #2c3e50;
+        font-weight: 900;
+        padding: 5px 12px;
+        border-radius: 8px;
+        font-size: 20px;
+        box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+    }
+
+    .level-name {
+        margin: 0;
+        font-size: 24px;
+        font-weight: bold;
+        text-shadow: 1px 1px 3px #000;
+        line-height: 1.2;
+    }
+
+    .difficulty {
+        font-size: 14px;
+        background: rgba(0, 0, 0, 0.4);
+        padding: 6px 12px;
+        border-radius: 20px;
+        align-self: flex-start;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .boss-tag {
+        color: #ff4757;
+        font-weight: bold;
+        text-shadow: 0 0 5px #ff4757;
+    }
+
+    /* 挑戰按鈕樣式 */
+    .challenge-btn {
+        background: #e74c3c;
+        color: white;
+        border: none;
+        padding: 12px;
+        font-size: 18px;
+        font-weight: bold;
+        border-radius: 10px;
+        cursor: pointer;
+        margin-top: auto;
+        box-shadow: 0 5px 0 #c0392b;
+        transition: 0.1s;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    .card.unlocked .challenge-btn:hover {
+        background: #ff5e4d;
+    }
+
+    .card.unlocked .challenge-btn:active {
+        transform: translateY(5px);
+        box-shadow: none;
+    }
+
+    .card.locked .challenge-btn {
+        background: #95a5a6;
+        box-shadow: 0 5px 0 #7f8c8d;
+        cursor: not-allowed;
+        color: #ecf0f1;
+    }
+
+    /* 響應式：螢幕變寬時自動改為 2 欄排版 */
+    @media (min-width: 600px) {
+        .career-container {
+            grid-template-columns: repeat(2, 1fr);
+            padding: 25px;
+        }
+    }
+
+		
+		/* 基礎樣式 */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f39c12; color: #fff; text-align: center; margin: 0; padding: 20px; }
+        #game-container { max-width: 900px; margin: 0 auto; background: #2c3e50; color: #ecf0f1; padding: 20px; border-radius: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); border: 4px solid #e74c3c; position: relative; }
+        
+        /* 頂部資訊列 (金幣與音效) */
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 10px 20px; border-radius: 10px; }
+        .gold-display { font-size: 20px; font-weight: bold; color: #f1c40f; text-shadow: 1px 1px 2px #000; }
+        .audio-btn { background: #34495e; color: white; border: 2px solid #7f8c8d; padding: 5px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .audio-btn:hover { background: #7f8c8d; }
+
+        /* 大廳與表單樣式 */
+        #setup-screen { display: block; }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        label { font-weight: bold; color: #f1c40f; display: block; margin-bottom: 10px; font-size: 18px; }
+        select, input { width: 100%; background: #34495e; color: #fff; padding: 10px; border-radius: 5px; border: none; font-size: 16px; box-sizing: border-box; }
+        .btn-start { width: 100%; background-color: #e74c3c; color: white; border: none; cursor: pointer; font-weight: bold; font-size: 22px; transition: 0.3s; padding: 15px; text-transform: uppercase; border-radius: 10px; box-shadow: 0 4px 0 #c0392b; }
+        .btn-start:hover { background-color: #ff5e4d; transform: translateY(-2px); box-shadow: 0 6px 0 #c0392b; }
+        .btn-start:active { transform: translateY(4px); box-shadow: none; }
+
+        /* 🏎️ 角色選擇網格 (CSS Grid) */
+        .char-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .char-card { background: #34495e; border: 3px solid #7f8c8d; border-radius: 12px; padding: 15px; cursor: pointer; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); position: relative; display: flex; flex-direction: column; align-items: center; }
+        .char-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.5); border-color: #bdc3c7; }
+        .char-card.selected { border-color: #2ecc71; box-shadow: 0 0 20px rgba(46, 204, 113, 0.6); transform: scale(1.05); background: #27ae60; }
+        .char-card.locked { filter: grayscale(100%); opacity: 0.8; cursor: pointer; border-color: #555; }
+        .char-card.locked:hover { filter: grayscale(80%); }
+        
+        .char-card .avatar { font-size: 45px; margin-bottom: 10px; height: 60px; display: flex; justify-content: center; align-items: center; }
+        .char-card .img-avatar { width: 60px; height: 60px; background-size: contain; background-repeat: no-repeat; background-position: center; margin-bottom: 10px; }
+        .char-card .name { font-weight: bold; font-size: 18px; margin-bottom: 5px; }
+        .char-card .skill { font-size: 12px; color: #bdc3c7; text-align: center; height: 35px; }
+        .char-card.selected .skill { color: #fff; }
+        
+        /* 鎖頭與價格疊加層 */
+        .lock-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); border-radius: 9px; display: flex; flex-direction: column; justify-content: center; align-items: center; pointer-events: none; }
+        .lock-icon { font-size: 30px; margin-bottom: 5px; }
+        .lock-price { font-weight: bold; color: #f1c40f; font-size: 16px; background: rgba(0,0,0,0.8); padding: 4px 10px; border-radius: 15px; }
+
+        /* 遊戲畫面樣式 */
+        #play-screen { display: none; }
+		/* 遊戲畫面主要容器 */
+		#game-board {
+		    display: flex;
+		    flex-direction: column;
+		    width: 100%;
+		    position: relative;
+		    border-radius: 12px;
+		    overflow: hidden; /* 👈 【關鍵】這會切齊邊界，讓整體看起來像你原本原圖那樣乾淨 */
+		}
+		
+		/* 頂部和底部的共用設定 */
+		#bg-top, #bg-bottom {
+		    width: 100%;
+		    background-repeat: no-repeat !important;
+		    transition: background-position 0.4s ease-out;
+		}
+		
+		/* 電腦版 (預設視覺比例) */
+		#bg-top { 
+		    background-size: 100% auto !important; 
+		    background-position-y: 0% !important; /* 👈 0% 代表對齊圖片最頂端 (天空與山脈) */
+		}
+		#bg-bottom { 
+		    background-size: 100% auto !important; 
+		    background-position-y: 100% !important; /* 👈 100% 代表對齊圖片最底端 (前景泥地) */
+		    position: relative;
+		    z-index: 10;
+		    margin-top: -30px; 
+		    pointer-events: none;
+		}		
+		/* 賽道 */
+		.track-container {
+		    width: 100%;
+		    background-color: #2c3e50; 
+		    position: relative;
+		    z-index: 1; 
+		    padding-bottom: 20px;
+		}
+		
+		/* 車道設定 */
+		.lane {
+		    position: relative;
+		    height: 55px; /* 可根據你的需求微調車道高度 */
+		    display: flex;
+		    align-items: center;
+		    /* 這裡可以拿掉背景顏色，因為外層 .track-container 已經是深灰色了 */
+		    border-bottom: 3px dashed #f1c40f; /* 黃色虛線 */
+		}
+		
+        .lane:last-child { border-bottom: none; }
+        .lane-name { position: absolute; left: 10px; top: 25px; color: #fff; font-weight: bold; opacity: 0.6; z-index: 1; font-size: 14px; text-shadow: 1px 1px 0 #000; }
+        .boss-lane { color: #ff4757 !important; opacity: 1 !important; text-shadow: 0 0 5px red; }
+        .finish-line { position: absolute; right: 15px; top: 0; bottom: 0; width: 20px; background: repeating-linear-gradient(0deg, #fff, #fff 15px, #000 15px, #000 30px); z-index: 0; box-shadow: -5px 0 10px rgba(0,0,0,0.5); }
+
+        .character { position: absolute; left: 0; top: -5px; width: 80px; height: 80px; font-size: 40px; line-height: 80px; transition: left 0.4s ease-out; z-index: 2; background-size: contain; background-repeat: no-repeat; background-position: center; }
+        .driving { animation: driveEngine 0.2s infinite alternate; }
+        @keyframes driveEngine { from { transform: translateY(0px) rotate(-2deg); } to { transform: translateY(-3px) rotate(2deg); } }
+		.boss-driving { 
+		    /* 疊加原本的引擎震動與全新的閃電特效 */
+		    animation: bossDriveEngine 0.15s infinite alternate, lightningGlow 0.25s infinite alternate !important; 
+		}
+        @keyframes bossDriveEngine { from { transform: translateY(0px) scale(1.1); } to { transform: translateY(-4px) scale(1.1); } }
+        .stopped { animation: none !important; filter: grayscale(80%) drop-shadow(0 0 5px red); transform: scale(0.9); }
+		
+		/* =========================================
+		   精靈圖 (Sprite Sheet) 專用動畫設定 
+		   ========================================= */
+		.character.sprite-mode {
+		    background-size: 320px 320px !important; /* 4x4 網格，每格 80px */
+		    background-position-x: 0px;
+		    border-radius: 0;
+		    box-shadow: none !important;
+		    filter: none; /* 移除預設的濾鏡效果 */
+		}
+		
+		/* 第 1 列：停止 (Idle) - 只有 1 幀 */
+		.character.sprite-mode.idle, 
+		.character.sprite-mode:not(.driving):not(.boss-driving):not(.stopped):not(.finished) {
+		    background-position-y: -240px !important;
+		    animation: none !important;
+		}
+		
+		/* 第 2 列：一般行駛 (Driving) - 4 幀動畫 */
+		.character.sprite-mode.driving {
+		    background-position-y: 0px !important;
+		    animation: sprite-play 0.5s steps(4) infinite !important;
+		}
+		
+		/* 第 2 列：Boss 行駛 (疊加閃電濾鏡與震動) */
+		.character.sprite-mode.boss-driving {
+		    background-position-y: 0px !important;
+		    /* 👈 【關鍵修改 2】加入 bossDriveEngine，讓 Boss 恢復放大與向上提的效果 */
+		    animation: sprite-play 0.5s steps(4) infinite, bossDriveEngine 0.15s infinite alternate, lightningGlow 0.25s infinite alternate !important;
+		}
+		/* ⚡ 高壓閃電圍身特效 */
+		@keyframes lightningGlow {
+		    0%   { filter: drop-shadow(0 0 5px #0ff) drop-shadow(0 0 15px #3498db); } /* 青藍色閃光 */
+		    33%  { filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 25px #f1c40f); } /* 黃白色爆閃 */
+		    66%  { filter: drop-shadow(0 0 2px #3498db) drop-shadow(0 0 10px #0ff); } /* 微弱電光 */
+		    100% { filter: drop-shadow(0 0 12px #fff) drop-shadow(0 0 35px #f1c40f); } /* 強烈黃白電光 */
+		}
+		
+		/* 第 3 列：拋錨 (Stalled) - 4 幀動畫 */
+		.character.sprite-mode.stopped {
+		    background-position-y: -80px !important;
+		    animation: sprite-play 0.8s steps(4) infinite !important;
+		    transform: scale(1) !important; /* 取消預設的縮小效果 */
+		}
+		
+		/* 第 4 列：勝利衝線 (Finished) - 4 幀動畫 */
+		.character.sprite-mode.finished {
+		    background-position-y: -160px !important;
+		    animation: sprite-play 0.6s steps(4) infinite !important;
+		}
+		
+		/* 精靈圖 X 軸橫移核心動畫 */
+		@keyframes sprite-play {
+		    from { background-position-x: 0px; }
+		    to { background-position-x: -320px; } /* 移動 4 格的寬度 */
+		}
+		
+        .speech-bubble { position: absolute; top: -25px; left: 10px; background-color: white; color: black; font-size: 12px; font-weight: bold; padding: 4px 8px; border-radius: 8px; white-space: nowrap; display: none; z-index: 10; border: 2px solid #3498db; box-shadow: 0px 2px 5px rgba(0,0,0,0.3); line-height: 1.2; }
+        .speech-bubble::after { content: ''; position: absolute; bottom: -5px; left: 10px; border-width: 5px 5px 0; border-style: solid; border-color: white transparent transparent transparent; }
+        
+        #question-area { font-size: 34px; font-weight: bold; margin: 15px 0; color: #f1c40f; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .option-btn { background-color: #2980b9; font-size: 30px; padding: 15px; border-radius: 8px; color: white; cursor: pointer; border: none; font-weight: bold; transition: 0.2s; }
+        .option-btn:hover { background-color: #3498db; transform: scale(1.02); }
+        
+        #message { font-size: 20px; font-weight: bold; height: 35px; margin-top: 15px; }
+                /* 💡 提示功能樣式 */
+        .hint-btn { background-color: #f39c12; color: white; border: 2px solid #e67e22; padding: 5px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 16px; margin-bottom: 15px; transition: 0.2s; }
+        .hint-btn:hover { background-color: #e67e22; transform: scale(1.05); }
+        #hint-area { display: none; margin-bottom: 15px; font-size: 18px; color: #ecf0f1; background: rgba(0,0,0,0.5); padding: 12px; border-radius: 10px; line-height: 1.5; border: 1px dashed #f1c40f; text-align: left; }
+        .hint-highlight { color: #f1c40f; font-weight: bold; font-size: 22px; }
+
+        #event-message { font-size: 18px; font-weight: bold; color: #e67e22; height: 25px; margin-bottom: 5px;}
+        #leaderboard { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; font-size: 16px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; flex-wrap: wrap; gap: 10px; }
+
+		/* 📱 移動端專屬響應式 (直立螢幕 Portrait) */
+		@media (max-width: 900px) and (orientation: portrait) {
+		    #bg-top { 
+		        height: 140px !important; 
+		        background-size: 200% auto !important; 
+		        background-position-y: 40% !important; /* 👈 【關鍵】設為 40%，將鏡頭從純雲層往下壓，完美露出仙人掌與山脈 */
+		    }
+		    #bg-bottom { 
+		        height: 50px !important; 
+		        margin-top: -20px !important; 
+		        background-size: 200% auto !important; 
+		        background-position-y: 100% !important; /* 下方維持 100% */
+		    }
+	.track-container { padding: 15px 0 10px 0; }
+		    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
+		    
+		    /* 隱藏越界車輛與泡泡 */
+		    .character.offscreen-ahead, .character.offscreen-behind { background-image: none !important; box-shadow: none !important; filter: none !important; }
+		    .character.offscreen-ahead .char-emoji, .character.offscreen-behind .char-emoji { display: none !important; }
+		    .character.offscreen-ahead .speech-bubble { display: block !important; top: 25px; left: -40px; background-color: #e74c3c; color: white; border-color: #c0392b; z-index: 100; }
+		    .character.offscreen-behind .speech-bubble { display: block !important; top: 25px; left: 30px; background-color: #95a5a6; color: white; border-color: #7f8c8d; z-index: 100; }
+		    .character.offscreen-ahead .speech-bubble::after, .character.offscreen-behind .speech-bubble::after { display: none; }
+		}
+		
+	/* 📱 手機橫向螢幕 (Landscape) */
+	@media (max-height: 500px) and (orientation: landscape) {
+	    body { padding: 5px; }
+	    #game-container { padding: 10px; }
+	    
+	    #play-screen[style*="block"] {
+	        display: grid !important;
+	        grid-template-columns: 55% 42%;
+	        column-gap: 3%;
+	        align-items: center;
+	    }
+	    
+	    #leaderboard { grid-column: 1 / 3; padding: 5px; margin-bottom: 5px; font-size: 14px; }
+	    #event-message { grid-column: 1 / 3; font-size: 14px; height: 20px; margin: 0; }
+	    
+	    /* 🔥 修復核心：將整個大外框 game-board 放進左欄，完美恢復你原本橫向的版面比例！ */
+	    #game-board { 
+	        grid-column: 1 / 2; 
+	        grid-row: 3 / 6; 
+	        margin-bottom: 0; 
+	        zoom: 0.65; 
+	    }
+	    
+#bg-top { 
+        height: 90px !important; 
+        background-size: 120% auto !important; 
+        background-position-y: 50% !important; /* 👈 【關鍵修改】加大這個數值，把相機鏡頭再往下壓，讓沙漠山脈露出來 */
+    }
+    #bg-bottom { 
+        height: 35px !important; 
+        margin-top: -15px !important; 
+        background-size: 120% auto !important; 
+        background-position-y: 100% !important;
+    }
+	    .track-container { padding: 10px 0 5px 0; }
+	    .finish-line { right: auto; left: 120%; transition: left 0.4s ease-out; }
+	    
+	    /* 橫向同樣需要隱藏越界的車輛 */
+	    .character.offscreen-ahead, .character.offscreen-behind { background-image: none !important; box-shadow: none !important; filter: none !important; }
+	    .character.offscreen-ahead .char-emoji, .character.offscreen-behind .char-emoji { display: none !important; }
+	    .character.offscreen-ahead .speech-bubble { display: block !important; top: 25px; left: -40px; background-color: #e74c3c; color: white; border-color: #c0392b; z-index: 100; }
+	    .character.offscreen-behind .speech-bubble { display: block !important; top: 25px; left: 30px; background-color: #95a5a6; color: white; border-color: #7f8c8d; z-index: 100; }
+	    .character.offscreen-ahead .speech-bubble::after, .character.offscreen-behind .speech-bubble::after { display: none; }
+	
+	    #question-area { grid-column: 2 / 3; grid-row: 3; font-size: 22px; margin: 0 0 10px 0; }
+	    .options-grid { grid-column: 2 / 3; grid-row: 4; gap: 8px; }
+	    .option-btn { font-size: 20px; padding: 10px; }
+	    #message { grid-column: 2 / 3; grid-row: 5; margin-top: 5px; font-size: 16px; height: 25px; }
+	}
+	/* ▼▼▼ 步驟 2 新增：學習成效報告 UI 樣式 ▼▼▼ */
+        .report-btn { background: #8e44ad; color: white; border: 2px solid #9b59b6; padding: 5px 15px; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.3s; margin-right: 10px; }
+        .report-btn:hover { background: #9b59b6; }
+        .top-buttons { display: flex; align-items: center; }
+
+        /* 模態框 (Modal) 遮罩層 */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        
+		/* 模態框主體 */
+		.modal-content { background: #2c3e50; padding: 25px; border-radius: 15px; width: 90%; max-width: 800px; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; border: 4px solid #f1c40f; box-shadow: 0 10px 30px rgba(241,196,15,0.4); color: white; position: relative; }
+        .modal-content h2 { margin-top: 0; color: #f1c40f; text-align: center; font-size: 28px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        
+        /* 統計摘要區塊 */
+        .report-summary { display: flex; justify-content: space-around; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-bottom: 20px; font-weight: bold; font-size: 18px; flex-wrap: wrap; gap: 10px; }
+        
+/* 表格容器 (帶捲動條) */
+.table-container { overflow-y: auto; flex-grow: 1; flex-shrink: 0; min-height: 250px; margin-bottom: 20px; border-radius: 8px; border: 1px solid #7f8c8d; background: #34495e; }   
+		
+        /* 表格樣式 */
+        #report-table { width: 100%; border-collapse: collapse; text-align: center; }
+        #report-table th, #report-table td { padding: 12px 8px; border-bottom: 1px solid #7f8c8d; }
+        #report-table th { background: #2980b9; position: sticky; top: 0; z-index: 1; font-size: 16px; color: #fff; text-shadow: 1px 1px 2px #000; }
+        #report-table tbody tr:nth-child(even) { background: rgba(0,0,0,0.15); }
+        #report-table tbody tr:hover { background: rgba(52, 152, 219, 0.4); }
+        
+        .correct-text { color: #2ecc71; font-weight: bold; }
+        .wrong-text { color: #e74c3c; font-weight: bold; }
+
+        /* 底部按鈕區 */
+        .modal-actions { display: flex; justify-content: space-between; }
+        .btn-close { background: #7f8c8d; color: white; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.2s; }
+        .btn-close:hover { background: #95a5a6; transform: translateY(-2px); }
+        .btn-clear { background: #e74c3c; color: white; padding: 12px 25px; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.2s; }
+        .btn-clear:hover { background: #c0392b; transform: translateY(-2px); }
+
+        /* 手機版響應式 */
+        @media (max-width: 600px) {
+            .report-summary { flex-direction: column; align-items: center; font-size: 16px; }
+            #report-table th, #report-table td { padding: 8px 4px; font-size: 13px; }
+            .modal-content { padding: 15px; }
+            .modal-content h2 { font-size: 22px; }
+            .btn-close, .btn-clear { font-size: 15px; padding: 10px 15px; }
+        }
+        /* ▲▲▲ 步驟 2 新增結束 ▲▲▲ */	
+    </style>
+</head>
+<body>
+	
+<div id="game-container">
+    <!-- 頂部資訊列：金幣與音效開關 -->
+    <div class="top-bar">
+        <div class="gold-display">💰 金幣: <span id="gold-count">0</span></div>
+		<!-- ▼▼▼ 步驟 2 修改：加入報表按鈕 ▼▼▼ -->
+        <div class="top-buttons">
+            <button id="report-btn" class="report-btn" onclick="showReport()">📊 學習報告</button>
+            <button id="audio-toggle" class="audio-btn" onclick="AudioManager.toggleMute()">🔊 音效: 開</button>
+        </div>
+        <!-- ▲▲▲ 步驟 2 修改結束 ▲▲▲ -->
+	</div>
+
+    <div id="setup-screen">
+        <h2>🏎️ 活塞盃：數學大賽 </h2>
+        <p>進行 3 個回合的積分排名賽！第 3 回合將有強大的 Boss 登場！</p>
+
+	<input type="hidden" id="chapter-select" value="chapter1">
+		
+	<div class="career-container">
+	    <h1 class="menu-title">🏆 生涯模式</h1>
+	
+	    <!-- Ch1 (已解鎖) -->
+	    <div class="card unlocked" id="card-chapter1" onclick="selectChapter('chapter1')">
+	        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch1</span>
+	            <h3 class="level-name">州際公路</h3>
+	        </div>
+	        <div class="difficulty">難度: 卡丁車級</div>
+	    </div>
+	
+	    <!-- Ch2 -->
+	    <div class="card unlocked" id="card-chapter2" onclick="selectChapter('chapter2')">
+	        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch2</span>
+	            <h3 class="level-name">屯門黃金海岸沙灘</h3>
+	        </div>
+	        <div class="difficulty">難度: 新秀級 <span class="boss-tag">+ Boss戰</span></div>
+		</div>	
+	    <!-- Ch3 -->
+	    <div class="card unlocked" id="card-chapter3" onclick="selectChapter('chapter3')">
+	        <div class="stage-name">🟡 第二階段 (位值概念)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch3</span>
+	            <h3 class="level-name">青馬大橋</h3>
+	        </div>
+	        <div class="difficulty">難度: 業餘級</div>
+	    </div>
+	
+	    <!-- Ch4 -->
+	    <div class="card unlocked" id="card-chapter4" onclick="selectChapter('chapter4')">
+	        <div class="stage-name">🟡 第二階段 (位值概念)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch4</span>
+	            <h3 class="level-name">英國倫敦</h3>
+	        </div>
+	        <div class="difficulty">難度: 職業級</div>
+	    </div>
+	
+	    <!-- Ch5 -->
+	    <div class="card unlocked" id="card-chapter5" onclick="selectChapter('chapter5')">
+	        <div class="stage-name">🟡 第二階段 (位值概念)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch5</span>
+	            <h3 class="level-name">Line Friend</h3>
+	        </div>
+	        <div class="difficulty">難度: 專家級 <span class="boss-tag">+ Boss戰</span></div>
+	    </div>
+	
+	    <!-- Ch6 -->
+	    <div class="card unlocked" id="card-chapter6" onclick="selectChapter('chapter6')">
+	        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch6</span>
+	            <h3 class="level-name">美國華盛頓</h3>
+	        </div>
+	        <div class="difficulty">難度: 拉力級</div>
+	    </div>
+	
+	    <!-- Ch7 -->
+	    <div class="card unlocked" id="card-chapter7" onclick="selectChapter('chapter7')">
+	        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch7</span>
+	            <h3 class="level-name">冰雪極地</h3>
+	        </div>
+	        <div class="difficulty">難度: 冠軍級 (特殊道具)</div>
+	    </div>
+	
+	    <!-- Ch8 -->
+	    <div class="card unlocked" id="card-chapter8" onclick="selectChapter('chapter8')">
+	        <div class="stage-name">🟠 第三階段 (乘除啟蒙)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch8</span>
+	            <h3 class="level-name">科技工廠</h3>
+	        </div>
+	        <div class="difficulty">難度: 大師級</div>
+	    </div>
+	
+	    <!-- Ch9 -->
+	    <div class="card unlocked" id="card-chapter9" onclick="selectChapter('chapter9')">
+	        <div class="stage-name">🔴 第四階段 (大腦極限)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch9</span>
+	            <h3 class="level-name">活塞盃競技場</h3>
+	        </div>
+	        <div class="difficulty">難度: 傳奇級</div>
+	    </div>
+	
+	    <!-- Ch10 -->
+	    <div class="card unlocked" id="card-chapter10" onclick="selectChapter('chapter10')">
+	        <div class="stage-name">🔴 第四階段 (大腦極限)</div>
+	        <div class="chapter-header">
+	            <span class="chapter-num">Ch10</span>
+	            <h3 class="level-name">終極車神爭霸戰</h3>
+	        </div>
+	        <div class="difficulty">難度: 總冠軍 <span class="boss-tag">Boss</span></div>
+	    </div>
+	</div>
+		
+        <div class="form-group">
+            <label>選擇你的賽車手：</label>
+            <div id="character-grid" class="char-grid"></div>
+        </div>
+        
+		<div class="form-group">
+		    <label>選擇難度：</label>
+		    <select id="difficulty" onclick="AudioManager.playSound('click')">
+		        <option value="super_easy" selected>🟢 超簡單 </option> <!-- 新增這行 -->
+		        <option value="easy">🟢 簡單</option>
+		        <option value="normal">🟡 普通</option>
+		        <option value="hard">🔴 困難</option>
+		    </select>
+		</div>
+		
+        <div class="form-group">
+            <label>選擇運算模式：</label>
+            <select id="operation-mode" onclick="AudioManager.playSound('click')">
+                <option value="add" selected>➕ 加法</option>
+                <option value="sub">➖ 減法</option>
+                <option value="mul">✖️ 乘法</option>
+                <option value="div">➗ 除法</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>選擇基準數字：</label>
+            <select id="multiplier" onclick="AudioManager.playSound('click')">
+                <option value="random" selected>🎲 隨機 (2~12)</option>
+                <option value="2">數字 2</option>
+                <option value="3">數字 3</option>
+                <option value="4">數字 4</option>
+                <option value="5">數字 5</option>
+                <option value="6">數字 6</option>
+                <option value="7">數字 7</option>
+                <option value="8">數字 8</option>
+                <option value="9">數字 9</option>
+                <option value="10">數字 10</option>
+            </select>
+        </div>
+	<!-- 👇 請在基準數字的下拉選單下方，加回這個唯一的開始按鈕 -->
+        <button class="btn-start" onclick="initGame()">🏁 發動引擎！</button>
+        
+    </div> <!-- 這裡是 setup-screen 的結尾 -->
+	
+    <div id="play-screen">
+        <div id="leaderboard">
+            <span id="diff-display" style="color:#3498db">難度：普通</span>
+            <span id="level-display" style="color:#2ecc71">回合：1 / 3</span>
+            <span id="score-display" style="color:#f1c40f">目前總分: 0</span>
+            <span id="streak-display" style="color:#e67e22">🔥 連勝: 0</span>
+        </div>
+        <div id="event-message"></div>
+        
+		<!-- ▼▼▼ 修改這裡：新增場景包裝器與前後景區塊 ▼▼▼ -->
+       <!-- 遊戲畫面主要容器 -->
+		<div id="game-board">
+		    <!-- 頂部風景 (Top Background) -->
+		    <div id="bg-top"></div>
+            
+            <div class="track-container">
+                <div class="finish-line"></div>
+                <div class="lane"><div class="lane-name" id="player-name">YOU</div><div id="player" class="character stopped"><span class="char-emoji">🏎️</span><div class="speech-bubble" id="bubble-player"></div></div></div>
+                <div class="lane"><div class="lane-name" id="ai1-name">對手 1</div><div id="ai1" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai1"></div></div></div>
+                <div class="lane"><div class="lane-name" id="ai2-name">對手 2</div><div id="ai2" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai2"></div></div></div>
+                <div class="lane"><div class="lane-name" id="ai3-name">對手 3</div><div id="ai3" class="character driving"><span class="char-emoji"></span><div class="speech-bubble" id="bubble-ai3"></div></div></div>
+            </div>
+		<!-- 底部前景 (Bottom Foreground) -->
+		    <div id="bg-bottom"></div>
+		</div>		
+        <div id="question-area">準備中...</div>
+        
+        <!-- ▼▼▼ 新增：提示按鈕與顯示區塊 ▼▼▼ -->
+        <button id="btn-hint" class="hint-btn" onclick="showHint()">💡 唔識計？按我睇提示</button>
+        <div id="hint-area"></div>
+        <!-- ▲▲▲ 新增結束 ▲▲▲ -->
+        
+        <div class="options-grid" id="options-container"></div>
+
+        <div id="message"></div>
+    </div>
+<!-- ▼▼▼ 步驟 2 新增：學習成效報告 Modal 視窗 ▼▼▼ -->
+    <div id="report-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2>📊 學習成效總結報告</h2>
+
+						<!-- 👇 新增：多重篩選器區塊 -->
+            <div style="display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+                <select id="filter-chapter" onchange="renderReportData()" style="padding: 6px; font-size: 14px; background: #34495e; color: #f1c40f; border: 1px solid #7f8c8d; border-radius: 5px;">
+                    <option value="all">📚 所有章節</option>
+                </select>
+                
+                <select id="filter-operation" onchange="renderReportData()" style="padding: 6px; font-size: 14px; background: #34495e; color: #f1c40f; border: 1px solid #7f8c8d; border-radius: 5px;">
+                    <option value="all">🧮 所有模式</option>
+                </select>
+                
+                <select id="filter-result" onchange="renderReportData()" style="padding: 6px; font-size: 14px; background: #34495e; color: #f1c40f; border: 1px solid #7f8c8d; border-radius: 5px;">
+                    <option value="all">🎯 所有結果</option>
+                    <option value="correct">✔️ 答對</option>
+                    <option value="wrong">❌ 答錯</option>
+                </select>
+            </div>
+            <!-- 👆 新增結束 -->			
+			<div id="report-summary" class="report-summary">
+                <!-- 數據摘要由 JS 動態生成 -->
+            </div>
+            <div class="table-container">
+                <table id="report-table">
+                    <thead>
+                        <tr>
+                            <th>時間</th>
+							<th>模式</th> <!-- 👈 新增這個表頭 -->
+                            <th>題目</th>
+                            <th>你的答案</th>
+                            <th>正確答案</th>
+                            <th>結果</th>
+                            <th>作答時間</th>
+                        </tr>
+                    </thead>
+                    <tbody id="report-tbody">
+                        <!-- 表格資料由 JS 動態生成 -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-clear" onclick="clearReportData()">🗑️ 清除紀錄</button>
+                <button class="btn-close" onclick="hideReport()">返回遊戲大廳</button>
+            </div>
+        </div>
+    </div>
+    <!-- ▲▲▲ 步驟 2 新增結束 ▲▲▲ -->
+
+</div>
+
+<script>
+// =====================================================================
+    // 🎵 音效管理系統 (AudioManager) - 支援隨機 BGM 歌單
+    // =====================================================================
+    const AudioManager = {
+        isMuted: false,
+        
+        // 🎼 1. 建立 BGM 歌單陣列 (你可以隨意新增更多音樂 URL)
+        bgmTracks: [
+            'https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/BGM.mp3',
+            'https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/BGM3.mp3',
+            'https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/BGM5.mp3',
+			'https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/BGM6.mp3',
+			'https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/BGM4.mp3',
+            'https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/BGM2.mp3'
+        ],
+
+        sounds: {
+            bgm: new Audio(), // 先建立一個空的 Audio 物件給 BGM
+            click: new Audio('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Click.mp3'),
+            engine: new Audio('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Enginee.mp3'),
+            finish: new Audio('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Finish.mp3'),
+            allFinished: new Audio('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/All Finish.mp3'),
+            eventWind: new Audio('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Wind.mp3'),
+            eventSlip: new Audio('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Slip.mp3'),
+            eventStall: new Audio('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Stall.mp3'),
+            skillBoost: new Audio('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Boost.mp3'),
+            skillPull: new Audio('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Wind.mp3'),
+            skillStun: new Audio('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Stall.mp3')
+        },
+
+        init: function() {
+            this.sounds.bgm.volume = 0.2;
+            for (let key in this.sounds) {
+                if (key !== 'bgm') this.sounds[key].volume = 0.6;
+            }
+
+            // 🎼 2. 監聽 BGM 播放結束事件：一播完就自動換下一首隨機歌
+            this.sounds.bgm.addEventListener('ended', () => {
+                this.playRandomBGM();
+            });
+
+            // 遊戲載入時先隨機選一首歌準備好
+            this.playRandomBGM(false); 
+        },
+
+        // 🎼 3. 隨機播放 BGM 的專屬功能
+        playRandomBGM: function(autoPlay = true) {
+            let randomIndex = Math.floor(Math.random() * this.bgmTracks.length);
+            this.sounds.bgm.src = this.bgmTracks[randomIndex]; // 換上新選到的歌
+            
+            if (autoPlay && !this.isMuted) {
+                this.sounds.bgm.play().catch(e => console.log('Audio playback prevented:', e));
+            }
+        },
+
+        playSound: function(id) {
+            if (this.isMuted) return;
+            
+            // 特別處理 BGM，因為現在 BGM 不用這個 function 播
+            if (id === 'bgm') {
+                this.sounds.bgm.play().catch(e => console.log('Audio playback prevented by browser:', e));
+                return;
+            }
+
+            let sound = this.sounds[id];
+            if (sound) {
+                sound.currentTime = 0;
+                sound.play().catch(e => console.log('Audio playback prevented by browser:', e));
+            }
+        },
+
+        toggleMute: function() {
+            this.isMuted = !this.isMuted;
+            const btn = document.getElementById('audio-toggle');
+            if (this.isMuted) {
+                this.sounds.bgm.pause();
+                btn.innerText = "🔇 音效: 關";
+                btn.style.background = "#e74c3c";
+            } else {
+                this.sounds.bgm.play().catch(e => console.log('Audio playback prevented:', e));
+                btn.innerText = "🔊 音效: 開";
+                btn.style.background = "#34495e";
+            }
+            this.playSound('click');
+        }
+    };
+    AudioManager.init();
+
+// =====================================================================
+// 🧠 題庫引擎系統 (QuestionEngine) - 支援多學科擴充
+// =====================================================================
+const QuestionGenerator = {
+    // 取得隨機整數 [min, max]
+    getRandom: function(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    },
+
+    // 智能選項生成器 (產生 1 對 3 錯，包含迷惑性答案)
+    generateOptions: function(correctAnswer, operationType) {
+        let options = new Set([correctAnswer]);
+        
+        while (options.size < 4) {
+            let offset = 0;
+            let rand = Math.random();
+            
+            if (rand < 0.3) {
+                // 迷惑 1: 粗心算錯 1 或 2 (加減法常犯)
+                offset = this.getRandom(1, 2) * (Math.random() > 0.5 ? 1 : -1);
+            } else if (rand < 0.6 && correctAnswer > 10) {
+                // 迷惑 2: 十位數搞錯 (進退位常犯)
+                offset = 10 * (Math.random() > 0.5 ? 1 : -1);
+            } else if (rand < 0.8 && operationType === 'mul') {
+                // 迷惑 3: 乘法背錯相鄰的基數 (例如 6x7=42 變成 48)
+                offset = this.getRandom(1, 9) * (Math.random() > 0.5 ? 1 : -1);
+            } else {
+                // 迷惑 4: 隨機相近數字
+                offset = this.getRandom(-5, 5);
+            }
+
+            let fakeAnswer = correctAnswer + offset;
+            if (fakeAnswer >= 0 && fakeAnswer !== correctAnswer) {
+                options.add(fakeAnswer);
+            }
+        }
+        return Array.from(options).sort(() => Math.random() - 0.5);
+    },
+
+    // 主生成函數
+    generateQuestion: function(chapterNumber) {
+        let qText = "";
+        let cAnswer = 0;
+        let isBoss = false;
+        let opType = 'add'; // 用於決定干擾選項的生成策略
+
+        const isAdd = Math.random() > 0.5;
+                // 只有在困難模式 ('hard') 之下，才有 20% 機率觸發突襲 (Boss題)
+        const bossTrigger = (difficultySetting === 'hard') && (Math.random() < 0.2);
+
+        switch(parseInt(chapterNumber)) {
+            case 1: // Ch1: 10 以內加減法
+                if (isAdd) {
+                    let a = this.getRandom(1, 9);
+                    let b = this.getRandom(1, 10 - a);
+                    cAnswer = a + b; qText = `${a} + ${b} = ?`;
+                } else {
+                    let a = this.getRandom(2, 10);
+                    let b = this.getRandom(1, a - 1);
+                    cAnswer = a - b; qText = `${a} - ${b} = ?`; opType = 'sub';
+                }
+                break;
+
+            case 2: // Ch2: 20 以內，20% 加數未知
+                isBoss = bossTrigger;
+                let a2 = this.getRandom(5, 9);
+                let b2 = this.getRandom(11 - a2, 9); // 湊十法
+                let sum2 = a2 + b2;
+      // ✅ 正確新代碼
+                    if (isBoss) {
+                        let hideFirst = Math.random() > 0.5; // 只擲一次硬幣
+                        qText = hideFirst ? `? + ${b2} = ${sum2}` : `${a2} + ? = ${sum2}`;
+                        cAnswer = hideFirst ? a2 : b2;
+                    } else {
+                    if (isAdd) {
+                        cAnswer = sum2; qText = `${a2} + ${b2} = ?`;
+                    } else {
+                        cAnswer = a2; qText = `${sum2} - ${b2} = ?`; opType = 'sub';
+                    }
+                }
+                break;
+
+            case 3: // Ch3: 雙位數加減一位數/整十數
+                if (isAdd) {
+                    let a3 = this.getRandom(11, 89);
+                    let b3 = Math.random() > 0.5 ? this.getRandom(1, 9) : this.getRandom(1, Math.floor((99-a3)/10)) * 10;
+                    cAnswer = a3 + b3; qText = `${a3} + ${b3} = ?`;
+                } else {
+                    let a3 = this.getRandom(21, 99);
+                    let b3 = Math.random() > 0.5 ? this.getRandom(1, a3 % 10 || 9) : this.getRandom(1, Math.floor(a3/10)) * 10;
+                    cAnswer = a3 - b3; qText = `${a3} - ${b3} = ?`; opType = 'sub';
+                }
+                break;
+
+            case 4: // Ch4: 雙位數加減雙位數 (無進退位)
+                if (isAdd) {
+                    let u1 = this.getRandom(1, 8), u2 = this.getRandom(1, 9 - u1);
+                    let t1 = this.getRandom(1, 8), t2 = this.getRandom(1, 9 - t1);
+                    let n1 = t1 * 10 + u1, n2 = t2 * 10 + u2;
+                    cAnswer = n1 + n2; qText = `${n1} + ${n2} = ?`;
+                } else {
+                    let u1 = this.getRandom(2, 9), u2 = this.getRandom(1, u1);
+                    let t1 = this.getRandom(2, 9), t2 = this.getRandom(1, t1 - 1);
+                    let n1 = t1 * 10 + u1, n2 = t2 * 10 + u2;
+                    cAnswer = n1 - n2; qText = `${n1} - ${n2} = ?`; opType = 'sub';
+                }
+                break;
+
+            case 5: // Ch5: 雙位數加減雙位數 (必定進退位) + 20% Boss
+                isBoss = bossTrigger;
+                let isAdd5 = isAdd;
+                let n1_5, n2_5, sum_diff_5;
+                
+                if (isAdd5) {
+                    let u1 = this.getRandom(2, 9), u2 = this.getRandom(10 - u1, 9);
+                    let t1 = this.getRandom(1, 7), t2 = this.getRandom(1, 8 - t1);
+                    n1_5 = t1 * 10 + u1; n2_5 = t2 * 10 + u2; sum_diff_5 = n1_5 + n2_5;
+                } else {
+                    let u1 = this.getRandom(0, 8), u2 = this.getRandom(u1 + 1, 9);
+                    let t1 = this.getRandom(2, 9), t2 = this.getRandom(1, t1 - 1);
+                    n1_5 = t1 * 10 + u1; n2_5 = t2 * 10 + u2; sum_diff_5 = n1_5 - n2_5; opType = 'sub';
+                }
+
+                if (isBoss && !isAdd5) { // 減數/被減數未知
+                    if (Math.random() > 0.5) {
+                        qText = `? - ${n2_5} = ${sum_diff_5}`; cAnswer = n1_5;
+                    } else {
+                        qText = `${n1_5} - ? = ${sum_diff_5}`; cAnswer = n2_5;
+                    }
+                } else {
+                    cAnswer = sum_diff_5; 
+                    qText = isAdd5 ? `${n1_5} + ${n2_5} = ?` : `${n1_5} - ${n2_5} = ?`;
+                }
+                break;
+
+            case 6: // Ch6: 乘法起步 (2, 5, 10)
+                let bases6 = [2, 5, 10];
+                let a6 = bases6[this.getRandom(0, 2)];
+                let b6 = this.getRandom(2, 9);
+                if(Math.random() > 0.5) [a6, b6] = [b6, a6];
+                cAnswer = a6 * b6; qText = `${a6} × ${b6} = ?`; opType = 'mul';
+                break;
+
+            case 7: // Ch7: 進階乘法 (3, 4, 6, 7, 8, 9) + 20% Boss
+                isBoss = bossTrigger;
+                let bases7 = [3, 4, 6, 7, 8, 9];
+                let a7 = bases7[this.getRandom(0, 5)];
+                let b7 = this.getRandom(3, 9);
+                opType = 'mul';
+                
+                // ✅ 正確新代碼
+                if (isBoss) {
+                    let hideFirst = Math.random() > 0.5;
+                    qText = hideFirst ? `? × ${b7} = ${a7*b7}` : `${a7} × ? = ${a7*b7}`;
+                    cAnswer = hideFirst ? a7 : b7;
+                } else {
+                    cAnswer = a7 * b7; qText = `${a7} × ${b7} = ?`;
+                }
+                break;
+
+            case 8: // Ch8: 基礎整除法
+                let div_b = this.getRandom(2, 9);
+                let div_ans = this.getRandom(2, 9);
+                let div_a = div_b * div_ans;
+                cAnswer = div_ans; qText = `${div_a} ÷ ${div_b} = ?`; opType = 'div';
+                break;
+
+            case 9: // Ch9: 四則綜合大亂鬥 (遞迴呼叫前 8 章)
+                return this.generateQuestion(this.getRandom(1, 8));
+
+               case 10: // Ch10: 終極未知數挑戰 (All Boss)
+                // 如果不是困難模式，就關閉突襲，降級成一般的四則綜合大亂鬥
+                if (difficultySetting !== 'hard') {
+                    return this.generateQuestion(this.getRandom(1, 8));
+                }
+                
+                isBoss = true;
+
+                let op10 = this.getRandom(1, 4); // 1:+, 2:-, 3:x, 4:/
+                let n10_a, n10_b, n10_ans;
+                let hideFirst10 = Math.random() > 0.5; // 統一在這裡只抽籤一次
+                
+                if (op10 === 1) { // 加法未知
+                    n10_a = this.getRandom(11, 50); n10_b = this.getRandom(11, 49); n10_ans = n10_a + n10_b;
+                    qText = hideFirst10 ? `? + ${n10_b} = ${n10_ans}` : `${n10_a} + ? = ${n10_ans}`;
+                    cAnswer = hideFirst10 ? n10_a : n10_b;
+                } else if (op10 === 2) { // 減法未知
+                    n10_b = this.getRandom(11, 40); n10_ans = this.getRandom(11, 40); n10_a = n10_b + n10_ans;
+                    qText = hideFirst10 ? `? - ${n10_b} = ${n10_ans}` : `${n10_a} - ? = ${n10_ans}`;
+                    cAnswer = hideFirst10 ? n10_a : n10_b;
+                } else if (op10 === 3) { // 乘法未知
+                    n10_a = this.getRandom(3, 9); n10_b = this.getRandom(3, 9); n10_ans = n10_a * n10_b;
+                    qText = hideFirst10 ? `? × ${n10_b} = ${n10_ans}` : `${n10_a} × ? = ${n10_ans}`;
+                    cAnswer = hideFirst10 ? n10_a : n10_b; opType = 'mul';
+                } else { // 除法未知
+                    n10_ans = this.getRandom(3, 9); n10_b = this.getRandom(2, 9); n10_a = n10_ans * n10_b;
+                    qText = hideFirst10 ? `? ÷ ${n10_b} = ${n10_ans}` : `${n10_a} ÷ ? = ${n10_ans}`;
+                    cAnswer = hideFirst10 ? n10_a : n10_b; opType = 'div';
+                }
+                break;
+
+        }
+
+        return {
+            questionText: qText,
+            correctAnswer: cAnswer,
+            options: this.generateOptions(cAnswer, opType),
+            isBossMode: isBoss
+        };
+    }
+};
+    // =====================================================================
+    // 🎮 遊戲核心資料庫 (GAME_DATA)
+    // =====================================================================
+	// ▼▼▼ 修改這裡：更新 GAME_DATA 加入 topHeight 與 bottomHeight ▼▼▼
+	const GAME_DATA = {
+	    chapters: {
+	        "chapter1": { 
+	            name: "州際公路", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", 
+	            border: "4px solid #7f8c8d",
+	            topHeight: "345px",    /* 👈 後景(天空/遠山)的高度 (可根據實際圖片微調 px) */
+	            bottomHeight: "60px",   /* 👈 前景(馬路下方)的高度 (可根據實際圖片微調 px) */
+				delayMultiplier: 1.0   // 👈 新增：正常速度
+	        },
+	        "chapter2": { 
+	            name: "黃金海岸沙灘", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 2b.png')", 
+	            border: "4px solid #34495e",
+	            topHeight: "313px",
+	            bottomHeight: "86px",
+	    		delayMultiplier: 1.0   // 👈 新增：延遲兩倍，對手變慢 (適合需要思考的進退位)
+	        },
+	        "chapter3": { 
+	            name: "香港青馬大橋", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 3a.png')", 
+	            border: "4px solid #f1c40f",
+	            topHeight: "315px",
+	            bottomHeight: "86px",
+	        	delayMultiplier: 2.0   // 👈 新增：正常速度
+	        },
+	        "chapter4": { 
+	            name: "英國倫敦", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 4.png')", 
+	            border: "4px solid #f1c40f",
+	            topHeight: "315px",
+	            bottomHeight: "86px",
+	        	delayMultiplier: 2.0   // 👈 新增：正常速度
+	        },
+	        "chapter5": { 
+	            name: "Line Friend", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Chapter2a.png')", 
+	            border: "4px solid #34495e",
+	            topHeight: "325px",
+	            bottomHeight: "60px",
+	    		delayMultiplier: 2.0   // 👈 新增：延遲兩倍，對手變慢
+	        },
+	        "chapter6": { 
+	            name: "美國華盛頓", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 5.png')", 
+	            border: "4px solid #f1c40f",
+	            topHeight: "340px",
+	            bottomHeight: "86px",
+	        	delayMultiplier: 2.0   // 👈 新增：正常速度
+	        },
+	        "chapter7": { 
+	            name: "香港青馬大橋", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 3a.png')", 
+	            border: "4px solid #f1c40f",
+	            topHeight: "315px",
+	            bottomHeight: "86px",
+	        	delayMultiplier: 2.0   // 👈 新增：正常速度
+	        },
+	        "chapter8": { 
+	            name: "香港青馬大橋", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 3a.png')", 
+	            border: "4px solid #f1c40f",
+	            topHeight: "315px",
+	            bottomHeight: "86px",
+	        	delayMultiplier: 2.0   // 👈 新增：正常速度
+	        },
+	        "chapter9": { 
+	            name: "香港青馬大橋", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 3a.png')", 
+	            border: "4px solid #f1c40f",
+	            topHeight: "315px",
+	            bottomHeight: "86px",
+	        	delayMultiplier: 2.0   // 👈 新增：正常速度
+	        },
+	        "chapter10": { 
+	            name: "香港青馬大橋", 
+	            bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 3a.png')", 
+	            border: "4px solid #f1c40f",
+	            topHeight: "315px",
+	            bottomHeight: "86px",
+	        	delayMultiplier: 2.0   // 👈 新增：正常速度
+	        },
+			
+	    },
+		// ▲▲▲ 修改結束 ▲▲▲
+	characters: {
+            "mcqueen": { 
+                name: "閃電麥坤", emoji: "🏎️", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Mcqueen (S).png", 
+			    isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 3 條多推 1 步", streakReq: 3, skillType: "boost", skillValue: 1, 
+                price: 0, purchasable: false, unlockCondition: "預設解鎖" 
+            },
+            "mater": { 
+                name: "拖線", emoji: "🛻", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Mater (S).png", 
+				isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 3 條領先者退 1 步", streakReq: 3, skillType: "pull_back_leader", skillValue: 1, 
+                price: 0, purchasable: false, unlockCondition: "第 1 章 (普通難度) 取得第一名解鎖" 
+            },
+            "sally": { 
+                name: "沙莉", emoji: "🚙", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Sally (S).png", 
+				isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 3 條全體停 2 秒", streakReq: 3, skillType: "stun_all", skillValue: 2000, 
+                price: 10000, purchasable: true, unlockCondition: "花費 10000 金幣" 
+            },
+            "cruz": { 
+                name: "酷姐", emoji: "🚓", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Cruz (S).png", 
+			    isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 4 條多推 1 步", streakReq: 4, skillType: "boost", skillValue: 1, 
+                price: 0, purchasable: false, unlockCondition: "第 2 章 (普通難度) 取得第一名解鎖" 
+            },
+            "black_mcqueen": { 
+                name: "閃電麥坤(黑色)", emoji: "🏎️✨", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Black Mcqueen (S).png", 
+			    isSprite: true, // 新增這行：告訴系統這是精靈圖
+                skillDesc: "連對 3 條推 2 步", streakReq: 3, skillType: "boost", skillValue: 2, 
+                price: 0, purchasable: false, unlockCondition: "第 3 章 (普通難度) 取得第一名解鎖" 
+            },
+
+			"storm": { 
+                name: "暴風積克", emoji: "🏎️💨", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Jackson Storm (S).png", // 換成精靈圖檔名
+			    isSprite: true, // 新增這行：告訴系統這是精靈圖
+                skillDesc: "連對 2 條對手停 2 秒", streakReq: 2, skillType: "stun_all", skillValue: 2000, 
+                price: 0, purchasable: false, unlockCondition: "第 4 章 (困難難度) 取得第一名解鎖" 
+            },
+
+			"King": { 
+                name: "「王者」理奇·培恩", emoji: "🚁", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/The kings (S).png", 
+			    isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "無視突發退後懲罰", streakReq: 999, skillType: "immune_backwards", skillValue: 0, 
+                price: 20000, purchasable: true, unlockCondition: "花費 20000 金幣" 
+            },
+			// ▼▼▼ 在這裡接續新增四個困難難度解鎖角色 ▼▼▼
+            "Doc Hudson": { 
+                name: "藍天博士", emoji: "🎨", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Doc Hudson (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 4 條推 2 步", streakReq: 4, skillType: "boost", skillValue: 2, 
+                price: 0, purchasable: false, unlockCondition: "第 1 章 (困難難度) 取得第一名解鎖" 
+            },
+            "Chick Hicks": { 
+                name: "路霸", emoji: "⛽", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Chick Hick (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 4 條領先者退 2 步", streakReq: 4, skillType: "pull_back_leader", skillValue: 2, 
+                price: 0, purchasable: false, unlockCondition: "第 2 章 (困難難度) 取得第一名解鎖" 
+            },
+            "Pikachu": { 
+                name: "比卡超", emoji: "🛞", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Pikachu (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 3 條對手停 2 秒", streakReq: 3, skillType: "stun_all", skillValue: 2000, 
+                price: 0, purchasable: false, unlockCondition: "第 1 章 (簡單難度) 取得第一名解鎖" 
+            },
+            "Pompompurin": { 
+                name: "布丁狗", emoji: "⛽", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Pompompurin (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 5 條領先者退 1 步", streakReq: 5, skillType: "pull_back_leader", skillValue: 1, 
+                price: 0, purchasable: false, unlockCondition: "第 2 章 (簡單難度) 取得第一名解鎖" 
+            },
+            "Cinnamoroll": { 
+                name: "玉桂狗", emoji: "🛞", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Cinnamoroll (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 5 條對手停 1 秒", streakReq: 5, skillType: "stun_all", skillValue: 1000, 
+                price: 0, purchasable: false, unlockCondition: "第 3 章 (簡單難度) 取得第一名解鎖" 
+            },
+
+			"Hello Kitty": { 
+                name: "吉蒂貓", emoji: "🚗", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Hello Kitty (S).png", 
+                isSprite: true,
+                skillDesc: "無視突發退後懲罰", streakReq: 999, skillType: "immune_backwards", skillValue: 0, 
+                price: 0, purchasable: false, 
+                unlockCondition: "第 5 章 (簡單難度) 取得第一名解鎖"  // <--- 修改這裡
+            },
+            "Brown": { 
+                name: "熊大", emoji: "", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Brown.png", 
+                isSprite: true,
+                skillDesc: "連對 3 條淘金(+10金幣)", streakReq: 3, skillType: "gold_rush", skillValue: 10, 
+                price: 0, purchasable: false, 
+                unlockCondition: "第 5 章 (普通難度) 取得第一名解鎖"  // <--- 修改這裡
+            },
+
+		// ▼▼▼ 步驟 1 新增：擴充護盾與淘金角色 ▼▼▼
+            "Francesco": { 
+                name: "弗朗西斯科·貝魯力", emoji: "🚒", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Francesco (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 3 條獲得護盾", streakReq: 3, skillType: "shield", skillValue: 0, 
+                price: 0, purchasable: false, unlockCondition: "第 3 章 (困難難度) 取得第一名解鎖" 
+            },
+            "Messi": { 
+                name: "美斯", emoji: "⛽", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Messi (S).png", 
+                isSprite: true, // 新增這行：告訴系統這是精靈圖
+				skillDesc: "連對 3 條淘金(+10金幣)", streakReq: 3, skillType: "gold_rush", skillValue: 10, 
+                price: 15000, purchasable: true, unlockCondition: "花費 15000 金幣" 
+            }
+            // ▲▲▲ 步驟 1 新增結束 ▲▲▲
+        },
+opponents: [
+            { name: "Tesla", emoji: "🚕", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Tesla-removebg-preview.png", skillType: "boost", skillChance: 0.15 },
+            { name: "BMW", emoji: "🚓", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/BMW-removebg-preview.png", skillType: "stun_player", skillChance: 0.1 },
+            { name: "Angry Taxi", emoji: "🚕", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Taxi.png", skillType: "boost", skillChance: 0.15 },
+            { name: "Friendly Bus", emoji: "🚌", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/KMB.png", skillType: "stun_player", skillChance: 0.1 },
+            { name: "Mini Bus", emoji: "🚐", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Mini bus.png", skillType: "boost", skillChance: 0.15 }
+        ],
+        bosses: [
+				{ name: "暴風傑森", emoji: "👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Jackson Storm (S).png", isSprite: true, speedMultiplier: 0.75, skillType: "stun_player", skillChance: 0.25 },
+				{ name: "弗朗西斯科·貝魯力", emoji: "", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Francesco (S).png", isSprite: true, speedMultiplier: 0.75, skillType: "stun_player", skillChance: 0.25 },
+			    { name: "閃電麥坤(黑色)", emoji: "🏎️👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Black Mcqueen (S).png", isSprite: true, speedMultiplier: 0.75, skillType: "boost", skillChance: 0.3 },
+			    { name: "路霸", emoji: "🏎️👹", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Chick Hick (S).png", isSprite: true, speedMultiplier: 0.75, skillType: "boost", skillChance: 0.3 },
+				{ name: "美斯", emoji: "", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Messi (S).png", isSprite: true, speedMultiplier: 0.75, skillType: "boost", skillChance: 0.3 }
+			],
+		dialogues: {
+            lead: ["太慢啦！", "吃我的沙吧！", "我是無敵的！", "看不到我的車尾燈！"],
+            mid: ["要追上了！", "別擋路！", "穩住節奏！"],
+            behind: ["我不會放棄的！", "等著瞧！", "前面等等我！"],
+            boss: ["嚐嚐 Boss 的厲害！", "你們這群小渣渣！", "別想贏我！"]
+        }
+    };
+
+    let playerGold = parseInt(localStorage.getItem('mathRacerGold')) || 100;
+    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen"];
+    let selectedCharId = "mcqueen";
+
+    window.onload = function() {
+        updateGoldDisplay();
+        renderCharacterGrid();
+    };
+
+function updateOperationMode() {
+    const chapter = document.getElementById('chapter-select').value;
+    const opSelect = document.getElementById('operation-mode');
+    const multiplierGroup = document.getElementById('multiplier').parentNode; 
+
+    // 生涯模式由系統自動出題，因此隱藏基準數字選單
+    multiplierGroup.style.display = 'none';
+    opSelect.innerHTML = ''; 
+
+    // 根據章節顯示對應的學習目標
+    let optionsHtml = '';
+    switch(chapter) {
+        case 'chapter1': optionsHtml = '<option selected>🟢 10以內加減法</option>'; break;
+        case 'chapter2': optionsHtml = '<option selected>🟢 20以內 (湊十法) (困難含突襲)</option>'; break;
+        case 'chapter3': optionsHtml = '<option selected>🟡 雙位數加減 (配一位/整十數)</option>'; break;
+        case 'chapter4': optionsHtml = '<option selected>🟡 雙位數加減雙位數 (無進退位)</option>'; break;
+        case 'chapter5': optionsHtml = '<option selected>🟡 雙位數加減 (必定進退位) (困難含突襲)</option>'; break;
+        case 'chapter6': optionsHtml = '<option selected>🟠 乘法起步 (2, 5, 10 的倍數)</option>'; break;
+        case 'chapter7': optionsHtml = '<option selected>🟠 進階乘法 (困難含突襲)</option>'; break;
+        case 'chapter8': optionsHtml = '<option selected>🟠 基礎整除法</option>'; break;
+        case 'chapter9': optionsHtml = '<option selected>🔴 四則運算綜合大亂鬥</option>'; break;
+        case 'chapter10': optionsHtml = '<option selected>🏆 終極戰 (困難開啟全突襲)</option>'; break;
+        default: optionsHtml = '<option selected>🎲 綜合練習</option>';
+    }
+
+    
+    opSelect.innerHTML = optionsHtml;
+    // 鎖定選單不讓玩家修改，因為這由章節強制決定
+    opSelect.disabled = true; 
+}
+		
+	function selectChapter(chapterId) {
+
+		// ▼▼▼ 新增這段：檢查卡片是否為鎖定狀態 ▼▼▼
+	    let targetCard = document.getElementById('card-' + chapterId);
+	    if (targetCard && targetCard.classList.contains('locked')) {
+	        AudioManager.playSound('click'); 
+	        alert("🔒 此章節尚未解鎖！請先完成解鎖條件。");
+	        return; // 直接中斷函數，不讓系統選取這個章節也不會往下捲動
+	    }
+	    // ▲▲▲ 新增結束 ▲▲▲
+	    AudioManager.playSound('click'); // 播放點擊音效
+	    
+	    // 1. 更新我們剛剛在第一步建立的隱藏輸入框
+	    document.getElementById('chapter-select').value = chapterId;
+	    
+	    // 2. 清除所有卡片的發光邊框 (重置狀態)
+	    document.querySelectorAll('.card').forEach(card => {
+	        card.style.borderColor = '';
+	        card.style.boxShadow = '';
+	    });
+	    
+	    // 3. 讓被點擊的卡片亮起綠色邊框，提示玩家目前選了哪一關
+	    let selectedCard = document.getElementById('card-' + chapterId);
+	    if(selectedCard) {
+	        selectedCard.style.borderColor = '#2ecc71';
+	        selectedCard.style.boxShadow = '0 0 15px rgba(46, 204, 113, 0.5)';
+	    }
+	    
+	    // 4. 呼叫你原本就寫好的函數，動態更新下方的「運算模式」與「基準數字」
+	    updateOperationMode();
+		// 👇 加入這段：延遲 0.2 秒後，平滑捲動到車手網格
+	    setTimeout(() => {
+	        document.getElementById('character-grid').scrollIntoView({ behavior: 'smooth', block: 'center' });
+	    }, 200);
+	}
+	
+	// 確保網頁載入時根據預設選項初始化一次選單
+	document.addEventListener('DOMContentLoaded', updateOperationMode);
+	
+    function updateGoldDisplay() {
+        document.getElementById('gold-count').innerText = playerGold;
+        localStorage.setItem('mathRacerGold', playerGold);
+    }
+
+    function renderCharacterGrid() {
+        const grid = document.getElementById('character-grid');
+        grid.innerHTML = '';
+        
+        for (let key in GAME_DATA.characters) {
+            let charData = GAME_DATA.characters[key];
+            let isUnlocked = unlockedChars.includes(key);
+            
+            let card = document.createElement('div');
+            card.className = `char-card ${isUnlocked ? '' : 'locked'}`;
+            if (key === selectedCharId && isUnlocked) card.classList.add('selected');
+            
+			let avatarHtml = "";
+            if (charData.img) {
+                if (charData.isSprite) {
+                    // 精靈圖特製：放大 4 倍 (240x240)，並將 Y 軸上移 180px 來精準顯示第 4 列的「停止(Idle)」狀態，加上 !important 強制覆蓋
+                    avatarHtml = `<div class="img-avatar" style="background-image: url('${charData.img}'); background-size: 240px 240px !important; background-position: 0px -180px !important; background-repeat: no-repeat !important;"></div>`;
+                } else {
+                    // 一般圖片維持原本的 contain 設定
+                    avatarHtml = `<div class="img-avatar" style="background-image: url('${charData.img}')"></div>`;
+                }
+            } else {
+                avatarHtml = `<div class="avatar">${charData.emoji}</div>`;
+            }			
+            card.innerHTML = `
+                ${avatarHtml}
+                <div class="name">${charData.name}</div>
+                <div class="skill">${charData.skillDesc}</div>
+                ${!isUnlocked ? `<div class="lock-overlay"><div class="lock-icon">🔒</div><div class="lock-price">💰 ${charData.price}</div></div>` : ''}
+            `;
+            
+            card.onclick = () => handleCharacterClick(key, charData, isUnlocked);
+            grid.appendChild(card);
+        }
+    }
+
+    function handleCharacterClick(key, charData, isUnlocked) {
+        AudioManager.playSound('click');
+        if (isUnlocked) {
+            selectedCharId = key;
+            renderCharacterGrid();
+        
+		// 👇 加入這段：選完解鎖的角色後，平滑捲動到難度下拉選單
+        setTimeout(() => {
+            document.getElementById('difficulty').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 200);
+			
+		} else {
+            if (charData.purchasable) {
+                if (playerGold >= charData.price) {
+                    let confirmBuy = confirm(`是否花費 ${charData.price} 金幣解鎖【${charData.name}】？`);
+                    if (confirmBuy) {
+                        playerGold -= charData.price;
+                        unlockedChars.push(key);
+                        selectedCharId = key;
+                        localStorage.setItem('mathRacerUnlocked_v2', JSON.stringify(unlockedChars));
+                        updateGoldDisplay();
+                        renderCharacterGrid();
+                        alert(`🎉 成功解鎖 ${charData.name}！`);
+                    }
+                } else {
+                    alert(`❌ 金幣不足！\n需要 ${charData.price} 金幣，你目前只有 ${playerGold} 金幣。`);
+                }
+            } else {
+                alert(`🔒 此角色無法直接購買！\n\n解鎖條件：\n${charData.unlockCondition}`);
+            }
+        }
+    }
+
+    let currentMultiplierSetting = '3', currentOperation = 'mul';
+    let totalSteps = 20, currentAnswer = 0, gameActive = false, difficultySetting = 'normal';
+	// ▼▼▼ 步驟 3 新增：學習數據追蹤變數 ▼▼▼
+    let learningStats = [];       // 存放這場遊戲的所有答題記錄
+    let questionStartTime = 0;    // 記錄每次出題的時間戳記
+    let currentQuestionText = ""; // 記錄當前的題目字串
+    // ▲▲▲ 步驟 3 新增結束 ▲▲▲
+	let playerStreak = 0, finishOrder = [], currentLevel = 1;
+    const maxLevels = 3;
+    let scores = { player: 0, ai1: 0, ai2: 0, ai3: 0 };
+    let eventInterval, speechInterval;
+    let aiTimers = { ai1: null, ai2: null, ai3: null };
+
+	const diffParams = {
+        super_easy: { maxNum: 5, aiSpeedMin: 2500, aiSpeedMax: 4500 }, // 數字極簡，但 AI 前期跑很快
+        easy: { maxNum: 10, aiSpeedMin: 4000, aiSpeedMax: 6000 },
+        normal: { maxNum: 12, aiSpeedMin: 2500, aiSpeedMax: 4500 },
+        hard: { maxNum: 20, aiSpeedMin: 1500, aiSpeedMax: 2500 }
+    };
+	
+    let racers = {
+        player: { element: document.getElementById('player'), emoji: document.querySelector('#player .char-emoji'), step: 0, stalled: false, finished: false, name: "你" },
+        ai1: { element: document.getElementById('ai1'), emoji: document.querySelector('#ai1 .char-emoji'), step: 0, stalled: false, finished: false, name: "對手 1" },
+        ai2: { element: document.getElementById('ai2'), emoji: document.querySelector('#ai2 .char-emoji'), step: 0, stalled: false, finished: false, name: "對手 2" },
+        ai3: { element: document.getElementById('ai3'), emoji: document.querySelector('#ai3 .char-emoji'), step: 0, stalled: false, finished: false, name: "對手 3" }
+    };
+
+    function initGame() {
+        AudioManager.playSound('engine');
+        AudioManager.playSound('bgm');
+        
+        currentMultiplierSetting = document.getElementById('multiplier').value;
+        currentOperation = document.getElementById('operation-mode').value; 
+        difficultySetting = document.getElementById('difficulty').value;
+
+		// ▼▼▼ 修改這裡：讀取章節並套用「三明治」裁切法 ▼▼▼
+        let selectedChapter = document.getElementById('chapter-select').value;
+        let chapterData = GAME_DATA.chapters[selectedChapter];
+        
+        // 【修正】你的 HTML 大外框叫做 'game-board'
+        let sceneWrapper = document.getElementById('game-board');
+        sceneWrapper.style.border = chapterData.border;
+        sceneWrapper.style.backgroundImage = 'none'; 
+        
+        // 1. 【修正】你的頂部風景 HTML 叫做 'bg-top'
+        let sceneryTop = document.getElementById('bg-top');
+        sceneryTop.style.backgroundImage = chapterData.bgImage;
+        sceneryTop.style.height = chapterData.topHeight;
+        
+        // 2. 【修正】你的底部前景 HTML 叫做 'bg-bottom'
+        let sceneryBottom = document.getElementById('bg-bottom');
+        sceneryBottom.style.backgroundImage = chapterData.bgImage;
+        sceneryBottom.style.height = chapterData.bottomHeight;
+        // ▲▲▲ 修改結束 ▲▲▲
+        
+        let lanes = document.querySelectorAll('.lane');
+        lanes.forEach(lane => {
+            lane.style.backgroundColor = "rgba(0, 0, 0, 0.4)"; // 添加黑色半透明底，讓角色清晰同時透出背景
+            lane.style.borderBottom = "3px dashed rgba(241, 196, 15, 0.5)"; // 讓虛線也稍微融入
+        });
+        // ▲▲▲ 步驟 1 修改結束 ▲▲▲		
+        
+        let pData = GAME_DATA.characters[selectedCharId];
+        document.getElementById('player-name').innerText = pData.name;
+        racers.player.name = pData.name; 
+
+		if (pData.img && pData.img !== "") {
+		    racers.player.element.style.backgroundImage = `url('${pData.img}')`;
+		    racers.player.emoji.innerText = "";
+		    // 判定是否套用精靈圖模式
+		    if (pData.isSprite) {
+		        racers.player.element.classList.add('sprite-mode');
+		    } else {
+		        racers.player.element.classList.remove('sprite-mode');
+		    }
+		} else {
+		    racers.player.element.style.backgroundImage = "none";
+		    racers.player.emoji.innerText = pData.emoji;
+		    racers.player.element.classList.remove('sprite-mode');
+		} 
+
+		let diffNames = { super_easy: "🟢 超簡單", easy: "🟢 簡單", normal: "🟡 普通", hard: "🔴 困難" };
+        document.getElementById('diff-display').innerText = `難度：${diffNames[difficultySetting]}`;
+		document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('play-screen').style.display = 'block';
+        document.querySelector('.top-bar').style.display = 'none';
+
+        currentLevel = 1;
+        scores = { player: 0, ai1: 0, ai2: 0, ai3: 0 };
+        startRace(); 
+    }
+
+function startRace() {
+        document.getElementById('level-display').innerText = `回合：${currentLevel} / ${maxLevels}`;
+        document.getElementById('score-display').innerText = `目前總分: ${scores.player}`;
+        document.getElementById('streak-display').innerText = `🔥 連勝: 0`;
+        document.getElementById('event-message').innerText = "";
+        
+        playerStreak = 0; finishOrder = [];
+
+        // 取得玩家目前使用的角色資料
+        let pData = GAME_DATA.characters[selectedCharId];
+
+        // ▼▼▼ 1. 修改對手抽籤池：過濾掉和玩家相同的角色 ▼▼▼
+        let availableOpponents = GAME_DATA.opponents.filter(opp => 
+            opp.name !== pData.name && opp.img !== pData.img
+        );
+        // 防呆機制：如果過濾後對手少於 3 個（通常不會發生），就恢復原狀避免報錯
+        if (availableOpponents.length < 3) {
+            availableOpponents = [...GAME_DATA.opponents];
+        }
+        let shuffledOpponents = availableOpponents.sort(() => 0.5 - Math.random());
+        // ▲▲▲ 修改結束 ▲▲▲
+        
+        // ▼▼▼ 正確的對手生成邏輯 ▼▼▼
+        ["ai1", "ai2", "ai3"].forEach((aiKey, index) => {
+            let oppData = shuffledOpponents[index % shuffledOpponents.length];
+            racers[aiKey].name = oppData.name;
+            
+            // 1. 先重置基礎 Class，避免洗掉後面的 sprite-mode
+            racers[aiKey].element.className = 'character driving'; 
+            
+            if (oppData.img) {
+                racers[aiKey].element.style.backgroundImage = `url('${oppData.img}')`;
+                racers[aiKey].emoji.innerText = "";
+                // 2. 判定是否為精靈圖並加入專屬 Class
+                if (oppData.isSprite) {
+                    racers[aiKey].element.classList.add('sprite-mode');
+                }
+            } else {
+                racers[aiKey].element.style.backgroundImage = "none";
+                racers[aiKey].emoji.innerText = oppData.emoji;
+            }
+            document.getElementById(`${aiKey}-name`).innerText = racers[aiKey].name;
+            document.getElementById(`${aiKey}-name`).classList.remove('boss-lane');
+        });
+
+        // ▼▼▼ 2. 修改 Boss 生成邏輯：過濾掉和玩家相同的 Boss ▼▼▼
+        if (currentLevel === maxLevels) {
+            // 過濾掉和玩家同圖片或同名字的 Boss
+            let availableBosses = GAME_DATA.bosses.filter(boss => 
+                boss.name !== pData.name && boss.img !== pData.img
+            );
+            // 防呆機制：如果運氣太好，所有 Boss 都跟玩家一樣被濾光了，就退回使用全部 Boss
+            if (availableBosses.length === 0) {
+                availableBosses = [...GAME_DATA.bosses];
+            }
+            
+            let bossData = availableBosses[Math.floor(Math.random() * availableBosses.length)];
+            
+            // 1. 先重置基礎 Class 設定為 Boss 狀態
+            racers.ai3.element.className = 'character boss-driving';
+            
+            if (bossData.img !== "") {
+                racers.ai3.element.style.backgroundImage = `url('${bossData.img}')`;
+                racers.ai3.emoji.innerText = "";
+                // 2. 判定是否為精靈圖並加入專屬 Class
+                if (bossData.isSprite) {
+                    racers.ai3.element.classList.add('sprite-mode');
+                }
+            } else {
+                racers.ai3.element.style.backgroundImage = "none";
+                racers.ai3.emoji.innerText = bossData.emoji;
+            }
+            racers.ai3.name = bossData.name;
+            document.getElementById('ai3-name').innerText = `🔥 ${bossData.name} 🔥`;
+            document.getElementById('ai3-name').classList.add('boss-lane');
+        }
+
+        // 下面的 for (let key in racers) 重置狀態邏輯保持不變...
+        for (let key in racers) {
+            racers[key].step = 0; racers[key].stalled = false; racers[key].finished = false;
+            racers[key].element.classList.remove('finished'); 
+  			// ▼ 加入移除 'idle'，確保不會卡在靜止畫格
+            racers[key].element.classList.remove('finished', 'idle');
+			
+			if(key === 'player') {
+                racers[key].element.classList.add('driving');
+                racers[key].element.classList.remove('stopped');
+            }
+        }
+        
+        updatePositions(); gameActive = true; generateQuestion();
+        
+        scheduleAIMove('ai1'); scheduleAIMove('ai2'); scheduleAIMove('ai3');
+        clearInterval(eventInterval); clearInterval(speechInterval);
+        eventInterval = setInterval(triggerRandomEvent, 7000);
+        speechInterval = setInterval(updateSpeechBubbles, 3500);
+    }
+	function scheduleAIMove(aiName) {
+        if (!gameActive || racers[aiName].finished) return;
+        
+        let params = diffParams[difficultySetting];
+        let delay = Math.floor(Math.random() * (params.aiSpeedMax - params.aiSpeedMin + 1)) + params.aiSpeedMin;
+
+		// ▼▼▼ 修改：從 GAME_DATA 中讀取當前章節的延遲倍率 ▼▼▼
+        let currentChapter = document.getElementById('chapter-select').value;
+        let chapterData = GAME_DATA.chapters[currentChapter];
+        if (chapterData && chapterData.delayMultiplier) {
+            delay = delay * chapterData.delayMultiplier;
+        }
+        // ▲▲▲ 修改結束 ▲▲▲
+		
+        // Boss 會有速度加成
+        if (currentLevel === maxLevels && aiName === 'ai3') {
+            delay = delay * GAME_DATA.bosses[0].speedMultiplier; 
+        }
+        
+        clearTimeout(aiTimers[aiName]); 
+        aiTimers[aiName] = setTimeout(() => {
+            if (!gameActive || racers[aiName].finished) return;
+            
+            if (!racers[aiName].stalled) {
+                let canMove = true; // 預設 AI 可以移動
+                
+				// ▼▼▼ 超簡單模式專屬的「動態控分」機制 ▼▼▼
+                // 新增 !racers.player.finished 條件，玩家衝線後就解除封印
+                if (difficultySetting === 'super_easy' && !racers.player.finished) {
+                    let pStep = racers.player.step;
+                    let targetStep = racers[aiName].step + 1; // AI 預計移動到的下一步
+                    
+                    if (targetStep > pStep) {
+                        // 規則 1：絕對不可以超過玩家 (最多只能平排)
+                        canMove = false;
+                    } else if (targetStep === pStep) {
+                        // 規則 2：最多只能有一台車跟玩家平排
+                        let parallelCount = 0;
+                        for (let k of ['ai1', 'ai2', 'ai3']) {
+                            // 檢查其他對手，是不是已經有人跟玩家平排（或超過）了
+                            if (k !== aiName && racers[k].step >= pStep) {
+                                parallelCount++;
+                            }
+                        }
+                        if (parallelCount >= 1) {
+                            // 如果已經有 1 台(或以上)的車跟玩家平排，這台車就必須留在後面
+                            canMove = false; 
+                        }
+                    }
+                }
+                // ▲▲▲ 機制結束 ▲▲▲
+// 只有在允許移動的情況下，AI 才會真的前進
+                if (canMove) {
+                    racers[aiName].step++;
+                    
+                    // ▼▼▼ 步驟 2 新增：AI 技能觸發機制 ▼▼▼
+                    let oppData;
+                    if (currentLevel === maxLevels && aiName === 'ai3') {
+                        oppData = GAME_DATA.bosses.find(b => b.name === racers.ai3.name) || GAME_DATA.bosses[0];
+                    } else {
+                        oppData = GAME_DATA.opponents.find(o => o.name === racers[aiName].name) || GAME_DATA.opponents[0];
+                    }
+
+                    // 檢查是否發動技能 (有機率且沒衝線)
+                    if (oppData.skillType && Math.random() < oppData.skillChance && !racers.player.finished) {
+                        let eventMsg = document.getElementById('event-message');
+                        let isSuperEasyRestricted = (difficultySetting === 'super_easy');
+                        
+                        if (oppData.skillType === "boost") {
+                            // 技能：瞬間推進 (如果超簡單模式下，推進後會超過玩家就不發動)
+                            if (!(isSuperEasyRestricted && racers[aiName].step + 1 > racers.player.step)) {
+                                racers[aiName].step++; // 額外前進一步
+                                AudioManager.playSound('skillBoost');
+                                eventMsg.innerText = `⚠️ 警告：${racers[aiName].name} 發動了【瞬間推進】！`;
+                            }
+							} else if (oppData.skillType === "stun_player") {
+                            // 技能：干擾隨機對手停駛 (包含玩家或其他 AI)
+                            // 1. 找出所有未衝線、且不是施放者自己的車手作為合法目標
+                            let validTargets = ["player", "ai1", "ai2", "ai3"].filter(k => !racers[k].finished && k !== aiName);
+                            
+                            if (validTargets.length > 0) {
+                                // 2. 隨機抽選一個倒楣鬼
+                                let targetKey = validTargets[Math.floor(Math.random() * validTargets.length)];
+                                let targetRacer = racers[targetKey];
+                                
+                                if (targetKey === 'player' && targetRacer.hasShield) {
+                                    // 如果抽中玩家，且玩家有護盾
+                                    targetRacer.hasShield = false; 
+                                    AudioManager.playSound('skillBoost');
+                                    eventMsg.innerText = `🛡️ ${racers[aiName].name} 試圖干擾你，但被【護盾】擋下了！`;
+                                } else {
+                                    // 抽中玩家沒護盾，或是抽中其他 AI
+                                    AudioManager.playSound('eventStall');
+                                    let targetNameDisplay = (targetKey === 'player') ? "你" : targetRacer.name;
+                                    eventMsg.innerText = `⚠️ 警告：${racers[aiName].name} 發動了干擾，${targetNameDisplay} 被迫停駛 2 秒！`;
+                                    
+                                    targetRacer.stalled = true;
+                                    targetRacer.element.classList.remove('driving', 'boss-driving');
+                                    targetRacer.element.classList.add('stopped');
+                                    
+                                    setTimeout(() => {
+                                        if (gameActive && !targetRacer.finished) {
+                                            targetRacer.stalled = false;
+                                            targetRacer.element.classList.remove('stopped');
+                                            // 判斷恢復時要加回哪種引擎動畫 (Boss 或一般)
+                                            let isTargetBoss = (currentLevel === maxLevels && targetKey === 'ai3');
+                                            targetRacer.element.classList.add(isTargetBoss ? 'boss-driving' : 'driving');
+                                        }
+                                    }, 2000);
+                                }
+                            }
+                        }
+						// 2.5秒後清除提示訊息
+                        setTimeout(() => { if(gameActive) eventMsg.innerText = ""; }, 2500);
+                    }
+                    // ▲▲▲ 步驟 2 新增結束 ▲▲▲
+
+                    updatePositions();
+                    checkWinCondition();
+                }
+			}
+            // 無論這次有沒有前進，都繼續安排下一次動作，讓 AI 保持引擎運轉隨時準備追上
+            if(gameActive && !racers[aiName].finished) scheduleAIMove(aiName);
+        }, delay);
+    }
+    function triggerRandomEvent() {
+        if (!gameActive) return;
+        let eventMsg = document.getElementById('event-message');
+        let rand = Math.random();
+        
+        let pData = GAME_DATA.characters[selectedCharId];
+        let isImmune = (pData.skillType === "immune_backwards");
+
+        if (rand < 0.10) {
+            // 3) 發動隨機事件：強烈風沙音效
+            AudioManager.playSound('eventWind');
+            eventMsg.innerText = "🌪️ 突發事件：強烈風沙來襲，未衝線全員退後一格！";
+            for (let key in racers) {
+                if (!racers[key].finished) {
+                    if (key === 'player' && isImmune) { eventMsg.innerText += " (免疫！)"; continue; }
+                    racers[key].step = Math.max(0, racers[key].step - 1);
+                }
+            }
+        } else if (rand < 0.2) {
+            // 3) 發動隨機事件：路面濕滑音效
+            AudioManager.playSound('eventSlip');
+            eventMsg.innerText = "💨 突發事件：路面濕滑，兩部車打滑退後！";
+            let activeKeys = ["player", "ai1", "ai2", "ai3"].filter(k => !racers[k].finished).sort(() => 0.5 - Math.random());
+            if(activeKeys[0] && (activeKeys[0] !== 'player' || !isImmune)) racers[activeKeys[0]].step = Math.max(0, racers[activeKeys[0]].step - 1);
+            if(activeKeys[1] && (activeKeys[1] !== 'player' || !isImmune)) racers[activeKeys[1]].step = Math.max(0, racers[activeKeys[1]].step - 1);
+        } else if (rand < 0.5) {
+            let activeAIs = ['ai1', 'ai2', 'ai3'].filter(k => !racers[k].finished && !(currentLevel === maxLevels && k === 'ai3')); 
+            if (activeAIs.length > 0) {
+                let aiTarget = activeAIs[Math.floor(Math.random() * activeAIs.length)];
+                // 3) 發動隨機事件：車輛熄匙音效
+                AudioManager.playSound('eventStall');
+                eventMsg.innerText = `⚠️ 突發事件：${racers[aiTarget].name} 突然熄匙！`;
+                racers[aiTarget].stalled = true;
+                racers[aiTarget].element.classList.remove('driving');
+                racers[aiTarget].element.classList.add('stopped');
+                
+                setTimeout(() => {
+                    if(gameActive && !racers[aiTarget].finished) {
+                        racers[aiTarget].stalled = false;
+                        racers[aiTarget].element.classList.add('driving');
+                        racers[aiTarget].element.classList.remove('stopped');
+                        eventMsg.innerText = "";
+                    }
+                }, 2500);
+                return;
+            }
+        } else {
+            eventMsg.innerText = ""; return;
+        }
+
+        updatePositions();
+        setTimeout(() => { if(gameActive) eventMsg.innerText = ""; }, 2500);
+    }
+
+    function updateSpeechBubbles() {
+        if (!gameActive) return;
+        let sorted = ["player", "ai1", "ai2", "ai3"].sort((a,b) => racers[b].step - racers[a].step);
+        let isMobile = window.innerWidth <= 768;
+        
+        ["player", "ai1", "ai2", "ai3"].forEach(key => {
+            if (racers[key].finished) return;
+            let element = racers[key].element;
+            if (isMobile && (element.classList.contains('offscreen-ahead') || element.classList.contains('offscreen-behind'))) return;
+
+            let bubble = document.getElementById(`bubble-${key}`);
+            bubble.style.display = "none";
+            if (Math.random() < 0.3) return;
+
+            let text = "";
+            let dData = GAME_DATA.dialogues;
+            
+            if (currentLevel === maxLevels && key === 'ai3') {
+                text = dData.boss[Math.floor(Math.random() * dData.boss.length)];
+            } else if (key === sorted[0]) text = dData.lead[Math.floor(Math.random() * dData.lead.length)];
+            else if (key === sorted[3]) text = dData.behind[Math.floor(Math.random() * dData.behind.length)];
+            else text = dData.mid[Math.floor(Math.random() * dData.mid.length)];
+
+            bubble.innerText = text; bubble.style.display = "block";
+            setTimeout(() => { 
+                if (!(isMobile && (element.classList.contains('offscreen-ahead') || element.classList.contains('offscreen-behind')))) {
+                    bubble.style.display = "none"; 
+                }
+            }, 2000);
+        });
+    }
+
+function generateQuestion() {
+    if (!gameActive || racers.player.finished) return;
+    
+    // ▼▼▼ 新增：重置提示按鈕狀態 ▼▼▼
+    document.getElementById('hint-area').style.display = 'none';
+    document.getElementById('btn-hint').style.display = 'inline-block';
+    
+    // ... 原本嘅 racers.player.element.classList.remove... 保持不變
+    racers.player.element.classList.remove('stopped');
+    racers.player.element.classList.add('driving');
+    document.getElementById('message').innerText = "踩油門作答！";
+    document.getElementById('message').style.color = "#ecf0f1";
+
+    // 1. 取得目前的章節數字
+    let currentChapterStr = document.getElementById('chapter-select').value;
+    let chapterNumber = parseInt(currentChapterStr.replace('chapter', '')) || 1;
+
+    // 2. 呼叫新的題庫引擎生成題目
+    const questionData = QuestionGenerator.generateQuestion(chapterNumber);
+
+    currentAnswer = questionData.correctAnswer;
+    currentQuestionText = questionData.questionText;
+    
+    let questionArea = document.getElementById('question-area');
+
+    // 3. 處理 Boss 題型的視覺變化
+    if (questionData.isBossMode) {
+        questionArea.style.color = "#ff4757"; // 變成紅色
+        questionArea.innerText = "🔥 突襲！ " + currentQuestionText;
+    } else {
+        questionArea.style.color = "#f1c40f"; // 恢復黃色
+        questionArea.innerText = currentQuestionText;
+    }
+
+    questionStartTime = Date.now();
+
+    // 4. 渲染按鈕選項 (安全傳遞數值)
+    let optionsHtml = '';
+    for (let op of questionData.options) {
+        let safeValue = JSON.stringify(op); 
+        optionsHtml += `<button class="option-btn" onclick='AudioManager.playSound("click"); checkAnswer(${safeValue})'>${op}</button>`;
+    }
+    document.getElementById('options-container').innerHTML = optionsHtml;
+}
+	
+    function checkAnswer(selected) {
+        if (!gameActive || racers.player.finished) return;
+
+		// ▼▼▼ 修正 Bug：新增檢查玩家是否中了技能 (停駛狀態) ▼▼▼
+        if (racers.player.stalled) {
+            let msgElement = document.getElementById('message');
+            msgElement.style.color = "#ff4757";
+            msgElement.innerText = "💥 車輛被干擾停駛中，暫時無法作答！";
+            return; // 終止這段程式碼，不讓玩家前進，也不清除選項
+        }
+        // ▲▲▲ 修正 Bug 結束 ▲▲▲
+		
+		let msgElement = document.getElementById('message');
+        document.getElementById('options-container').innerHTML = ""; 
+
+		// ▼▼▼ 步驟 3 新增：計算作答時間與記錄數據 ▼▼▼
+        let timeSpent = (Date.now() - questionStartTime) / 1000; // 計算毫秒差並轉為秒
+        let isCorrect = (selected === currentAnswer);
+		        
+		// ▼▼▼ 抓取目前的章節與模式 (適配最新生涯模式) ▼▼▼
+		let currentChapterStr = document.getElementById('chapter-select').value;
+		let currentChapterName = GAME_DATA.chapters[currentChapterStr] ? GAME_DATA.chapters[currentChapterStr].name : "未知章節";
+		let currentOpName = document.getElementById('operation-mode').options[0] ? document.getElementById('operation-mode').options[0].text : "綜合";	
+		
+		learningStats.push({
+			chapter: currentChapterName,  // 👈 新增這行：把章節名稱存起來
+			operationMode: currentOpName, // 👈 新增這行：把運算模式存起來
+            question: currentQuestionText,
+            userAnswer: selected,
+            correctAnswer: currentAnswer,
+            isCorrect: isCorrect,
+            timeElapsed: timeSpent.toFixed(2) + "秒",
+            timestamp: new Date().toLocaleString()
+        });
+        // ▲▲▲ 步驟 3 新增結束 ▲▲▲
+		
+        if (selected === currentAnswer) {
+            playerStreak++;
+            document.getElementById('streak-display').innerText = `🔥 連勝: ${playerStreak}`;
+            msgElement.style.color = "#2ecc71";
+            msgElement.innerText = `⚡ 加速衝刺！ (連續答對 ${playerStreak} 條)`;
+            racers.player.step++;
+
+			// ▼▼▼ 步驟 4 新增：戰鬥中經濟系統微調 ▼▼▼
+            if (playerStreak > 0 && playerStreak % 3 === 0) {
+                playerGold += 10;
+                updateGoldDisplay(); // 呼叫既有函數即時更新畫面上方金幣
+                
+                let eventMsg = document.getElementById('event-message');
+                eventMsg.innerText = `💰 表現出色！連對 ${playerStreak} 題，額外獲得 10 金幣！`;
+                AudioManager.playSound('skillBoost'); // 播放一個音效當作獎勵提示
+                
+                // 2.5秒後清除提示，避免卡在畫面上
+                setTimeout(() => { 
+                    if (gameActive && eventMsg.innerText.includes('金幣')) {
+                        eventMsg.innerText = ""; 
+                    }
+                }, 2500);
+            }
+            // ▲▲▲ 步驟 4 新增結束 ▲▲▲
+			
+            applyPlayerSkill();
+            updatePositions(); checkWinCondition();
+            if (gameActive && !racers.player.finished) setTimeout(generateQuestion, 500);
+        } else {
+            playerStreak = 0; 
+            document.getElementById('streak-display').innerText = `🔥 連勝: 0`;
+            msgElement.style.color = "#e74c3c";
+            msgElement.innerText = "💥 拋錨了！重新發動！(連勝中斷)";
+            racers.player.element.classList.remove('driving');
+            racers.player.element.classList.add('stopped');
+            if (!racers.player.finished) setTimeout(generateQuestion, 1200); 
+        }
+    }
+
+    function applyPlayerSkill() {
+        let pData = GAME_DATA.characters[selectedCharId];
+        let eventMsg = document.getElementById('event-message');
+
+        if (playerStreak > 0 && playerStreak % pData.streakReq === 0) {
+            switch (pData.skillType) {
+                case "boost":
+                    // 4) 發動技能音效：加速推進
+                    AudioManager.playSound('skillBoost');
+                    racers.player.step += pData.skillValue;
+                    eventMsg.innerText = `✨ 【技能發動】連對 ${pData.streakReq} 條，額外推進 ${pData.skillValue} 步！`;
+                    break;
+                case "pull_back_leader":
+                    // 4) 發動技能音效：拉退領先者
+                    AudioManager.playSound('skillPull');
+                    let sorted = ["player", "ai1", "ai2", "ai3"].sort((a, b) => racers[b].step - racers[a].step);
+                    let target = (sorted[0] !== "player") ? sorted[0] : sorted[1];
+                    if (target && racers[target].step > 0 && !racers[target].finished) {
+                        racers[target].step -= pData.skillValue;
+                        eventMsg.innerText = `🛻 【技能發動】使對手 (${racers[target].name}) 退後 ${pData.skillValue} 步！`;
+                    }
+                    break;
+                case "stun_all":
+                    // 4) 發動技能音效：全體停駛
+                    AudioManager.playSound('skillStun');
+                    ["ai1", "ai2", "ai3"].forEach(ai => {
+                        if (!racers[ai].finished) {
+                            racers[ai].stalled = true;
+                            racers[ai].element.classList.remove('driving', 'boss-driving');
+                            racers[ai].element.classList.add('stopped');
+                        }
+                    });
+                    eventMsg.innerText = `⚡ 【技能發動】對手全部停駛 ${pData.skillValue / 1000} 秒！`;
+                    setTimeout(() => {
+                        if (gameActive) {
+                            ["ai1", "ai2", "ai3"].forEach(ai => {
+                                if (!racers[ai].finished) {
+                                    racers[ai].stalled = false;
+                                    racers[ai].element.classList.remove('stopped');
+                                    racers[ai].element.classList.add((currentLevel === maxLevels && ai === 'ai3') ? 'boss-driving' : 'driving');
+                                }
+                            });
+                        }
+                    }, pData.skillValue);
+                    break;
+				// ▼▼▼ 步驟 1 新增：擴充護盾與淘金技能邏輯 ▼▼▼
+                case "shield":
+                    AudioManager.playSound('skillBoost');
+                    racers.player.hasShield = true; // 賦予玩家護盾狀態
+                    eventMsg.innerText = `🛡️ 【技能發動】獲得護盾！免疫下一次答錯熄火或退後！`;
+                    break;
+                case "gold_rush":
+                    AudioManager.playSound('skillBoost');
+                    playerGold += pData.skillValue; // 直接增加金幣
+                    updateGoldDisplay();            // 即時更新頂部 UI
+                    eventMsg.innerText = `💰 【技能發動】淘金成功！立即獲得 ${pData.skillValue} 金幣！`;
+                    break;
+                // ▲▲▲ 步驟 1 新增結束 ▲▲▲
+			}
+        }
+    }
+
+function updatePositions() {
+    let isMobile = window.innerWidth <= 950; 
+    let pStep = racers.player.step;
+
+    // 計算 0% 到 100% 的進度
+    let bgPercent = Math.min(100, Math.max(0, (pStep / totalSteps) * 100));
+
+    // ▼▼▼ 關鍵修改：只改變 X 軸，不碰 Y 軸 ▼▼▼
+    document.getElementById('bg-top').style.backgroundPositionX = `${bgPercent}%`;
+    document.getElementById('bg-bottom').style.backgroundPositionX = `${bgPercent}%`;
+    // ▲▲▲ 修改結束 ▲▲▲
+
+    if (!isMobile) {
+        // 電腦版絕對位置邏輯
+        for (let key in racers) { 
+            let percentage = (racers[key].step / totalSteps) * 85; 
+            racers[key].element.style.left = percentage + "%"; 
+            racers[key].element.classList.remove('offscreen-ahead', 'offscreen-behind');
+        }
+        document.querySelector('.finish-line').style.left = 'auto';
+        document.querySelector('.finish-line').style.right = '15px';
+    } else {
+        // 手機版 (直立與橫向) 鏡頭跟隨邏輯
+        let playerBasePos = 15 + (pStep / totalSteps) * 60;
+        let stepWidth = 12;
+
+        for (let key in racers) {
+            let diff = racers[key].step - pStep;
+            let targetPos = playerBasePos + (diff * stepWidth);
+            let element = racers[key].element;
+            let bubble = document.getElementById(`bubble-${key}`);
+            
+            element.classList.remove('offscreen-ahead', 'offscreen-behind');
+
+            if (targetPos > 85) { 
+                element.style.left = "85%";
+                element.classList.add('offscreen-ahead');
+                bubble.innerText = `${racers[key].name} ⏩`;
+                bubble.style.display = "block";
+            } else if (targetPos < 0) { 
+                element.style.left = "-5%";
+                element.classList.add('offscreen-behind');
+                bubble.innerText = `⏪ ${racers[key].name}`;
+                bubble.style.display = "block";
+            } else {
+                element.style.left = targetPos + "%";
+                if (bubble.innerText.includes('⏩') || bubble.innerText.includes('⏪')) {
+                    bubble.style.display = "none";
+                }
+            }
+        }
+
+        let finishDiff = totalSteps - pStep;
+        let finishPos = playerBasePos + (finishDiff * stepWidth);
+        let finishLine = document.querySelector('.finish-line');
+        
+        if (finishPos > 90) {
+            finishLine.style.left = '120%';
+        } else {
+            finishLine.style.left = finishPos + '%';
+        }
+    }
+}
+	
+function checkWinCondition() {
+        if (!gameActive) return;
+
+        for (let key in racers) {
+            if (racers[key].step >= totalSteps && !racers[key].finished) {
+                racers[key].finished = true;
+                finishOrder.push(key);
+
+                // ▼▼▼ 修改這裡：判斷名次來決定播放哪種精靈圖動畫 ▼▼▼
+                racers[key].element.classList.remove('driving', 'boss-driving');
+                
+                if (finishOrder.length === 1) {
+                    // 如果衝線名單長度是 1，代表他是第一名 -> 播放勝利衝線動畫
+                    racers[key].element.classList.add('finished');
+                } else {
+                    // 其他名次 (2, 3, 4名) -> 套用 idle 待機動畫 (停止狀態)
+                    racers[key].element.classList.add('idle');
+                }
+                // ▲▲▲ 修改結束 ▲▲▲
+                
+                // 1) 單獨車輛衝線音效
+                AudioManager.playSound('finish');
+
+                let ranks = ["🥇 第一名", "🥈 第二名", "🥉 第三名", "🏅 第四名"];
+                let rankStr = ranks[finishOrder.length - 1];
+                document.getElementById('event-message').innerText = `🏁 ${racers[key].name} 以 ${rankStr} 衝過終點線！`;
+
+                if (key === 'player') {
+                    document.getElementById('question-area').innerText = `🎉 你以 ${rankStr} 衝線完成比賽！`;
+                    document.getElementById('options-container').innerHTML = "<p style='font-size:20px; color:#f1c40f;'>等待其他選手...</p>";
+                } else {
+                    clearTimeout(aiTimers[key]); 
+                }
+            }
+        }
+        
+        // ... 下面的全體結算邏輯保持不變 ...
+        if (finishOrder.length === 4) {
+            gameActive = false; clearInterval(eventInterval); clearInterval(speechInterval);
+            ["ai1", "ai2", "ai3"].forEach(k => clearTimeout(aiTimers[k]));
+            ["player", "ai1", "ai2", "ai3"].forEach(k => document.getElementById(`bubble-${k}`).style.display = "none");
+
+            // 2) 所有人衝線後的結算音效
+            AudioManager.playSound('allFinished');
+
+            scores[finishOrder[0]] += 4; scores[finishOrder[1]] += 3; scores[finishOrder[2]] += 2; scores[finishOrder[3]] += 1;
+            let resultMsg = `🏁 第 ${currentLevel} 回合結算！\n🥇 第一名: ${racers[finishOrder[0]].name} (+4分)\n🥈 第二名: ${racers[finishOrder[1]].name} (+3分)\n🥉 第三名: ${racers[finishOrder[2]].name} (+2分)\n🏅 第四名: ${racers[finishOrder[3]].name} (+1分)`;
+            document.getElementById('question-area').innerText = "本回合結束！"; document.getElementById('options-container').innerHTML = "";
+            setTimeout(() => {
+                alert(resultMsg);
+                if (currentLevel < maxLevels) { currentLevel++; startRace(); } else { endTournament(); }
+            }, 600);
+        }
+    }
+
+    function endTournament() {
+        let finalSorted = ["player", "ai1", "ai2", "ai3"].sort((a,b) => scores[b] - scores[a]);
+        let playerRank = finalSorted.indexOf("player") + 1;
+        
+        let goldReward = 0;
+        if (playerRank === 1) goldReward = 1000;
+        else if (playerRank === 2) goldReward = 500;
+        else if (playerRank === 3) goldReward = 200;
+        else goldReward = 100;
+
+        let finalMsg = "🏆 活塞盃總冠軍賽果 🏆\n\n";
+        finalMsg += `🥇 冠軍：${racers[finalSorted[0]].name} (總分: ${scores[finalSorted[0]]})\n`;
+        finalMsg += `🥈 亞軍：${racers[finalSorted[1]].name} (總分: ${scores[finalSorted[1]]})\n`;
+        finalMsg += `🥉 季軍：${racers[finalSorted[2]].name} (總分: ${scores[finalSorted[2]]})\n\n`;
+        
+if (playerRank === 1) {
+            finalMsg += "太強了！你擊敗了所有人，贏得了總冠軍！ Kachow！\n";
+            
+            let newlyUnlockedChar = null;
+            let currentChapterStr = document.getElementById('chapter-select').value;
+
+            // ▼▼▼ 全新生涯模式：章節與難度解鎖邏輯 ▼▼▼
+            if (currentChapterStr === 'chapter1') {
+                if (difficultySetting === 'easy' && !unlockedChars.includes('Pikachu')) newlyUnlockedChar = 'Pikachu';
+                if (difficultySetting === 'normal' && !unlockedChars.includes('mater')) newlyUnlockedChar = 'mater';
+                if (difficultySetting === 'hard' && !unlockedChars.includes('Doc Hudson')) newlyUnlockedChar = 'Doc Hudson';
+            } 
+            else if (currentChapterStr === 'chapter2') {
+                if (difficultySetting === 'easy' && !unlockedChars.includes('Pompompurin')) newlyUnlockedChar = 'Pompompurin';
+                if (difficultySetting === 'normal' && !unlockedChars.includes('cruz')) newlyUnlockedChar = 'cruz';
+                if (difficultySetting === 'hard' && !unlockedChars.includes('Chick Hicks')) newlyUnlockedChar = 'Chick Hicks';
+            } 
+            else if (currentChapterStr === 'chapter3') {
+                if (difficultySetting === 'easy' && !unlockedChars.includes('Cinnamoroll')) newlyUnlockedChar = 'Cinnamoroll';
+                if (difficultySetting === 'normal' && !unlockedChars.includes('black_mcqueen')) newlyUnlockedChar = 'black_mcqueen';
+                if (difficultySetting === 'hard' && !unlockedChars.includes('Francesco')) newlyUnlockedChar = 'Francesco';
+            } 
+
+            else if (currentChapterStr === 'chapter4') { 
+                if (difficultySetting === 'hard' && !unlockedChars.includes('storm')) newlyUnlockedChar = 'storm';
+            }
+
+			else if (currentChapterStr === 'chapter5') { 
+                // 第 5 章 (包含進退位挑戰的大魔王關卡)
+                if (difficultySetting === 'easy' && !unlockedChars.includes('Hello Kitty')) newlyUnlockedChar = 'Hello Kitty';
+                if (difficultySetting === 'normal' && !unlockedChars.includes('Brown')) newlyUnlockedChar = 'Brown';
+            }
+            // ▲▲▲ 全新邏輯結束 ▲▲▲
+	
+            if (newlyUnlockedChar) {
+                unlockedChars.push(newlyUnlockedChar);
+                localStorage.setItem('mathRacerUnlocked_v2', JSON.stringify(unlockedChars));
+                finalMsg += `\n\n🔓 【解鎖成就！】\n恭喜你達成了通關條件，獲得了新車手：${GAME_DATA.characters[newlyUnlockedChar].name}！下次遊戲時即可選擇！`;
+            }
+
+        } else {
+            finalMsg += "可惜了，回去多練練，下次再來挑戰！\n";
+        }
+        
+        finalMsg += `\n💰 獲得賽事獎金：+${goldReward} 金幣！`;
+        
+        playerGold += goldReward;
+        localStorage.setItem('mathRacerGold', playerGold);
+
+		// ▼▼▼ 步驟 3 新增：遊戲結束時儲存學習數據 ▼▼▼
+        if (learningStats.length > 0) {
+            // 讀取歷史數據，若無則為空陣列
+            let pastStats = JSON.parse(localStorage.getItem('mathRacerLearningStats')) || [];
+            // 將本次遊戲的數據與歷史數據合併
+            pastStats = pastStats.concat(learningStats);
+            // 存回瀏覽器
+            localStorage.setItem('mathRacerLearningStats', JSON.stringify(pastStats));
+            console.log("📊 本次學習數據已儲存至 LocalStorage:", learningStats);
+        }
+        // ▲▲▲ 步驟 3 新增結束 ▲▲▲
+		
+        document.getElementById('message').innerText = "比賽結束！"; 
+        document.getElementById('question-area').innerText = "🏆 頒獎典禮 🏆";
+        
+        setTimeout(() => { 
+            alert(finalMsg); 
+            location.reload(); 
+        }, 800);
+    }
+
+// ▼▼▼ 加入兩位數直式思維：智能提示系統 ▼▼▼
+function showHint() {
+    AudioManager.playSound('click');
+    let hintArea = document.getElementById('hint-area');
+    let btnHint = document.getElementById('btn-hint');
+    
+    let qStr = currentQuestionText;
+    let hintMsg = "慢慢嚟，唔使急！試吓用手指或者心算拆開佢。"; 
+
+    // 判斷係咪突襲題 (Boss 題)
+    let isBoss = qStr.split('=')[0].includes('?');
+
+    if (isBoss) {
+        // 🔴【突襲題提示區】保持不變...
+        if (qStr.includes('+')) {
+            hintMsg = "💡 <b>【突襲拆解：加法變減法】</b><br>要搵返唔見咗嘅數，將答案減去另一個已知嘅數字就得啦！";
+        } 
+        else if (qStr.includes('-')) {
+            let leftPart = qStr.split('-')[0].trim();
+            if (leftPart === '?') {
+                hintMsg = "💡 <b>【突襲拆解：搵返最大數】</b><br>減法最前面嗰個係最大嘅數！將後面兩個數字<b>加埋一齊</b>就搵到佢啦！";
+            } else {
+                hintMsg = "💡 <b>【突襲拆解：調位減法】</b><br>用最前面嗰個大數，<b>減去最後嘅答案</b>，就可以搵出中間隻壞蛋！";
+            }
+        } 
+        else if (qStr.includes('×') || qStr.includes('*')) {
+            hintMsg = "💡 <b>【突襲拆解：乘法反推】</b><br>諗吓乘數表！另一個數字乘幾多，先會變成最後嘅答案呢？";
+        } 
+        else if (qStr.includes('÷') || qStr.includes('/')) {
+            hintMsg = "💡 <b>【突襲拆解：除法變乘法】</b><br>除法調轉就係乘法！試吓將數字乘埋一齊，或者用乘數表反推。";
+        }
+    } 
+    else {
+        // 🟢【普通題提示區】 (A + B = ?)
+        if (qStr.includes('-')) {
+            let parts = qStr.split('-');
+            let num1 = parseInt(parts[0].trim());
+            let num2 = parseInt(parts[1].split('=')[0].trim());
+
+            if (num1 >= 10 && num2 >= 10) {
+                // 【兩位數減法：十位個位分開減】
+                let t1 = Math.floor(num1 / 10) * 10;
+                let t2 = Math.floor(num2 / 10) * 10;
+                let o1 = num1 % 10;
+                let o2 = num2 % 10;
+
+                if (o1 < o2) {
+                    // 需要退位 (借位)
+                    let t1_borrow = t1 - 10;
+                    let o1_borrow = o1 + 10;
+                    let diff_t = t1_borrow - t2;
+                    let diff_o = o1_borrow - o2;
+                    
+                    hintMsg = `💡 <b>【分開處理法 (需要借位)】</b><br>
+                    個位 ${o1} 唔夠減 ${o2}，要問十位借 10！<br>
+                    1️⃣ 十位減十位： ${t1_borrow} - ${t2} = <span class="hint-highlight">${diff_t}</span><br>
+                    2️⃣ 個位減個位： ${o1_borrow} - ${o2} = <span class="hint-highlight">${diff_o}</span><br>
+                    3️⃣ 加返埋一齊： ${diff_t} + ${diff_o} = <span class="hint-highlight">?</span>`;
+                } else {
+                    // 唔使退位
+                    let diff_t = t1 - t2;
+                    let diff_o = o1 - o2;
+                    
+                    hintMsg = `💡 <b>【分開處理法】</b><br>
+                    1️⃣ 十位減十位： ${t1} - ${t2} = <span class="hint-highlight">${diff_t}</span><br>
+                    2️⃣ 個位減個位： ${o1} - ${o2} = <span class="hint-highlight">${diff_o}</span><br>
+                    3️⃣ 加返埋一齊： ${diff_t} + ${diff_o} = <span class="hint-highlight">?</span>`;
+                }
+            }
+            // 【11~19減單數：保留拆大數法】
+            else if (num1 > 10 && num1 < 20 && (num1 % 10 < num2)) {
+                let r = num1 - 10;      
+                let diff = 10 - num2;   
+                hintMsg = `💡 <b>【拆大數法】</b><br>
+                1️⃣ 將 ${num1} 拆做 <span class="hint-highlight">10</span> 同 <span class="hint-highlight">${r}</span><br>
+                2️⃣ 先用 10 減： 10 - ${num2} = <span class="hint-highlight">${diff}</span><br>
+                3️⃣ 加返埋尾數： ${diff} + ${r} = <span class="hint-highlight">?</span>`;
+            } else {
+                hintMsg = "💡 <b>【減法小貼士】</b><br>慢慢減，可以用手指幫手，或者將數字拆細啲嚟計！";
+            }
+        } 
+        else if (qStr.includes('+')) {
+            let parts = qStr.split('+');
+            let num1 = parseInt(parts[0].trim());
+            let num2 = parseInt(parts[1].split('=')[0].trim());
+
+            if (num1 >= 10 && num2 >= 10) {
+                // 【兩位數加法：十位個位分開加】
+                let t1 = Math.floor(num1 / 10) * 10;
+                let t2 = Math.floor(num2 / 10) * 10;
+                let o1 = num1 % 10;
+                let o2 = num2 % 10;
+                
+                hintMsg = `💡 <b>【分開處理法】</b><br>
+                1️⃣ 先加十位： ${t1} + ${t2} = <span class="hint-highlight">${t1 + t2}</span><br>
+                2️⃣ 再加個位： ${o1} + ${o2} = <span class="hint-highlight">${o1 + o2}</span><br>
+                3️⃣ 最後合體： ${t1 + t2} + ${o1 + o2} = <span class="hint-highlight">?</span>`;
+            } else {
+                hintMsg = "💡 <b>【加法小貼士】</b><br>將大啲嗰個數字擺喺心入面，然後伸出手指數上去！";
+            }
+        } 
+        else if (qStr.includes('×') || qStr.includes('*')) {
+            let parts = qStr.includes('×') ? qStr.split('×') : qStr.split('*');
+            let num1 = parts[0].trim();
+            let num2 = parts[1].split('=')[0].trim();
+            hintMsg = `💡 <b>【乘法小貼士】</b><br>試吓背 <b>${num1}</b> 或者 <b>${num2}</b> 嘅乘數表！<br>諗吓 ${num1} 個 ${num2} 加埋一齊係幾多？`;
+        } 
+        else if (qStr.includes('÷') || qStr.includes('/')) {
+            let parts = qStr.includes('÷') ? qStr.split('÷') : qStr.split('/');
+            let num2 = parts[1].split('=')[0].trim();
+            hintMsg = `💡 <b>【除法小貼士】</b><br>除法即係乘法嘅相反！<br>試吓背 <b>${num2}</b> 嘅乘數表，諗吓 ${num2} 乘幾多會等於前面個大數？`;
+        }
+    }
+
+    // 顯示提示，隱藏按鈕
+    hintArea.innerHTML = hintMsg;
+    hintArea.style.display = 'block';
+    btnHint.style.display = 'none';
+}
+// ▲▲▲ 加入兩位數直式思維：智能提示系統結束 ▲▲▲
+
+
+
+
+    window.addEventListener('resize', () => { if(gameActive) updatePositions(); });
+// ▼▼▼ 步驟 2 新增：學習成效報告功能函數 ▼▼▼
+function showReport() {
+        AudioManager.playSound('click');
+        const modal = document.getElementById('report-modal');
+        modal.style.display = 'flex';
+        
+        let stats = JSON.parse(localStorage.getItem('mathRacerLearningStats')) || [];
+        
+        let chapSelect = document.getElementById('filter-chapter');
+        let opSelect = document.getElementById('filter-operation');
+        
+        // 1. 初始化並保留 "all" 選項
+        chapSelect.innerHTML = '<option value="all">📚 所有章節</option>';
+        opSelect.innerHTML = '<option value="all">🧮 所有模式</option>';
+        document.getElementById('filter-result').value = 'all'; // 重置結果篩選
+        
+        // 2. 動態抽出所有的「章節」並加入選項
+        let uniqueChapters = [...new Set(stats.map(s => s.chapter).filter(c => c))];
+        uniqueChapters.forEach(chap => {
+            chapSelect.innerHTML += `<option value="${chap}">${chap}</option>`;
+        });
+        
+        // 3. 動態抽出所有的「運算模式」並加入選項
+        let uniqueOps = [...new Set(stats.map(s => s.operationMode).filter(o => o && o !== '-'))];
+        uniqueOps.forEach(op => {
+            opSelect.innerHTML += `<option value="${op}">${op}</option>`;
+        });
+        
+        renderReportData(); 
+    }
+
+    function renderReportData() {
+        const tbody = document.getElementById('report-tbody');
+        const summary = document.getElementById('report-summary');
+        
+        let allStats = JSON.parse(localStorage.getItem('mathRacerLearningStats')) || [];
+        
+        let fChap = document.getElementById('filter-chapter').value;
+        let fOp = document.getElementById('filter-operation').value;
+        let fRes = document.getElementById('filter-result').value;
+        
+        // ========== 步驟一：執行三重數據過濾 ==========
+        let filteredStats = allStats.filter(s => {
+            let matchChap = (fChap === 'all' || s.chapter === fChap);
+            let matchOp = (fOp === 'all' || s.operationMode === fOp);
+            let matchRes = (fRes === 'all') || 
+                           (fRes === 'correct' && s.isCorrect) || 
+                           (fRes === 'wrong' && !s.isCorrect);
+            return matchChap && matchOp && matchRes;
+        });
+        
+        // ========== 步驟二：拆分「本月」與「上月」數據 ==========
+        let now = new Date();
+        let currM = now.getMonth(), currY = now.getFullYear();
+        let lastM = currM === 0 ? 11 : currM - 1;
+        let lastY = currM === 0 ? currY - 1 : currY;
+        
+        let thisMonthStats = [];
+        let lastMonthStats = [];
+        
+        filteredStats.forEach(s => {
+            let d = new Date(s.timestamp);
+            // 防呆處理：若瀏覽器時間格式無法直接轉換，嘗試手動拆解
+            if(isNaN(d)) {
+                let parts = s.timestamp.split(/[\s,/]+/);
+                if(parts.length >= 3) {
+                    if(parts[0].length === 4) d = new Date(parts[0], parts[1]-1, parts[2]); // YYYY格式
+                    else d = new Date(parts[2], parts[1]-1, parts[0]); // DD/MM/YYYY 格式
+                }
+            }
+            if(!isNaN(d)) {
+                if(d.getMonth() === currM && d.getFullYear() === currY) thisMonthStats.push(s);
+                else if(d.getMonth() === lastM && d.getFullYear() === lastY) lastMonthStats.push(s);
+            }
+        });
+        
+        // ========== 步驟三：計算指標的小幫手 ==========
+        function calcMetrics(arr) {
+            let t = arr.length;
+            let c = arr.filter(x => x.isCorrect).length;
+            let a = t > 0 ? Math.round((c / t) * 100) : 0;
+            let secs = 0;
+            arr.forEach(x => secs += parseFloat(x.timeElapsed.replace('秒', '')));
+            let avg = t > 0 ? (secs / t).toFixed(2) : 0;
+            return { total: t, correct: c, acc: a, avg: avg };
+        }
+        
+        let tm = calcMetrics(thisMonthStats); // 本月指標 (This Month)
+        let lm = calcMetrics(lastMonthStats); // 上月指標 (Last Month)
+        
+        // 罩門分析 (基於目前篩選出的所有數據)
+        let wrongCounts = {};
+        filteredStats.filter(s => !s.isCorrect).forEach(s => {
+            wrongCounts[s.question] = (wrongCounts[s.question] || 0) + 1;
+        });
+        let mostWrongQ = "無", maxWrong = 0;
+        for (let q in wrongCounts) {
+            if (wrongCounts[q] > maxWrong) { maxWrong = wrongCounts[q]; mostWrongQ = q; }
+        }
+        let weaknessHtml = maxWrong > 0 ? `<span style="color:#e74c3c">${mostWrongQ} (錯 ${maxWrong} 次)</span>` : `<span style="color:#2ecc71">完美！沒有常錯題</span>`;
+        
+// ========== 步驟四：渲染摘要 UI (四宮格對比設計) ==========
+        // 改用 Grid 網格排版，保證手機上是 2x2，節省空間
+        summary.style.display = "grid";
+        summary.style.gridTemplateColumns = "1fr 1fr"; 
+        summary.style.gap = "10px";
+        
+        summary.innerHTML = `
+            <div style="background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">📝 答題數</div>
+                <div style="font-size:26px; color:#f1c40f; font-weight:bold;">${tm.total}</div>
+                <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.total}</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">✅ 答對</div>
+                <div style="font-size:26px; color:#2ecc71; font-weight:bold;">${tm.correct}</div>
+                <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.correct}</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">🎯 正確率</div>
+                <div style="font-size:26px; font-weight:bold; color:${tm.acc >= 80 ? '#2ecc71' : (tm.acc >= 60 ? '#f1c40f' : '#e74c3c')}">${tm.acc}%</div>
+                <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.acc}%</div>
+            </div>
+            <div style="background:rgba(0,0,0,0.4); padding:15px 10px; border-radius:8px; display:flex; flex-direction:column; align-items:center;">
+                <div style="font-size:14px; color:#bdc3c7; margin-bottom:5px;">⏱️ 平均耗時</div>
+                <div style="font-size:26px; color:#3498db; font-weight:bold;">${tm.avg}s</div>
+                <div style="font-size:12px; color:#95a5a6; margin-top:5px;">上月: ${lm.avg}s</div>
+            </div>
+            <div style="grid-column: 1 / -1; text-align: center; margin-top: 5px; padding-top: 15px; border-top: 1px dashed #7f8c8d; font-size: 16px;">
+                ⚠️ 罩門分析: ${weaknessHtml}
+            </div>
+        `;
+		
+        // ========== 步驟五：渲染下方詳細表格 ==========
+        tbody.innerHTML = '';
+        if (filteredStats.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="padding: 30px; font-size: 18px; color: #bdc3c7;">目前篩選條件下沒有紀錄喔！</td></tr>';
+        } else {
+            let reversedStats = [...filteredStats].reverse();
+            reversedStats.forEach(stat => {
+                let isRight = stat.isCorrect;
+                
+                // 將日期與時間拆成兩行
+                let timeParts = stat.timestamp ? stat.timestamp.split(' ') : ['-'];
+                let timeStr = timeParts.length > 1 ? `${timeParts[0]}<br><span style="color:#95a5a6; font-size:10px;">${timeParts[1]}</span>` : stat.timestamp;
+                
+                let rowHtml = `
+                    <tr>
+                        <td style="font-size: 12px; color: #bdc3c7;">${timeStr}</td>
+                        <td style="font-size: 14px; color: #e67e22;">${stat.operationMode || '-'}</td>
+                        <td style="font-size: 18px;">${stat.question}</td>
+                        <td class="${isRight ? 'correct-text' : 'wrong-text'}">${stat.userAnswer}</td>
+                        <td style="color:#f1c40f;">${stat.correctAnswer}</td>
+                        <td style="font-size: 20px;">${isRight ? '✔️' : '❌'}</td>
+                        <td style="color: #3498db;">${stat.timeElapsed}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += rowHtml;
+            });
+        }
+    }	
+    function hideReport() {
+        AudioManager.playSound('click');
+        document.getElementById('report-modal').style.display = 'none';
+    }
+
+    function clearReportData() {
+        AudioManager.playSound('click');
+        if (confirm('⚠️ 警告：確定要清除所有的學習紀錄嗎？這個動作無法復原喔！')) {
+            localStorage.removeItem('mathRacerLearningStats');
+            // 由於剛剛把數據刪了，重新呼叫一次 showReport() 來刷新畫面為空
+            showReport(); 
+            alert('🗑️ 學習紀錄已全部清除！');
+        }
+    }
+    // ▲▲▲ 步驟 2 新增結束 ▲▲▲
+</script>
+</body>
+</html>
