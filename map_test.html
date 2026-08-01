@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>社區導航尋寶 - 賽車地圖常識</title>
+    
+    <!-- 引入 Leaflet.js 的 CSS 和 JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
+        
+        /* 地圖容器，填滿整個畫面 */
+        #map { width: 100%; height: 100%; z-index: 1; }
+
+        /* 遊戲 UI 介面層 (浮在最上面) */
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            border: 4px solid #f39c12;
+            text-align: center;
+            pointer-events: auto;
+        }
+
+        h2 { margin: 0 0 10px 0; color: #d35400; font-size: 22px; }
+        
+        #question-box {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 10px;
+            min-height: 55px;
+        }
+
+        #feedback-box {
+            font-size: 18px;
+            font-weight: bold;
+            color: #e74c3c;
+            min-height: 25px;
+        }
+
+        /* 隱藏 Leaflet 預設的版權文字，讓畫面更像遊戲 */
+        .leaflet-control-attribution { display: none; }
+
+        /* 自訂 Emoji 圖示的 CSS */
+        .emoji-icon {
+            font-size: 45px;
+            text-align: center;
+            line-height: 45px;
+            filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.4));
+            transition: transform 0.2s;
+        }
+        
+        .car-icon {
+            font-size: 60px;
+            filter: drop-shadow(2px 5px 8px rgba(0,0,0,0.5));
+            z-index: 1000 !important; /* 確保車子總是在最上層 */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 遊戲 UI 面板 -->
+    <div id="ui-container">
+        <h2>🗺️ 賽車 GPS 導航任務</h2>
+        <div id="question-box">載入中...</div>
+        <div id="feedback-box">請將車車拖曳到正確的地方！👇</div>
+    </div>
+
+    <!-- 地圖容器 -->
+    <div id="map"></div>
+
+    <script>
+        // 1. 初始化地圖 (設定中心點為香港九龍公園附近，縮放級別 16)
+        const map = L.map('map', {
+            zoomControl: false, // 隱藏縮放按鈕，避免小朋友誤觸
+            doubleClickZoom: false
+        }).setView([22.298, 114.170], 16);
+
+        // 使用 CartoDB 的彩色地圖 (比傳統 Google Map 更簡潔漂亮，適合遊戲)
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19
+        }).addTo(map);
+
+        // 2. 定義自訂的 Emoji 圖示生成器
+        const createIcon = (emoji, className = 'emoji-icon') => L.divIcon({
+            html: `<div class="${className}">${emoji}</div>`,
+            className: 'custom-icon', // 清除預設背景
+            iconSize: [50, 50],
+            iconAnchor: [25, 25] // 將錨點設在正中心
+        });
+
+        // 3. 定義社區設施資料庫 (常識題庫)
+        const places = [
+            { id: 'hospital', name: '醫院', emoji: '🏥', latlng: [22.301, 114.171], question: '🗣️ 哎呀！司機唔舒服生病了，我哋應該揸車去邊度睇醫生？' },
+            { id: 'fire_station', name: '消防局', emoji: '🚒', latlng: [22.296, 114.168], question: '🗣️ 前面大廈發生火警！我哋要搵邊個部門幫手救火？' },
+            { id: 'supermarket', name: '超級市場', emoji: '🛒', latlng: [22.299, 114.174], question: '🗣️ 賽車手口渴了，想買蘋果同牛奶，應該去邊度買？' },
+            { id: 'school', name: '學校', emoji: '🏫', latlng: [22.295, 114.172], question: '🗣️ 夠鐘返學啦！小朋友每日要去邊度上堂同埋見同學仔？' }
+        ];
+
+        // 把所有設施標記加到地圖上
+        places.forEach(place => {
+            L.marker(place.latlng, { icon: createIcon(place.emoji) })
+             .addTo(map)
+             .bindTooltip(place.name, { direction: 'top', offset: [0, -20], permanent: true, className: 'custom-tooltip' });
+        });
+
+        // 4. 新增玩家賽車 (設定為可拖曳 draggable: true)
+        let carPos = [22.298, 114.170]; // 初始位置 (地圖中央)
+        const carMarker = L.marker(carPos, {
+            icon: createIcon('🚗', 'car-icon'),
+            draggable: true,
+            zIndexOffset: 1000 // 確保賽車疊在建築物上面
+        }).addTo(map);
+
+        // 5. 遊戲邏輯控制
+        let currentQuestionIndex = 0;
+        const questionBox = document.getElementById('question-box');
+        const feedbackBox = document.getElementById('feedback-box');
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= places.length) {
+                questionBox.innerText = "🎉 恭喜！所有導航任務完成！賽車可以繼續比賽啦！🏁";
+                feedbackBox.innerText = "";
+                carMarker.dragging.disable(); // 破關後禁止拖曳
+                return;
+            }
+            let currentTarget = places[currentQuestionIndex];
+            questionBox.innerText = currentTarget.question;
+            feedbackBox.innerText = "用手指按住 🚗，拉去正確嘅地方！";
+            feedbackBox.style.color = "#7f8c8d";
+        }
+
+        // 監聽賽車拖曳結束的事件
+        carMarker.on('dragend', function(e) {
+            const currentCarLatLng = carMarker.getLatLng();
+            const targetPlace = places[currentQuestionIndex];
+            const targetLatLng = L.latLng(targetPlace.latlng[0], targetPlace.latlng[1]);
+            
+            // 計算賽車與目標建築物的距離 (單位：米)
+            const distance = map.distance(currentCarLatLng, targetLatLng);
+
+            // 如果距離小於 80 米，判定為成功到達！
+            if (distance < 80) {
+                feedbackBox.innerText = `✨ 啱啦！呢度就係「${targetPlace.name}」！`;
+                feedbackBox.style.color = "#27ae60";
+                
+                // 放煙花或吸附效果 (將車子精準對齊到目標)
+                carMarker.setLatLng(targetLatLng);
+
+                // 2 秒後進入下一題
+                setTimeout(() => {
+                    currentQuestionIndex++;
+                    loadQuestion();
+                }, 2000);
+            } else {
+                // 距離太遠，判定錯誤
+                feedbackBox.innerText = "❌ 唔啱喎！再睇清楚地圖，拉去正確嘅圖示度啦！";
+                feedbackBox.style.color = "#e74c3c";
+                
+                // (可選) 讓車子彈回原位
+                // carMarker.setLatLng(carPos); 
+            }
+        });
+
+        // 遊戲開始
+        loadQuestion();
+
+    </script>
+</body>
+</html>
