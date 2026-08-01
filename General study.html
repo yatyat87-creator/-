@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 宇宙常識 - 尋找地球</title>
+    <!-- 引入 A-Frame 核心引擎 -->
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <style>
+        /* 浮動在 3D 畫面上的 UI 介面 */
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 500px;
+            z-index: 999; /* 確保 UI 在 3D 畫布最上層 */
+            text-align: center;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            pointer-events: none; /* 讓點擊可以穿透 UI 點到後面的星球 */
+        }
+
+        .mission-box {
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 15px 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            border: 4px solid #3498db;
+        }
+
+        h2 { margin: 0 0 10px 0; color: #2c3e50; font-size: 24px; }
+        
+        #status-msg {
+            font-size: 20px;
+            font-weight: bold;
+            color: #e67e22;
+        }
+
+        /* 重置按鈕 */
+        #reset-btn {
+            pointer-events: auto; /* 恢復按鈕的點擊功能 */
+            margin-top: 15px;
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            display: none; /* 預設隱藏，破關才顯示 */
+            box-shadow: 0 4px 0 #27ae60;
+        }
+        #reset-btn:active { transform: translateY(2px); box-shadow: none; }
+    </style>
+</head>
+<body>
+
+    <!-- UI 介面層 -->
+    <div id="ui-container">
+        <div class="mission-box">
+            <h2>🌍 太空常識任務</h2>
+            <div id="status-msg">任務：請點擊藍色的「地球 (Earth)」來啟動引擎！</div>
+            <button id="reset-btn" onclick="location.reload()">🔄 再玩一次</button>
+        </div>
+    </div>
+
+    <!-- A-Frame 3D 場景層 -->
+    <!-- cursor="rayOrigin: mouse" 讓玩家可以直接用滑鼠或手指點擊 3D 物件 -->
+    <a-scene cursor="rayOrigin: mouse" background="color: #050510">
+        
+        <!-- 太空星空背景 (使用簡單的星空點綴) -->
+        <a-entity star-system="count: 1000; radius: 250; depth: 0"></a-entity>
+
+        <!-- 攝影機 (玩家視角) -->
+        <a-camera position="0 1.6 4"></a-camera>
+
+        <!-- 1. 太陽 (中心發光體) -->
+        <a-sphere 
+            position="0 1.5 -4" 
+            radius="1.2" 
+            color="#F1C40F" 
+            material="shader: flat"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 10000">
+        </a-sphere>
+        <!-- 太陽光線 -->
+        <a-light type="point" color="#F1C40F" intensity="1" position="0 1.5 -4"></a-light>
+        <a-light type="ambient" color="#222"></a-light>
+
+        <!-- 2. 火星 (Mars - 紅色，設定為錯誤選項) -->
+        <!-- 使用 class="clickable" 方便 JavaScript 綁定事件 -->
+        <a-sphere 
+            id="planet-mars"
+            class="clickable"
+            position="-2.5 1.5 -2.5" 
+            radius="0.4" 
+            color="#E74C3C"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 6000">
+        </a-sphere>
+
+        <!-- 3. 地球 (Earth - 藍綠色，設定為正確選項) -->
+        <a-sphere 
+            id="planet-earth"
+            class="clickable"
+            position="2.5 1.5 -2.5" 
+            radius="0.5" 
+            color="#2E86C1"
+            animation="property: rotation; to: 0 360 0; loop: true; dur: 5000">
+            <!-- 加上簡單的綠色陸地裝飾 -->
+            <a-sphere position="0.2 0.2 0.35" radius="0.15" color="#27AE60" material="shader: flat"></a-sphere>
+            <a-sphere position="-0.2 -0.1 0.4" radius="0.2" color="#27AE60" material="shader: flat"></a-sphere>
+        </a-sphere>
+
+    </a-scene>
+
+    <!-- 遊戲邏輯腳本 -->
+    <script>
+        const uiMsg = document.getElementById('status-msg');
+        const resetBtn = document.getElementById('reset-btn');
+        const earth = document.getElementById('planet-earth');
+        const mars = document.getElementById('planet-mars');
+        
+        let isGameWon = false;
+
+        // 點擊火星 (錯誤)
+        mars.addEventListener('click', function () {
+            if (isGameWon) return; // 如果已經贏了就不反應
+            
+            uiMsg.innerText = "❌ 唔啱喎！呢粒係紅色的火星 (Mars)！";
+            uiMsg.style.color = "#c0392b";
+            
+            // 讓火星縮小再放大的錯誤動畫
+            mars.setAttribute('animation__error', 'property: scale; to: 0.8 0.8 0.8; dur: 200; dir: alternate; loop: 1');
+        });
+
+        // 點擊地球 (正確)
+        earth.addEventListener('click', function () {
+            if (isGameWon) return;
+            isGameWon = true;
+
+            uiMsg.innerText = "✨ 太棒啦！搵到地球 (Earth)！太空船準備加速！🚀💨";
+            uiMsg.style.color = "#27ae60";
+            resetBtn.style.display = "inline-block";
+
+            // 讓地球發光並浮動的勝利動畫
+            earth.setAttribute('material', 'emissive: #2E86C1; emissiveIntensity: 0.5');
+            earth.setAttribute('animation__win', 'property: position; to: 2.5 2.5 -1.5; dur: 2000; easing: easeOutElastic');
+            earth.setAttribute('animation__spinfast', 'property: rotation; to: 0 1080 0; dur: 2000');
+        });
+    </script>
+</body>
+</html>
