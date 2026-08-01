@@ -509,9 +509,12 @@
 	<input type="hidden" id="chapter-select" value="chapter1">
 		
 	<div class="career-container">
-	    <h1 class="menu-title">🏆 生涯模式</h1>
-	
-	    <!-- Ch1 (已解鎖) -->
+    <h1 class="menu-title">🏆 生涯模式</h1>
+    
+    <!-- ▼ 新增世界一標題 ▼ -->
+    <h2 style="grid-column: 1 / -1; color: #fff; text-align: center; margin: 10px 0; border-bottom: 2px dashed #f1c40f; padding-bottom: 10px;">🌍 世界一：活塞盃數學大賽 (Ch 1 - 10)</h2>	
+
+    <!-- Ch1 (已解鎖) -->
 	    <div class="card unlocked" id="card-chapter1" onclick="selectChapter('chapter1')">
 	        <div class="stage-name">🟢 第一階段 (基礎數感)</div>
 	        <div class="chapter-header">
@@ -608,7 +611,10 @@
 	            <h3 class="level-name">終極車神爭霸戰</h3>
 	        </div>
 	        <div class="difficulty">難度: 總冠軍 <span class="boss-tag">Boss</span></div>
-	    </div>
+        </div>
+            <!-- ▼ 新增世界二標題 ▼ -->
+    <h2 style="grid-column: 1 / -1; color: #fff; text-align: center; margin: 30px 0 10px 0; border-bottom: 2px dashed #9b59b6; padding-bottom: 10px;">🌍 世界二：漢字語文訓練 (Ch 11 - 15)</h2>
+
 		<!-- Ch11 中文寫字關卡 -->
 			<div class="card unlocked" id="card-chapter11" onclick="selectChapter('chapter11')">
 			    <div class="stage-name">🟣 第五階段 (語文訓練)</div>
@@ -1328,14 +1334,48 @@ opponents: [
         }
     };
 
-    let playerGold = parseInt(localStorage.getItem('mathRacerGold')) || 100;
-    let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen"];
-    let selectedCharId = "mcqueen";
+let playerGold = parseInt(localStorage.getItem('mathRacerGold')) || 100;
+let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || ["mcqueen"];
+let selectedCharId = "mcqueen";
 
-    window.onload = function() {
-        updateGoldDisplay();
-        renderCharacterGrid();
-    };
+// ▼ 新增：讀取解鎖的章節 (預設只有 Ch1 和 Ch11 解鎖)
+let unlockedChapters = JSON.parse(localStorage.getItem('mathRacerChapters')) || ["chapter1", "chapter11"];
+
+// ▼ 新增：負責掃描並把未解鎖關卡上鎖的函數
+function updateChapterLocks() {
+    for (let i = 1; i <= 15; i++) {
+        let chapId = "chapter" + i;
+        let card = document.getElementById("card-" + chapId);
+        if (card) {
+            if (unlockedChapters.includes(chapId)) {
+                card.classList.remove("locked");
+                card.classList.add("unlocked");
+                let overlay = card.querySelector('.lock-overlay');
+                if(overlay) overlay.style.display = 'none';
+            } else {
+                card.classList.remove("unlocked");
+                card.classList.add("locked");
+                // 自動生成鎖頭 UI
+                let overlay = card.querySelector('.lock-overlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.className = 'lock-overlay';
+                    overlay.innerHTML = '<div class="lock-icon">🔒</div><div class="lock-price" style="font-size:14px; margin-top:5px; background:rgba(0,0,0,0.8); padding:5px 10px; border-radius:10px; color:#f1c40f; text-align:center;">通關上一章<br>(普通) 解鎖</div>';
+                    card.appendChild(overlay);
+                } else {
+                    overlay.style.display = 'flex';
+                }
+            }
+        }
+    }
+}
+
+// ▼ 確保網頁一載入，就馬上執行上鎖！
+window.onload = function() {
+    updateGoldDisplay();
+    renderCharacterGrid();
+    updateChapterLocks(); // 👈 這行會把還沒破關的章節變成灰色鎖定狀態
+};
 
 function updateOperationMode() {
     const chapter = document.getElementById('chapter-select').value;
@@ -2302,7 +2342,23 @@ if (playerRank === 1) {
                 localStorage.setItem('mathRacerUnlocked_v2', JSON.stringify(unlockedChars));
                 finalMsg += `\n\n🔓 【解鎖成就！】\n恭喜你達成了通關條件，獲得了新車手：${GAME_DATA.characters[newlyUnlockedChar].name}！下次遊戲時即可選擇！`;
             }
-
+// ▼▼▼ 新增：解鎖下一關章節的邏輯 ▼▼▼
+            // 條件：必須是普通(normal)或困難(hard)難度
+            if (difficultySetting === 'normal' || difficultySetting === 'hard') {
+                let currentChapNum = parseInt(currentChapterStr.replace('chapter', ''));
+                let nextChapNum = currentChapNum + 1;
+                
+                // 防呆：第10關不會解鎖第11關 (兩個世界獨立)，第15關是最後一關
+                if (currentChapNum !== 10 && currentChapNum !== 15) { 
+                    let nextChapId = "chapter" + nextChapNum;
+                    if (!unlockedChapters.includes(nextChapId)) {
+                        unlockedChapters.push(nextChapId);
+                        // 儲存進度到瀏覽器
+                        localStorage.setItem('mathRacerChapters', JSON.stringify(unlockedChapters));
+                        finalMsg += `\n\n🔓 【解鎖新關卡！】\n恭喜達成了通關條件，成功開通：第 ${nextChapNum} 章！`;
+                    }
+                }
+            }
         } else {
             finalMsg += "可惜了，回去多練練，下次再來挑戰！\n";
         }
@@ -2327,10 +2383,20 @@ if (playerRank === 1) {
         document.getElementById('message').innerText = "比賽結束！"; 
         document.getElementById('question-area').innerText = "🏆 頒獎典禮 🏆";
         
-        setTimeout(() => { 
-            alert(finalMsg); 
-            location.reload(); 
-        }, 800);
+    setTimeout(() => { 
+        alert(finalMsg); 
+
+        // ▼▼▼ 取代原本會報錯的 location.reload() ▼▼▼
+        // 不重新載入網頁，直接切換回大廳，完美避開瀏覽器安全阻擋
+        document.getElementById('play-screen').style.display = 'none';
+        document.getElementById('setup-screen').style.display = 'block';
+        document.querySelector('.top-bar').style.display = 'flex';
+
+        // 重新刷新鎖頭與車手 UI
+        updateChapterLocks(); 
+        renderCharacterGrid();
+        // ▲▲▲ 修改結束 ▲▲▲
+    }, 800);
     }
 
 // ▼▼▼ 加入兩位數直式思維：智能提示系統 ▼▼▼
