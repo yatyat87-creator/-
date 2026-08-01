@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D 軌道飛船 - 常識科射擊原型</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* 遊戲 UI 介面 */
+        #ui-layer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            pointer-events: none; /* 讓滑鼠可以穿透 UI 操作遊戲 */
+            color: white;
+            text-shadow: 2px 2px 0 #000;
+        }
+        
+        h1 { margin: 0; font-size: 24px; color: #f1c40f; }
+        #score-board { font-size: 20px; font-weight: bold; margin-top: 10px; }
+        
+        #instructions {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 16px;
+            font-weight: bold;
+            pointer-events: none;
+            letter-spacing: 1px;
+        }
+    </style>
+
+    <script>
+        // --- 遊戲核心邏輯 ---
+        AFRAME.registerComponent('game-manager', {
+            schema: { speed: { type: 'number', default: 15 } }, // 飛船前進速度
+
+            init: function () {
+                this.score = 0;
+                this.isGameOver = false;
+                
+                this.rig = document.querySelector('#camera-rig');
+                this.ship = document.querySelector('#player-ship');
+                this.scoreBoard = document.querySelector('#score-board');
+                
+                this.lasers = [];
+                this.obstacles = [];
+                
+                this.spawnTimer = 0;
+
+                // 綁定滑鼠/觸控左右移動事件
+                window.addEventListener('mousemove', this.onMove.bind(this));
+                window.addEventListener('touchmove', this.onTouchMove.bind(this), {passive: false});
+                
+                // 綁定點擊射擊事件
+                window.addEventListener('mousedown', this.shoot.bind(this));
+                window.addEventListener('touchstart', this.shoot.bind(this));
+            },
+
+            // 處理左右移動 (限制在 -4 到 4 的範圍內)
+            onMove: function (e) {
+                let percent = e.clientX / window.innerWidth;
+                let targetX = (percent - 0.5) * 10; // 將螢幕 X 座標映射到 3D 空間的 X 軸
+                this.ship.object3D.position.x = Math.max(-4, Math.min(4, targetX));
+            },
+
+            onTouchMove: function (e) {
+                let percent = e.touches[0].clientX / window.innerWidth;
+                let targetX = (percent - 0.5) * 10;
+                this.ship.object3D.position.x = Math.max(-4, Math.min(4, targetX));
+            },
+
+            // 射擊雷射
+            shoot: function () {
+                if (this.isGameOver) { location.reload(); return; } // 死掉後點擊重來
+
+                let laser = document.createElement('a-cylinder');
+                laser.setAttribute('color', '#00ff00');
+                laser.setAttribute('radius', '0.05');
+                laser.setAttribute('height', '1');
+                laser.setAttribute('rotation', '90 0 0');
+                
+                // 雷射的出發點是飛船目前的絕對位置
+                let shipWorldPos = new THREE.Vector3();
+                this.ship.object3D.getWorldPosition(shipWorldPos);
+                laser.setAttribute('position', shipWorldPos);
+                
+                this.el.sceneEl.appendChild(laser);
+                this.lasers.push(laser);
+                
+                // 發射音效 (用簡單的震動模擬)
+                if (navigator.vibrate) navigator.vibrate(20);
+            },
+
+            // 生成障礙物 (紅色隕石)
+            spawnObstacle: function () {
+                let obs = document.createElement('a-box');
+                obs.setAttribute('color', '#e74c3c');
+                obs.setAttribute('depth', '1');
+                obs.setAttribute('height', '1');
+                obs.setAttribute('width', '1');
+                
+                // 隨機出現在前方 60 單位處，X 軸隨機
+                let randomX = (Math.random() - 0.5) * 10;
+                let spawnZ = this.rig.object3D.position.z - 60;
+                obs.setAttribute('position', { x: randomX, y: 0.5, z: spawnZ });
+                
+                // 加上一點旋轉動畫
+                obs.setAttribute('animation', `property: rotation; to: ${Math.random()*360} ${Math.random()*360} 0; loop: true; dur: 2000`);
+
+                this.el.sceneEl.appendChild(obs);
+                this.obstacles.push({ el: obs, hit: false });
+            },
+
+            // 每幀更新邏輯 (移動、碰撞偵測)
+            tick: function (time, timeDelta) {
+                if (this.isGameOver) return;
+                let dt = timeDelta / 1000;
+
+                // 1. 攝影機 (世界) 不斷往前推
+                this.rig.object3D.position.z -= this.data.speed * dt;
+
+                // 2. 定期生成障礙物
+                this.spawnTimer += dt;
+                if (this.spawnTimer > 0.8) { // 每 0.8 秒生成一顆
+                    this.spawnObstacle();
+                    this.spawnTimer = 0;
+                }
+
+                // 3. 更新雷射位置
+                for (let i = this.lasers.length - 1; i >= 0; i--) {
+                    let laser = this.lasers[i];
+                    laser.object3D.position.z -= (this.data.speed + 30) * dt; // 雷射比飛船快
+                    
+                    // 如果雷射飛太遠就移除
+                    if (laser.object3D.position.z < this.rig.object3D.position.z - 80) {
+                        laser.parentNode.removeChild(laser);
+                        this.lasers.splice(i, 1);
+                    }
+                }
+
+                // 4. 碰撞偵測 (極度簡化的距離判定)
+                let shipPos = new THREE.Vector3();
+                this.ship.object3D.getWorldPosition(shipPos);
+
+                for (let i = this.obstacles.length - 1; i >= 0; i--) {
+                    let obsData = this.obstacles[i];
+                    if (obsData.hit) continue;
+                    
+                    let obsPos = obsData.el.object3D.position;
+
+                    // A. 雷射擊中障礙物
+                    for (let j = this.lasers.length - 1; j >= 0; j--) {
+                        let laserPos = this.lasers[j].object3D.position;
+                        if (laserPos.distanceTo(obsPos) < 1.5) {
+                            // 擊毀特效 (變綠色並縮小)
+                            obsData.hit = true;
+                            obsData.el.setAttribute('color', '#f1c40f');
+                            obsData.el.setAttribute('animation__scale', 'property: scale; to: 0 0 0; dur: 200');
+                            
+                            // 移除雷射
+                            this.lasers[j].parentNode.removeChild(this.lasers[j]);
+                            this.lasers.splice(j, 1);
+                            
+                            // 加分
+                            this.score += 10;
+                            this.scoreBoard.innerText = "⭐ 分數: " + this.score;
+                            break;
+                        }
+                    }
+
+                    // B. 飛船撞到障礙物 (Game Over)
+                    if (!obsData.hit && shipPos.distanceTo(obsPos) < 1.2) {
+                        this.isGameOver = true;
+                        this.scoreBoard.innerText = "💥 遊戲結束！點擊畫面重玩";
+                        this.scoreBoard.style.color = "#e74c3c";
+                        this.ship.setAttribute('color', '#e74c3c');
+                        if (navigator.vibrate) navigator.vibrate([200, 100, 200]); // 撞毀震動
+                    }
+                    
+                    // 清理身後的障礙物
+                    if (obsPos.z > this.rig.object3D.position.z + 10) {
+                        obsData.el.parentNode.removeChild(obsData.el);
+                        this.obstacles.splice(i, 1);
+                    }
+                }
+            }
+        });
+    </script>
+</head>
+<body>
+
+    <!-- 2D UI 介面 -->
+    <div id="ui-layer">
+        <h1>🚀 軌道射擊測試</h1>
+        <div id="score-board">⭐ 分數: 0</div>
+    </div>
+    <div id="instructions">滑動控制左右 ↔️ | 點擊發射雷射 🎯</div>
+
+    <!-- 3D 場景 -->
+    <a-scene game-manager background="color: #0d0d1a" vr-mode-ui="enabled: false">
+        
+        <!-- 星空粒子背景 -->
+        <a-entity star-system="count: 1500; radius: 100; depth: 0"></a-entity>
+
+        <!-- 攝影機與玩家飛船群組 (Camera Rig) 
+             這個 Rig 會在 game-manager 裡不斷向 Z 軸負方向移動 -->
+        <a-entity id="camera-rig" position="0 0 0">
+            <!-- 攝影機固定在後方往前方看 -->
+            <a-camera position="0 2 3" look-controls="enabled: false" wasd-controls="enabled: false"></a-camera>
+            
+            <!-- 玩家的飛船 (一架藍色的戰機) -->
+            <a-entity id="player-ship" position="0 0.5 -1">
+                <!-- 飛船機身 -->
+                <a-cone color="#3498db" radius-bottom="0.5" height="1.5" rotation="-90 0 0"></a-cone>
+                <!-- 飛船機翼 -->
+                <a-box color="#2980b9" depth="0.8" height="0.1" width="1.8" position="0 0 0.3"></a-box>
+                <!-- 推進器火焰 -->
+                <a-cone color="#e67e22" radius-bottom="0.2" height="0.6" position="0 0 0.8" rotation="-90 0 0" 
+                        animation="property: scale; to: 1 1.5 1; dir: alternate; loop: true; dur: 100"></a-cone>
+            </a-entity>
+        </a-entity>
+
+        <!-- 軌道網格 (增加速度感) -->
+        <a-grid id="ground" width="100" height="100" position="0 0 -50" src="https://cdn.aframe.io/a-painter/images/floor.jpg"></a-grid>
+
+        <!-- 燈光 -->
+        <a-light type="ambient" color="#222"></a-light>
+        <a-light type="directional" position="-1 2 1" intensity="1.5"></a-light>
+
+    </a-scene>
+
+</body>
+</html>
