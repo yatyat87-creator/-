@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>英文聲控賽車 - 語音測試</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #e8f8f5; 
+            text-align: center; 
+            padding: 20px; 
+            color: #2c3e50;
+        }
+        
+        .card { 
+            background: white; 
+            border-radius: 20px; 
+            padding: 40px 20px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+            max-width: 400px; 
+            margin: 20px auto; 
+        }
+        
+        h2 { color: #16a085; margin-top: 0; }
+        
+        .emoji { font-size: 100px; margin: 10px 0; }
+        .word { font-size: 42px; font-weight: bold; color: #2980b9; letter-spacing: 2px; margin-bottom: 20px; }
+        
+        button { 
+            font-size: 20px; 
+            font-weight: bold;
+            padding: 15px 30px; 
+            border-radius: 50px; 
+            border: none; 
+            color: white; 
+            cursor: pointer; 
+            margin: 10px; 
+            transition: all 0.2s ease; 
+            box-shadow: 0 5px 0px rgba(0,0,0,0.2); 
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn-mic { background-color: #e74c3c; }
+        .btn-mic:hover { background-color: #c0392b; transform: translateY(-2px); box-shadow: 0 7px 0px rgba(0,0,0,0.2); }
+        .btn-mic:active { transform: translateY(5px); box-shadow: none; }
+        
+        .btn-play { background-color: #3498db; }
+        .btn-play:hover { background-color: #2980b9; transform: translateY(-2px); box-shadow: 0 7px 0px rgba(0,0,0,0.2); }
+        .btn-play:active { transform: translateY(5px); box-shadow: none; }
+        
+        #status { 
+            font-size: 22px; 
+            font-weight: bold; 
+            margin: 20px 0; 
+            min-height: 35px; 
+            color: #7f8c8d; 
+            background-color: #f8f9f9;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        select {
+            font-size: 18px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #bdc3c7;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🎙️ 英文聲控賽車原型</h2>
+    <p>允許瀏覽器使用咪高峰，然後大聲讀出單字！</p>
+
+    <div class="card">
+        <div class="emoji" id="emoji">🍎</div>
+        <div class="word" id="target-word">Apple</div>
+        
+        <div id="status">準備好就撳咪高峰啦！</div>
+
+        <button class="btn-mic" id="btn-mic" onclick="startListening()">🎤 講英文</button>
+        <button class="btn-play" onclick="playAudio()">🔊 聽讀音</button>
+
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px dashed #eee;">
+            <label style="font-weight: bold; display: block; margin-bottom: 10px;">切換測試單字：</label>
+            <select id="word-select" onchange="changeWord()">
+                <option value="Apple,🍎">Apple 🍎</option>
+                <option value="Elephant,🐘">Elephant 🐘</option>
+                <option value="Car,🚗">Car 🚗</option>
+                <option value="Banana,🍌">Banana 🍌</option>
+                <option value="Dinosaur,🦖">Dinosaur 🦖</option>
+            </select>
+        </div>
+    </div>
+
+    <script>
+        // 檢查瀏覽器是否支援 Web Speech API
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        let recognition;
+        
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US'; // 設定辨識語言為美式英文
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            // 開始收音時的視覺回饋
+            recognition.onstart = function() {
+                document.getElementById('status').innerText = "👂 聽緊你講嘢... (請講嘢)";
+                document.getElementById('status').style.color = "#e67e22";
+                document.getElementById('btn-mic').style.backgroundColor = "#c0392b";
+            };
+
+            // 收到語音結果並進行比對
+            recognition.onresult = function(event) {
+                // 取得辨識結果，並全部轉為小寫方便比對
+                const transcript = event.results[0][0].transcript.toLowerCase().trim();
+                const targetWord = document.getElementById('target-word').innerText.toLowerCase().trim();
+                
+                // 寬鬆判定：只要講出的句子包含該單字即可
+                if (transcript.includes(targetWord) || targetWord.includes(transcript.replace(/[^a-z]/g, ""))) {
+                    document.getElementById('status').innerText = "✨ 太棒啦！辨識為「" + event.results[0][0].transcript + "」！賽車加速！🏎️💨";
+                    document.getElementById('status').style.color = "#27ae60";
+                    document.getElementById('status').style.backgroundColor = "#d5f5e3";
+                } else {
+                    document.getElementById('status').innerText = "❌ 差少少！系統聽到嘅係:「" + event.results[0][0].transcript + "」";
+                    document.getElementById('status').style.color = "#e74c3c";
+                    document.getElementById('status').style.backgroundColor = "#fadbd8";
+                }
+            };
+
+            // 處理錯誤 (例如未授權咪高峰)
+            recognition.onerror = function(event) {
+                if (event.error === 'not-allowed') {
+                    document.getElementById('status').innerText = "⚠️ 請允許瀏覽器使用咪高峰權限！";
+                } else {
+                    document.getElementById('status').innerText = "⚠️ 收音失敗，請再試一次。";
+                }
+                document.getElementById('status').style.color = "#c0392b";
+            };
+            
+            // 結束收音時恢復按鈕顏色
+            recognition.onend = function() {
+                document.getElementById('btn-mic').style.backgroundColor = "#e74c3c";
+            }
+        } else {
+            document.getElementById('status').innerText = "⚠️ 你的瀏覽器不支援語音辨識，請使用 Google Chrome。";
+            document.getElementById('status').style.color = "red";
+        }
+
+        // 點擊「講英文」按鈕
+        function startListening() {
+            if (recognition) {
+                // 重置狀態列
+                document.getElementById('status').style.backgroundColor = "#f8f9f9";
+                recognition.start();
+            }
+        }
+
+        // 點擊「聽讀音」按鈕 (使用 Web Speech Synthesis)
+        function playAudio() {
+            const word = document.getElementById('target-word').innerText;
+            const utterance = new SpeechSynthesisUtterance(word);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.85; // 稍微調慢語速，適合 K3 小朋友聽清楚
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // 下拉選單切換單字
+        function changeWord() {
+            const val = document.getElementById('word-select').value.split(',');
+            document.getElementById('target-word').innerText = val[0];
+            document.getElementById('emoji').innerText = val[1];
+            
+            // 重置狀態
+            document.getElementById('status').innerText = "準備好就撳咪高峰啦！";
+            document.getElementById('status').style.color = "#7f8c8d";
+            document.getElementById('status').style.backgroundColor = "#f8f9f9";
+        }
+    </script>
+</body>
+</html>
