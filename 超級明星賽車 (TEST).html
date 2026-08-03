@@ -660,7 +660,94 @@
 			    </div>
 			    <div class="difficulty">難度: 狀元</div>
 			</div>
-	</div>
+<!-- ▼ 新增世界三標題 ▼ -->
+<h2 style="grid-column: 1 / -1; color: #fff; text-align: center; margin: 30px 0 10px 0; border-bottom: 2px dashed #3498db; padding-bottom: 10px;">🌍 世界三：英文聲控賽車 (Ch 21 - 30)</h2>
+
+<!-- 請複製原有章節卡片結構 (class="card unlocked")，並將 id 分別改為 card-chapter21 至 card-chapter30 -->
+<div class="card unlocked" id="card-chapter21" onclick="selectChapter('chapter21')">
+    <div class="stage-name">🔵 第六階段 (語音初階)</div>
+    <div class="chapter-header">
+        <span class="chapter-num">Ch21</span>
+        <h3 class="level-name">K2 基礎單字</h3>
+    </div>
+    <div class="difficulty">難度: 初級聲控</div>
+</div>
+<div class="card unlocked" id="card-chapter22" onclick="selectChapter('chapter22')">
+    <div class="stage-name">🔵 第六階段 (語音初階)</div>
+    <div class="chapter-header">
+        <span class="chapter-num">Ch22</span>
+        <h3 class="level-name">K2 基礎單字</h3>
+    </div>
+    <div class="difficulty">難度: 初級聲控</div>
+</div>
+<div class="card unlocked" id="card-chapter23" onclick="selectChapter('chapter23')">
+    <div class="stage-name">🔵 第六階段 (語音初階)</div>
+    <div class="chapter-header">
+        <span class="chapter-num">Ch23</span>
+        <h3 class="level-name">K2 基礎單字</h3>
+    </div>
+    <div class="difficulty">難度: 初級聲控</div>
+</div>
+<div class="card unlocked" id="card-chapter24" onclick="selectChapter('chapter24')">
+    <div class="stage-name">🔵 第六階段 (語音初階)</div>
+    <div class="chapter-header">
+        <span class="chapter-num">Ch24</span>
+        <h3 class="level-name">K2 基礎單字</h3>
+    </div>
+    <div class="difficulty">難度: 初級聲控</div>
+</div>
+<div class="card unlocked" id="card-chapter25" onclick="selectChapter('chapter25')">
+    <div class="stage-name">🔵 第六階段 (語音初階)</div>
+    <div class="chapter-header">
+        <span class="chapter-num">Ch25</span>
+        <h3 class="level-name">K2 基礎單字</h3>
+    </div>
+    <div class="difficulty">難度: 初級聲控</div>
+</div>
+<div class="card unlocked" id="card-chapter26" onclick="selectChapter('chapter26')">
+    <div class="stage-name">🔵 第六階段 (語音初階)</div>
+    <div class="chapter-header">
+        <span class="chapter-num">Ch26</span>
+        <h3 class="level-name">K2 基礎單字</h3>
+    </div>
+    <div class="difficulty">難度: 初級聲控</div>
+</div>
+<div class="card unlocked" id="card-chapter27" onclick="selectChapter('chapter27')">
+    <div class="stage-name">🔵 第六階段 (語音初階)</div>
+    <div class="chapter-header">
+        <span class="chapter-num">Ch27</span>
+        <h3 class="level-name">K2 基礎單字</h3>
+    </div>
+    <div class="difficulty">難度: 初級聲控</div>
+</div>
+<div class="card unlocked" id="card-chapter28" onclick="selectChapter('chapter28')">
+    <div class="stage-name">🔵 第六階段 (語音初階)</div>
+    <div class="chapter-header">
+        <span class="chapter-num">Ch28</span>
+        <h3 class="level-name">K2 基礎單字</h3>
+    </div>
+    <div class="difficulty">難度: 初級聲控</div>
+</div>
+<div class="card unlocked" id="card-chapter29" onclick="selectChapter('chapter29')">
+    <div class="stage-name">🔵 第六階段 (語音初階)</div>
+    <div class="chapter-header">
+        <span class="chapter-num">Ch29</span>
+        <h3 class="level-name">K2 基礎單字</h3>
+    </div>
+    <div class="difficulty">難度: 初級聲控</div>
+</div>
+<div class="card unlocked" id="card-chapter30" onclick="selectChapter('chapter30')">
+    <div class="stage-name">🔵 第六階段 (語音初階)</div>
+    <div class="chapter-header">
+        <span class="chapter-num">Ch30</span>
+        <h3 class="level-name">K2 基礎單字</h3>
+    </div>
+    <div class="difficulty">難度: 初級聲控</div>
+</div>
+
+<!-- (此處省略 Ch22-30 的重複 HTML 卡片，請依樣畫葫蘆補齊即可) -->
+        </div>
+    
 		
         <div class="form-group">
             <label>選擇你的賽車手：</label>
@@ -742,8 +829,19 @@
 		    </div>
 		    <button class="btn-play" onclick="animateCharacter()" style="padding: 10px; border-radius: 8px;">▶️ 示範筆順</button>
 		</div>
-		<!-- ▲ 新增結束 ▲ -->
-        <!-- ▼▼▼ 新增：提示按鈕與顯示區塊 ▼▼▼ -->
+        <!-- ▼ 新增：英文聲控區域 (預設隱藏) ▼ -->
+        <div id="english-voice-area" style="display: none; text-align: center; margin-top: 15px;">
+            <div class="emoji" id="voice-emoji" style="font-size: 80px; margin: 10px 0;">🍎</div>
+            <div class="word" id="voice-target-word" style="font-size: 42px; font-weight: bold; color: #f1c40f; letter-spacing: 2px; margin-bottom: 20px;">Apple</div>
+            
+            <div id="voice-status" style="font-size: 20px; font-weight: bold; margin: 15px 0; color: #ecf0f1;">準備好就撳咪高峰啦！</div>
+
+            <!-- 整合自 Web Speech 測試檔的按鈕 -->
+            <button class="btn-start" id="btn-mic" onclick="startListening()" style="background-color: #e74c3c; width: auto; display: inline-block; margin: 5px;">🎤 講英文</button>
+            <button class="btn-start" onclick="playEnglishAudio()" style="background-color: #3498db; width: auto; display: inline-block; margin: 5px;">🔊 聽讀音</button>
+        </div>
+        <!-- ▲ 新增結束 ▲ -->
+	    <!-- ▼▼▼ 新增：提示按鈕與顯示區塊 ▼▼▼ -->
         <button id="btn-hint" class="hint-btn" onclick="showHint()">💡 唔識計？按我睇提示</button>
         <div id="hint-area"></div>
         <!-- ▲▲▲ 新增結束 ▲▲▲ -->
@@ -1203,9 +1301,20 @@ const QuestionGenerator = {
 			"chapter13": { name: "進階詞彙路", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 3a.png')", border: "4px solid #9b59b6", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.2 },
 			"chapter14": { name: "高階筆畫灣", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 3a.png')", border: "4px solid #9b59b6", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.0 },
 			"chapter15": { name: "終極漢字山", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter 3a.png')", border: "4px solid #9b59b6", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 0.8 },
-	    },
+// ▼▼▼ 這裡補齊 21-30 章的設定 (注意標點符號) ▼▼▼
+            "chapter21": { name: "K2 動物園", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", border: "4px solid #3498db", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.5 },
+            "chapter22": { name: "K2 交通與天氣", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", border: "4px solid #3498db", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.5 },
+            "chapter23": { name: "K2 顏色與數字", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", border: "4px solid #3498db", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.5 },
+            "chapter24": { name: "K2 日常物品", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", border: "4px solid #3498db", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.5 },
+            "chapter25": { name: "K2 隨身物品", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", border: "4px solid #3498db", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.5 },
+            "chapter26": { name: "K3 食物與動物", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", border: "4px solid #3498db", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.2 },
+            "chapter27": { name: "K3 野生動物", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", border: "4px solid #3498db", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.2 },
+            "chapter28": { name: "K3 交通工具", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", border: "4px solid #3498db", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.2 },
+            "chapter29": { name: "K3 水果與動物", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", border: "4px solid #3498db", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 1.0 },
+            "chapter30": { name: "K3 終極挑戰", bgImage: "url('https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/chapter1.png')", border: "4px solid #3498db", topHeight: "315px", bottomHeight: "86px", delayMultiplier: 0.8 }
+        },
 		// ▲▲▲ 修改結束 ▲▲▲
-	characters: {
+        	characters: {
             "mcqueen": { 
                 name: "閃電麥坤", emoji: "🏎️", img: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Mcqueen (S).png", 
 			    isSprite: true, // 新增這行：告訴系統這是精靈圖
@@ -1339,11 +1448,11 @@ let unlockedChars = JSON.parse(localStorage.getItem('mathRacerUnlocked_v2')) || 
 let selectedCharId = "mcqueen";
 
 // ▼ 新增：讀取解鎖的章節 (預設只有 Ch1 和 Ch11 解鎖)
-let unlockedChapters = JSON.parse(localStorage.getItem('mathRacerChapters')) || ["chapter1", "chapter11"];
+let unlockedChapters = JSON.parse(localStorage.getItem('mathRacerChapters')) || ["chapter1", "chapter11", "chapter21"];
 
 // ▼ 新增：負責掃描並把未解鎖關卡上鎖的函數
 function updateChapterLocks() {
-    for (let i = 1; i <= 15; i++) {
+    for (let i = 1; i <= 30; i++) {
         let chapId = "chapter" + i;
         let card = document.getElementById("card-" + chapId);
         if (card) {
@@ -1402,9 +1511,16 @@ function updateOperationMode() {
         case 'chapter11': optionsHtml = '<option selected>✍️ 漢字訓練 (入門 - 最淺)</option>'; break;
 		case 'chapter12': optionsHtml = '<option selected>✍️ 漢字訓練 (初階)</option>'; break;
 		case 'chapter13': optionsHtml = '<option selected>✍️ 漢字訓練 (進階)</option>'; break;
-		case 'chapter14': optionsHtml = '<option selected>✍️ 漢字訓練 (高階)</option>'; break;
-		case 'chapter15': optionsHtml = '<option selected>✍️ 漢字訓練 (狀元 - 最深)</option>'; break;
-		default: optionsHtml = '<option selected>🎲 綜合練習</option>';
+        case 'chapter14': optionsHtml = '<option selected>✍️ 漢字訓練 (高階)</option>'; break;
+        case 'chapter15': optionsHtml = '<option selected>✍️ 漢字訓練 (狀元 - 最深)</option>'; break;
+        
+        // ▼▼▼ 新增英文聲控選單 (確認沒有漏掉 case 或 break) ▼▼▼
+        case 'chapter21': case 'chapter22': case 'chapter23': case 'chapter24': case 'chapter25':
+        case 'chapter26': case 'chapter27': case 'chapter28': case 'chapter29': case 'chapter30':
+            optionsHtml = '<option selected>🗣️ 英文聲控訓練</option>'; 
+            break;
+            
+        default: optionsHtml = '<option selected>🎲 綜合練習</option>';
     }
 
     
@@ -1962,6 +2078,44 @@ function generateQuestion() {
 
     // ▲▲▲ 中文關卡分流結束 ▲▲▲
 
+// ▼▼▼ 新增：支援 21 到 30 章的英文聲控關卡 ▼▼▼
+    if (chapterNumber >= 21 && chapterNumber <= 30) {
+        document.getElementById('hint-area').style.display = 'none';
+        document.getElementById('btn-hint').style.display = 'none';
+        document.getElementById('options-container').style.display = 'none';
+        
+        let chineseArea = document.getElementById('chinese-writing-area');
+        if(chineseArea) chineseArea.style.display = 'none';
+
+        racers.player.element.classList.remove('stopped');
+        racers.player.element.classList.add('driving');
+
+        document.getElementById('question-area').style.color = "#f1c40f";
+        document.getElementById('question-area').innerText = "大聲讀出呢個英文單字！";
+        document.getElementById('message').innerText = "";
+
+        let englishArea = document.getElementById('english-voice-area');
+        if(englishArea) englishArea.style.display = 'block';
+
+        // 隨機抽一個單字
+        let wordList = EnglishWordBank[chapterNumber];
+        currentEnglishTarget = wordList[Math.floor(Math.random() * wordList.length)];
+
+        document.getElementById('voice-emoji').innerText = currentEnglishTarget.emoji;
+        document.getElementById('voice-target-word').innerText = currentEnglishTarget.word;
+        document.getElementById('voice-status').innerText = "準備好就撳咪高峰啦！";
+        document.getElementById('voice-status').style.color = "#ecf0f1";
+        document.getElementById('btn-mic').style.backgroundColor = "#e74c3c";
+
+        questionStartTime = Date.now();
+        return; // 終止函數，不執行數學題庫
+    }
+    // ▲▲▲ 英文關卡分流結束 ▲▲▲
+    
+    // (接著記得隱藏英文區，當切換回數學關卡時)
+    let englishArea = document.getElementById('english-voice-area');
+    if(englishArea) englishArea.style.display = 'none';
+
     // === 以下保留你原本的數學邏輯 ===
     // (請確保加入這一行，讓數學模式時隱藏寫字板)
     let chineseArea = document.getElementById('chinese-writing-area');
@@ -2342,14 +2496,14 @@ if (playerRank === 1) {
                 localStorage.setItem('mathRacerUnlocked_v2', JSON.stringify(unlockedChars));
                 finalMsg += `\n\n🔓 【解鎖成就！】\n恭喜你達成了通關條件，獲得了新車手：${GAME_DATA.characters[newlyUnlockedChar].name}！下次遊戲時即可選擇！`;
             }
-// ▼▼▼ 新增：解鎖下一關章節的邏輯 ▼▼▼
+            // ▼▼▼ 新增：解鎖下一關章節的邏輯 ▼▼▼
             // 條件：必須是普通(normal)或困難(hard)難度
             if (difficultySetting === 'normal' || difficultySetting === 'hard') {
                 let currentChapNum = parseInt(currentChapterStr.replace('chapter', ''));
                 let nextChapNum = currentChapNum + 1;
                 
-                // 防呆：第10關不會解鎖第11關 (兩個世界獨立)，第15關是最後一關
-                if (currentChapNum !== 10 && currentChapNum !== 15) { 
+                // 防呆：各世界獨立，第10關不解鎖11，第15關不解鎖16，第30關是最後一關
+                if (currentChapNum !== 10 && currentChapNum !== 15 && currentChapNum !== 30) { 
                     let nextChapId = "chapter" + nextChapNum;
                     if (!unlockedChapters.includes(nextChapId)) {
                         unlockedChapters.push(nextChapId);
@@ -2722,6 +2876,29 @@ const ChineseWordBank = {
         15: ['學', '校', '老', '師', '朋', '友', '先', '生', '工', '人', '司', '機', '農', '夫', '公', '園', '超', '市', '商', '店', '買', '賣', '開', '心', '快', '樂', '喜', '歡', '美', '好']
     };	
 
+// ==========================================
+// 英文聲控單字庫 (由淺入深 10 關)
+// ==========================================
+let currentEnglishTarget = { word: 'Apple', emoji: '🍎' }; 
+
+const EnglishWordBank = {
+    // K2 初階：CVC 單字及簡單常見字 (字母少、易發音)
+    21: [{word: 'Cat', emoji: '🐱'}, {word: 'Dog', emoji: '🐶'}, {word: 'Pig', emoji: '🐷'}, {word: 'Cow', emoji: '🐮'}],
+    22: [{word: 'Sun', emoji: '☀️'}, {word: 'Car', emoji: '🚗'}, {word: 'Bus', emoji: '🚌'}, {word: 'Boy', emoji: '👦'}],
+    23: [{word: 'Red', emoji: '🔴'}, {word: 'Blue', emoji: '🔵'}, {word: 'One', emoji: '1️⃣'}, {word: 'Two', emoji: '2️⃣'}],
+    // K2 進階：日常物品與水果
+    24: [{word: 'Apple', emoji: '🍎'}, {word: 'Bird', emoji: '🐦'}, {word: 'Fish', emoji: '🐟'}, {word: 'Tree', emoji: '🌳'}],
+    25: [{word: 'Book', emoji: '📖'}, {word: 'Pen', emoji: '🖊️'}, {word: 'Bag', emoji: '🎒'}, {word: 'Hat', emoji: '🎩'}],
+    // K3 初階：音節變多，常見食物與動物
+    26: [{word: 'Milk', emoji: '🥛'}, {word: 'Cake', emoji: '🍰'}, {word: 'Egg', emoji: '🥚'}, {word: 'Bear', emoji: '🐻'}], 
+    27: [{word: 'Tiger', emoji: '🐅'}, {word: 'Lion', emoji: '🦁'}, {word: 'Frog', emoji: '🐸'}, {word: 'Duck', emoji: '🦆'}],
+    // K3 進階：交通工具與生活進階詞
+    28: [{word: 'Train', emoji: '🚆'}, {word: 'Plane', emoji: '✈️'}, {word: 'Ship', emoji: '🚢'}, {word: 'Bike', emoji: '🚲'}],
+    29: [{word: 'Banana', emoji: '🍌'}, {word: 'Orange', emoji: '🍊'}, {word: 'Monkey', emoji: '🐒'}, {word: 'Horse', emoji: '🐴'}],
+    // K3 終極：長單字或特殊發音
+    30: [{word: 'Elephant', emoji: '🐘'}, {word: 'Dinosaur', emoji: '🦖'}, {word: 'Umbrella', emoji: '☂️'}, {word: 'Astronaut', emoji: '🧑‍🚀'}]
+};
+
 function initWriter(char) {
     document.getElementById('character-target').innerHTML = '';
     writer = HanziWriter.create('character-target', char, {
@@ -2759,6 +2936,110 @@ function startQuiz() {
         }
     });
 }
+
+// ==========================================
+// 🗣️ Web Speech API 語音辨識與發音引擎
+// ==========================================
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition;
+
+if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US'; // 辨識語言為美式英文
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = function() {
+        document.getElementById('voice-status').innerText = "👂 聽緊你講嘢... (請講嘢)";
+        document.getElementById('voice-status').style.color = "#e67e22";
+        document.getElementById('btn-mic').style.backgroundColor = "#c0392b";
+    };
+
+    recognition.onresult = function(event) {
+        if (!gameActive || racers.player.finished) return;
+
+        const transcript = event.results[0][0].transcript.toLowerCase().trim();
+        const targetWord = currentEnglishTarget.word.toLowerCase().trim();
+        
+        // 寬鬆判定：只要講出的句子包含該單字即可
+        if (transcript.includes(targetWord) || targetWord.includes(transcript.replace(/[^a-z]/g, ""))) {
+            document.getElementById('voice-status').innerText = "✨ 太棒啦！辨識為「" + event.results[0][0].transcript + "」！";
+            document.getElementById('voice-status').style.color = "#2ecc71";
+            handleEnglishCorrectAnswer(); // 呼叫前進邏輯
+        } else {
+            document.getElementById('voice-status').innerText = "❌ 差少少！聽到嘅係:「" + event.results[0][0].transcript + "」";
+            document.getElementById('voice-status').style.color = "#e74c3c";
+            
+            // 答錯中斷連勝並拋錨
+            playerStreak = 0; 
+            document.getElementById('streak-display').innerText = `🔥 連勝: 0`;
+            let msgElement = document.getElementById('message');
+            msgElement.style.color = "#e74c3c";
+            msgElement.innerText = "💥 拋錨了！再試一次！(連勝中斷)";
+            racers.player.element.classList.remove('driving');
+            racers.player.element.classList.add('stopped');
+        }
+    };
+
+    recognition.onerror = function(event) {
+        if (event.error === 'not-allowed') {
+            document.getElementById('voice-status').innerText = "⚠️ 請允許瀏覽器使用咪高峰權限！";
+        } else {
+            document.getElementById('voice-status').innerText = "⚠️ 收音失敗，請再試一次。";
+        }
+        document.getElementById('voice-status').style.color = "#e74c3c";
+    };
+    
+    recognition.onend = function() {
+        document.getElementById('btn-mic').style.backgroundColor = "#e74c3c";
+    };
+}
+
+function startListening() {
+    if (racers.player.stalled) {
+        let msgElement = document.getElementById('message');
+        msgElement.style.color = "#ff4757";
+        msgElement.innerText = "💥 車輛被干擾停駛中，暫時無法發聲！";
+        return;
+    }
+    if (recognition) {
+        recognition.start();
+    } else {
+        alert("⚠️ 你的瀏覽器不支援語音辨識，請使用 Google Chrome。");
+    }
+}
+
+function playEnglishAudio() {
+    const utterance = new SpeechSynthesisUtterance(currentEnglishTarget.word);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.85; // 稍微調慢語速，適合 K3 小朋友聽清楚
+    window.speechSynthesis.speak(utterance);
+}
+
+// 語音答對後的前進處理邏輯
+function handleEnglishCorrectAnswer() {
+    if (!gameActive || racers.player.finished) return;
+    if (racers.player.stalled) return;
+
+    let msgElement = document.getElementById('message');
+    
+    playerStreak++;
+    document.getElementById('streak-display').innerText = `🔥 連勝: ${playerStreak}`;
+    msgElement.style.color = "#2ecc71";
+    msgElement.innerText = `⚡ 發音正確！加速衝刺！ (連續答對 ${playerStreak} 題)`;
+
+    racers.player.step++;
+
+    applyPlayerSkill();
+    updatePositions(); 
+    checkWinCondition();
+
+    // 延遲 1 秒後，自動出下一個單字
+    if (gameActive && !racers.player.finished) {
+        setTimeout(generateQuestion, 1000);
+    }
+}
+
 </script>
 </body>
 </html>
