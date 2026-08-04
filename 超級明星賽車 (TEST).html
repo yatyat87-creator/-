@@ -3046,6 +3046,11 @@ if (SpeechRecognition) {
     
     recognition.onend = function() {
         document.getElementById('btn-mic').style.backgroundColor = "#e74c3c";
+        
+        // ▼ 收音結束，恢復背景音樂音量
+        if (!AudioManager.isMuted) {
+            AudioManager.sounds.bgm.volume = 0.2;
+        }
     };
 }
 
@@ -3057,6 +3062,10 @@ function startListening() {
         return;
     }
     if (recognition) {
+        // ▼ 開始收音前，將背景音樂調到極細 (避免干擾咪高峰)
+        if (!AudioManager.isMuted) {
+            AudioManager.sounds.bgm.volume = 0.02; 
+        }
         recognition.start();
     } else {
         alert("⚠️ 你的瀏覽器不支援語音辨識，請使用 Google Chrome。");
@@ -3067,6 +3076,19 @@ function playEnglishAudio() {
     const utterance = new SpeechSynthesisUtterance(currentEnglishTarget.word);
     utterance.lang = 'en-US';
     utterance.rate = 0.85; // 稍微調慢語速，適合 K3 小朋友聽清楚
+    
+    // ▼ 播放系統示範讀音前，將背景音樂調細
+    if (!AudioManager.isMuted) {
+        AudioManager.sounds.bgm.volume = 0.02;
+    }
+    
+    // ▼ 系統發音結束後，自動恢復背景音樂
+    utterance.onend = function() {
+        if (!AudioManager.isMuted) {
+            AudioManager.sounds.bgm.volume = 0.2;
+        }
+    };
+    
     window.speechSynthesis.speak(utterance);
 }
 
