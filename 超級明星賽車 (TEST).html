@@ -2244,32 +2244,47 @@ function generateQuestion() {
         }
     }
 	function handleChineseCorrectAnswer() {
-	    if (!gameActive || racers.player.finished) return;
-	    if (racers.player.stalled) return; // 如果中了技能停駛中就忽略
-	
-	    let msgElement = document.getElementById('message');
-	
-	    // 清除寫字板準備下一題
-	    document.getElementById('character-target').innerHTML = ''; 
-	
-	    playerStreak++;
-	    document.getElementById('streak-display').innerText = `🔥 連勝: ${playerStreak}`;
-	    msgElement.style.color = "#2ecc71";
-	    msgElement.innerText = `⚡ 筆順正確！加速衝刺！ (連續答對 ${playerStreak} 題)`;
-	
-	    racers.player.step++;
-	
-	    // 觸發角色技能與更新位置
-	    applyPlayerSkill();
-	    updatePositions(); 
-	    checkWinCondition();
-	
-	    // 延遲 0.8 秒後，自動出下一個中文字
-	    if (gameActive && !racers.player.finished) {
-	        setTimeout(generateQuestion, 800);
-	    }
-	}
+    if (!gameActive || racers.player.finished) return;
 
+    let msgElement = document.getElementById('message');
+    let msgBox = document.getElementById('message-box');
+
+    // 🟢 修復核心 1：無論如何，先清除寫字板，確保唔會卡死！
+    document.getElementById('character-target').innerHTML = ''; 
+
+    if (racers.player.stalled) {
+        // 如果中了技能停駛中，提示被干擾，不給前進，但必須重新出題
+        if(msgBox) { msgBox.innerText = "💥 車輛停駛中，本次作答無法前進！"; msgBox.style.color = "#e74c3c"; }
+        playerStreak = 0;
+        document.getElementById('streak-display').innerText = `🔥 連勝: 0`;
+        
+        if (gameActive && !racers.player.finished) {
+            setTimeout(generateQuestion, 1200); // 延遲後出下一題
+        }
+        return; 
+    }
+
+    // --- 以下為正常前進邏輯 ---
+    playerStreak++;
+    document.getElementById('streak-display').innerText = `🔥 連勝: ${playerStreak}`;
+    
+    // 確保原本太棒了的字眼不會被覆蓋，或者可以直接在 msgElement 顯示
+    if(msgBox) { msgBox.innerText = "🎉 太棒了！賽車加速！ 🏎️💨"; msgBox.style.color = "#f39c12"; }
+    msgElement.style.color = "#2ecc71";
+    msgElement.innerText = `⚡ 筆順正確！加速衝刺！ (連續答對 ${playerStreak} 題)`;
+
+    racers.player.step++;
+
+    // 觸發角色技能與更新位置
+    applyPlayerSkill();
+    updatePositions(); 
+    checkWinCondition();
+
+    // 延遲 0.8 秒後，自動出下一個中文字
+    if (gameActive && !racers.player.finished) {
+        setTimeout(generateQuestion, 800);
+    }
+}
     function applyPlayerSkill() {
         let pData = GAME_DATA.characters[selectedCharId];
         let eventMsg = document.getElementById('event-message');
@@ -3093,12 +3108,25 @@ function playEnglishAudio() {
 }
 
 // 語音答對後的前進處理邏輯
+// ▼▼▼ 修復版：語音答對後的前進處理邏輯 ▼▼▼
 function handleEnglishCorrectAnswer() {
     if (!gameActive || racers.player.finished) return;
-    if (racers.player.stalled) return;
 
     let msgElement = document.getElementById('message');
-    
+    let voiceStatus = document.getElementById('voice-status');
+
+    // 🟢 修復核心 2：英文聲控同樣加上防卡死保護
+    if (racers.player.stalled) {
+        if(voiceStatus) { voiceStatus.innerText = "💥 車輛停駛中，本次作答無法前進！"; voiceStatus.style.color = "#e74c3c"; }
+        playerStreak = 0;
+        document.getElementById('streak-display').innerText = `🔥 連勝: 0`;
+        
+        if (gameActive && !racers.player.finished) {
+            setTimeout(generateQuestion, 1200);
+        }
+        return;
+    }
+
     playerStreak++;
     document.getElementById('streak-display').innerText = `🔥 連勝: ${playerStreak}`;
     msgElement.style.color = "#2ecc71";
@@ -3115,6 +3143,7 @@ function handleEnglishCorrectAnswer() {
         setTimeout(generateQuestion, 1000);
     }
 }
+
 
 </script>
 </body>
