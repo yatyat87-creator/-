@@ -2063,8 +2063,10 @@ function generateQuestion() {
 	    document.getElementById('btn-hint').style.display = 'none';
 	    document.getElementById('options-container').style.display = 'none';
 	
+        chineseMistakes = 0; // 👈 新增：每次出新字重置錯誤次數
+
 	    racers.player.element.classList.remove('stopped');
-	    racers.player.element.classList.add('driving');
+        racers.player.element.classList.add('driving');
 	
 	    document.getElementById('question-area').style.color = "#f1c40f";
 	    document.getElementById('question-area').innerText = "請跟著虛線寫出這個字！";
@@ -2243,8 +2245,27 @@ function generateQuestion() {
             if (!racers.player.finished) setTimeout(generateQuestion, 1200); 
         }
     }
-	function handleChineseCorrectAnswer() {
+	// ▼▼▼ 修復版：中文答對後的前進處理邏輯 ▼▼▼
+function handleChineseCorrectAnswer() {
     if (!gameActive || racers.player.finished) return;
+
+    // ▼▼▼ 新增：記錄中文學習數據 ▼▼▼
+    let timeSpent = (Date.now() - questionStartTime) / 1000;
+    let currentChapterStr = document.getElementById('chapter-select').value;
+    let currentChapterName = GAME_DATA.chapters[currentChapterStr] ? GAME_DATA.chapters[currentChapterStr].name : "未知章節";
+    let isPerfect = (chineseMistakes === 0);
+
+    learningStats.push({
+        chapter: currentChapterName,
+        operationMode: "✍️ 漢字訓練",
+        question: currentCharacter,
+        userAnswer: isPerfect ? "完美寫出" : `錯 ${chineseMistakes} 筆`,
+        correctAnswer: currentCharacter,
+        isCorrect: isPerfect, // 無寫錯筆順先算完美正確
+        timeElapsed: timeSpent.toFixed(2) + "秒",
+        timestamp: new Date().toLocaleString()
+    });
+    // ▲▲▲ 新增結束 ▲▲▲
 
     let msgElement = document.getElementById('message');
     let msgBox = document.getElementById('message-box');
@@ -2253,38 +2274,33 @@ function generateQuestion() {
     document.getElementById('character-target').innerHTML = ''; 
 
     if (racers.player.stalled) {
-        // 如果中了技能停駛中，提示被干擾，不給前進，但必須重新出題
         if(msgBox) { msgBox.innerText = "💥 車輛停駛中，本次作答無法前進！"; msgBox.style.color = "#e74c3c"; }
         playerStreak = 0;
         document.getElementById('streak-display').innerText = `🔥 連勝: 0`;
         
         if (gameActive && !racers.player.finished) {
-            setTimeout(generateQuestion, 1200); // 延遲後出下一題
+            setTimeout(generateQuestion, 1200); 
         }
         return; 
     }
 
-    // --- 以下為正常前進邏輯 ---
     playerStreak++;
     document.getElementById('streak-display').innerText = `🔥 連勝: ${playerStreak}`;
     
-    // 確保原本太棒了的字眼不會被覆蓋，或者可以直接在 msgElement 顯示
     if(msgBox) { msgBox.innerText = "🎉 太棒了！賽車加速！ 🏎️💨"; msgBox.style.color = "#f39c12"; }
     msgElement.style.color = "#2ecc71";
     msgElement.innerText = `⚡ 筆順正確！加速衝刺！ (連續答對 ${playerStreak} 題)`;
 
     racers.player.step++;
-
-    // 觸發角色技能與更新位置
     applyPlayerSkill();
     updatePositions(); 
     checkWinCondition();
 
-    // 延遲 0.8 秒後，自動出下一個中文字
     if (gameActive && !racers.player.finished) {
         setTimeout(generateQuestion, 800);
     }
 }
+
     function applyPlayerSkill() {
         let pData = GAME_DATA.characters[selectedCharId];
         let eventMsg = document.getElementById('event-message');
@@ -2883,6 +2899,7 @@ function showReport() {
 // ==========================================
 let currentCharacter = '車'; 
 let writer;
+let chineseMistakes = 0; // 👈 新增：用嚟追蹤中文寫錯幾多筆畫
 const ChineseWordBank = {
         // Ch11 (K2入門 - 筆畫最少、基本形狀與數字)
         11: ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '大', '小', '上', '下', '中', '人', '口', '手', '足', '目', '耳', '日', '月', '水', '火', '木', '土', '山', '石', '田'],
@@ -2992,6 +3009,7 @@ function startQuiz() {
 
     writer.quiz({
         onMistake: function(strokeData) {
+            chineseMistakes++; // 👈 新增：記錄寫錯筆畫
             if(msgBox) { msgBox.innerText = "❌ 寫錯囉！請注意筆順或方向！"; msgBox.style.color = "#c0392b"; }
         },
         onCorrectStroke: function(strokeData) {
@@ -2999,12 +3017,11 @@ function startQuiz() {
         },
         onComplete: function(summaryData) {
             if(msgBox) { msgBox.innerText = "🎉 太棒了！賽車加速！ 🏎️💨"; msgBox.style.color = "#f39c12"; }
-
-            // 這裡觸發賽車前進！(直接呼叫原有遊戲的邏輯)
             handleChineseCorrectAnswer(); 
         }
     });
 }
+
 
 // ==========================================
 // 🗣️ Web Speech API 語音辨識與發音引擎
@@ -3024,14 +3041,41 @@ if (SpeechRecognition) {
         document.getElementById('btn-mic').style.backgroundColor = "#c0392b";
     };
 
-    recognition.onresult = function(event) {
+	    recognition.onresult = function(event) {
         if (!gameActive || racers.player.finished) return;
 
         const transcript = event.results[0][0].transcript.toLowerCase().trim();
         const targetWord = currentEnglishTarget.word.toLowerCase().trim();
-        
-        // 寬鬆判定：只要講出的句子包含該單字即可
-        if (transcript.includes(targetWord) || targetWord.includes(transcript.replace(/[^a-z]/g, ""))) {
+        let isCorrect = transcript.includes(targetWord) || targetWord.includes(transcript.replace(/[^a-z]/g, ""));
+
+        // ▼▼▼ 新增：記錄英文學習數據 ▼▼▼
+        let timeSpent = (Date.now() - questionStartTime) / 1000;
+        let currentChapterStr = document.getElementById('chapter-select').value;
+        let currentChapterName = GAME_DATA.chapters[currentChapterStr] ? GAME_DATA.chapters[currentChapterStr].name : "未知章節";
+
+        learningStats.push({
+            chapter: currentChapterName,
+            operationMode: "🗣️ 英文聲控",
+            question: currentEnglishTarget.word,
+            userAnswer: event.results[0][0].transcript, // 記錄系統實際聽到嘅內容
+            correctAnswer: currentEnglishTarget.word,
+            isCorrect: isCorrect,
+            timeElapsed: timeSpent.toFixed(2) + "秒",
+            timestamp: new Date().toLocaleString()
+        });
+        // ▲▲▲ 新增結束 ▲▲▲
+
+        // 🟢 停駛防卡死機制 (必須放喺記錄數據之後，等小朋友嘅努力可以被記錄低)
+        if (racers.player.stalled) {
+            let voiceStatus = document.getElementById('voice-status');
+            if(voiceStatus) { voiceStatus.innerText = "💥 車輛停駛中，本次作答無法前進！"; voiceStatus.style.color = "#e74c3c"; }
+            playerStreak = 0;
+            document.getElementById('streak-display').innerText = `🔥 連勝: 0`;
+            if (gameActive && !racers.player.finished) setTimeout(generateQuestion, 1200);
+            return;
+        }
+
+        if (isCorrect) {
             document.getElementById('voice-status').innerText = "✨ 太棒啦！辨識為「" + event.results[0][0].transcript + "」！";
             document.getElementById('voice-status').style.color = "#2ecc71";
             handleEnglishCorrectAnswer(); // 呼叫前進邏輯
@@ -3039,7 +3083,6 @@ if (SpeechRecognition) {
             document.getElementById('voice-status').innerText = "❌ 差少少！聽到嘅係:「" + event.results[0][0].transcript + "」";
             document.getElementById('voice-status').style.color = "#e74c3c";
             
-            // 答錯中斷連勝並拋錨
             playerStreak = 0; 
             document.getElementById('streak-display').innerText = `🔥 連勝: 0`;
             let msgElement = document.getElementById('message');
@@ -3049,6 +3092,7 @@ if (SpeechRecognition) {
             racers.player.element.classList.add('stopped');
         }
     };
+
 
     recognition.onerror = function(event) {
         if (event.error === 'not-allowed') {
@@ -3113,20 +3157,7 @@ function handleEnglishCorrectAnswer() {
     if (!gameActive || racers.player.finished) return;
 
     let msgElement = document.getElementById('message');
-    let voiceStatus = document.getElementById('voice-status');
-
-    // 🟢 修復核心 2：英文聲控同樣加上防卡死保護
-    if (racers.player.stalled) {
-        if(voiceStatus) { voiceStatus.innerText = "💥 車輛停駛中，本次作答無法前進！"; voiceStatus.style.color = "#e74c3c"; }
-        playerStreak = 0;
-        document.getElementById('streak-display').innerText = `🔥 連勝: 0`;
-        
-        if (gameActive && !racers.player.finished) {
-            setTimeout(generateQuestion, 1200);
-        }
-        return;
-    }
-
+    
     playerStreak++;
     document.getElementById('streak-display').innerText = `🔥 連勝: ${playerStreak}`;
     msgElement.style.color = "#2ecc71";
