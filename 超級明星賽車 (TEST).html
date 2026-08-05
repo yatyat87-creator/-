@@ -3031,9 +3031,9 @@ let recognition;
 
 if (SpeechRecognition) {
     recognition = new SpeechRecognition();
-    recognition.lang = 'en-US'; // 辨識語言為美式英文
+    recognition.lang = 'en-GB'; // 保留英式發音，對香港小朋友較好
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    recognition.maxAlternatives = 1; // 恢復為只聽最準確嘅 1 個結果
 
     recognition.onstart = function() {
         document.getElementById('voice-status').innerText = "👂 聽緊你講嘢... (請講嘢)";
@@ -3041,14 +3041,16 @@ if (SpeechRecognition) {
         document.getElementById('btn-mic').style.backgroundColor = "#c0392b";
     };
 
-	    recognition.onresult = function(event) {
+    recognition.onresult = function(event) {
         if (!gameActive || racers.player.finished) return;
 
         const transcript = event.results[0][0].transcript.toLowerCase().trim();
         const targetWord = currentEnglishTarget.word.toLowerCase().trim();
-        let isCorrect = transcript.includes(targetWord) || targetWord.includes(transcript.replace(/[^a-z]/g, ""));
+        
+        // 💡 簡單寬容判定：只要聽到嘅句子包含目標單字 (例如 "an apple" 或 "apples" 包含 "apple") 就當啱
+        let isCorrect = transcript.includes(targetWord);
 
-        // ▼▼▼ 新增：記錄英文學習數據 ▼▼▼
+        // ▼▼▼ 記錄英文學習數據 ▼▼▼
         let timeSpent = (Date.now() - questionStartTime) / 1000;
         let currentChapterStr = document.getElementById('chapter-select').value;
         let currentChapterName = GAME_DATA.chapters[currentChapterStr] ? GAME_DATA.chapters[currentChapterStr].name : "未知章節";
@@ -3057,7 +3059,7 @@ if (SpeechRecognition) {
             chapter: currentChapterName,
             operationMode: "🗣️ 英文聲控",
             question: currentEnglishTarget.word,
-            userAnswer: event.results[0][0].transcript, // 記錄系統實際聽到嘅內容
+            userAnswer: transcript, // 記錄系統實際聽到嘅字
             correctAnswer: currentEnglishTarget.word,
             isCorrect: isCorrect,
             timeElapsed: timeSpent.toFixed(2) + "秒",
@@ -3065,7 +3067,7 @@ if (SpeechRecognition) {
         });
         // ▲▲▲ 新增結束 ▲▲▲
 
-        // 🟢 停駛防卡死機制 (必須放喺記錄數據之後，等小朋友嘅努力可以被記錄低)
+        // 🟢 停駛防卡死機制
         if (racers.player.stalled) {
             let voiceStatus = document.getElementById('voice-status');
             if(voiceStatus) { voiceStatus.innerText = "💥 車輛停駛中，本次作答無法前進！"; voiceStatus.style.color = "#e74c3c"; }
@@ -3076,11 +3078,11 @@ if (SpeechRecognition) {
         }
 
         if (isCorrect) {
-            document.getElementById('voice-status').innerText = "✨ 太棒啦！辨識為「" + event.results[0][0].transcript + "」！";
+            document.getElementById('voice-status').innerText = "✨ 太棒啦！辨識為「" + transcript + "」！";
             document.getElementById('voice-status').style.color = "#2ecc71";
             handleEnglishCorrectAnswer(); // 呼叫前進邏輯
         } else {
-            document.getElementById('voice-status').innerText = "❌ 差少少！聽到嘅係:「" + event.results[0][0].transcript + "」";
+            document.getElementById('voice-status').innerText = "❌ 差少少！聽到嘅係:「" + transcript + "」";
             document.getElementById('voice-status').style.color = "#e74c3c";
             
             playerStreak = 0; 
@@ -3093,7 +3095,6 @@ if (SpeechRecognition) {
         }
     };
 
-
     recognition.onerror = function(event) {
         if (event.error === 'not-allowed') {
             document.getElementById('voice-status').innerText = "⚠️ 請允許瀏覽器使用咪高峰權限！";
@@ -3105,10 +3106,8 @@ if (SpeechRecognition) {
     
     recognition.onend = function() {
         document.getElementById('btn-mic').style.backgroundColor = "#e74c3c";
-        
-        // ▼ 收音結束，恢復背景音樂音量
         if (!AudioManager.isMuted) {
-            AudioManager.sounds.bgm.volume = 0.2;
+            AudioManager.sounds.bgm.volume = 0.2; // 恢復背景音樂
         }
     };
 }
