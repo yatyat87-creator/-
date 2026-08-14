@@ -1,0 +1,16 @@
+{
+  "name": "我的專屬 BGM 播放器",
+  "short_name": "BGM Player",
+  "description": "支援 GitHub 音樂快取的播放器",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#2c3e50",
+  "theme_color": "#3498db",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3659/3659784.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
