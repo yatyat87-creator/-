@@ -250,8 +250,11 @@
     }
 
     playlistSelector.addEventListener('change', function() {
-        loadPlaylist(this.value);
-    });
+    const selected = this.value;
+    loadPlaylist(selected);
+    // 存入 localStorage
+    localStorage.setItem('lastSelectedPlaylist', selected);
+});
 
     // 🗑️ 共用函數：刪除特定的快取
     async function deleteCache(url, statusSpan, delBtn) {
@@ -467,9 +470,14 @@
         });
     });
 
-    const initialPlaylistName = playlistSelector.options[0].value;
+    // 新的寫法：記憶上次的選擇
+    const lastPlaylist = localStorage.getItem('lastSelectedPlaylist');
+    const initialPlaylistName = (lastPlaylist && playlistsData[lastPlaylist]) 
+                                ? lastPlaylist 
+                                : playlistSelector.options[0].value;
+    
+    playlistSelector.value = initialPlaylistName; // 同步選單狀態
     loadPlaylist(initialPlaylistName);
-
 </script>
 
 <script>
