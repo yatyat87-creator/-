@@ -179,6 +179,8 @@
     let gameOver = false, gameWon = false;
     let enemies = [], playerUnits = [], towers = [];
     let globalAnimTick = 0;
+    // 【新增】：用於控制兩隻兩隻出兵的排隊系統
+    let deployQueue = [];
 
     // --- 大廳邏輯 ---
     function updateLobbyUI() {
@@ -297,8 +299,14 @@
         }
     }
 
-    function buySoldier() {
+function buySoldier() {
         const feedback = document.getElementById('feedback');
+        // 【新增】：必須先有軍營才能產兵
+        if (!towers.some(t => t.id === 'barracks')) { 
+            feedback.innerText = "⚠️ 必須先建造【軍營】才能生產士兵！"; 
+            feedback.style.color = "#e74c3c";
+            return; 
+        }
         if (gameMeat < 50) { 
             feedback.innerText = "⚠️ 食物(肉)不足 50！請多建農田。"; 
             feedback.style.color = "#e74c3c";
@@ -359,41 +367,44 @@
     };
 
     window.deployOffense = function() {
-        if (isDeleteMode || gameOver || gameWon) return; let count = 0;
+        if (isDeleteMode || gameOver || gameWon) return; 
         
-        // 【出兵點邏輯】：找出軍營旁最靠近城鎮中心(終點)的道路
-        let spawnIndex = pathCoords.length - 1; 
         let barracks = towers.filter(t => t.id === 'barracks');
-        if (barracks.length > 0) {
-            let validIndices = [];
-            barracks.forEach(b => {
-                pathCoords.forEach((p, i) => { if (Math.abs(p.x - b.x) <= 1 && Math.abs(p.y - b.y) <= 1) validIndices.push(i); });
-            });
-            if (validIndices.length > 0) spawnIndex = Math.max(...validIndices); // 取最大 index (最靠近我方城鎮)
+        if (barracks.length === 0) {
+            document.getElementById('feedback').innerText = "⚠️ 必須先建造【軍營】才能出兵！";
+            document.getElementById('feedback').style.color = "#e74c3c";
+            return;
         }
+        
+        let spawnIndex = pathCoords.length - 1; 
+        let validIndices = [];
+        barracks.forEach(b => {
+            pathCoords.forEach((p, i) => { if (Math.abs(p.x - b.x) <= 1 && Math.abs(p.y - b.y) <= 1) validIndices.push(i); });
+        });
+        if (validIndices.length > 0) spawnIndex = Math.max(...validIndices);
 
+        let readyUnits = [];
         for(let i=0; i<offenseCamp.length; i++) {
             if(offenseCamp[i]) {
-                let u = offenseCamp[i]; let existingUnit = playerUnits.find(p => p.id === u.id && p.level === u.level && p.pathIndex === spawnIndex);
-                let unitData = BASIC_UNITS[u.id] || GENERALS[u.id];
-                
-                if (existingUnit && unitData) { 
-                    existingUnit.level++; 
-                    existingUnit.maxHp = 50 * existingUnit.level * (unitData.hpMult || 1); 
-                    existingUnit.hp = existingUnit.maxHp; 
-                    existingUnit.damage = 10 * unitData.dmg * existingUnit.level; 
-                } else if (unitData) { 
-                    let newU = new PlayerUnit(u.id, u.level); 
-                    newU.pathIndex = spawnIndex;
-                    newU.x = pathCoords[spawnIndex].x * TILE_SIZE + TILE_SIZE / 2; 
-                    newU.y = pathCoords[spawnIndex].y * TILE_SIZE + TILE_SIZE / 2;
-                    playerUnits.push(newU); 
-                }
-                offenseCamp[i] = null; count++;
+                readyUnits.push(offenseCamp[i]);
+                offenseCamp[i] = null; 
             }
         }
-        if(count > 0) { 
-            document.getElementById('feedback').innerText = `⚔️ 從前線派出了 ${count} 支部隊！`; 
+        
+        if(readyUnits.length > 0) { 
+            // 【修改】：依照速度降序排列，速度快的行先
+            readyUnits.sort((a, b) => {
+                let spdA = (BASIC_UNITS[a.id] || GENERALS[a.id]).spd;
+                let spdB = (BASIC_UNITS[b.id] || GENERALS[b.id]).spd;
+                return spdB - spdA;
+            });
+            
+            readyUnits.forEach(u => {
+                u.spawnIndex = spawnIndex;
+                deployQueue.push(u); // 放入佇列等待慢慢出發
+            });
+
+            document.getElementById('feedback').innerText = `⚔️ 準備派出 ${readyUnits.length} 支部隊！部隊將依序出發！`; 
             document.getElementById('feedback').style.color = "#e74c3c";
             updateCampsUI(); 
         }
@@ -507,7 +518,7 @@
         }
     });
 
-    class Enemy {
+class Enemy {
         constructor(wave, eTypeKey) {
             let baseData = ENEMY_TYPES[eTypeKey];
             this.pathIndex = 0;
@@ -516,137 +527,172 @@
             this.speed = (0.8 + wave * 0.1) * baseData.spdMult;
             this.color = baseData.color; this.radius = baseData.radius;
             this.baseDamage = 40 * baseData.hpMult; 
-            this.cooldown = 0;
-            this.fireRate = 30; 
-            this.damage = 10 + wave * 5; 
+            this.cooldown = 0; this.fireRate = 30; this.damage = 10 + wave * 5; 
+            
+            // 【雙排系統】：隨機分配左右車道，實現 2隻2隻 排隊
+            this.lane = Math.random() > 0.5 ? 1 : -1;
+            this.laneOffset = this.lane * 12; // 偏移 12 像素
+            this.drawOffsetX = 0; this.drawOffsetY = 0;
         }
         update() {
             const target = pathCoords[this.pathIndex + 1];
             if (!target) return true;
 
-            // 【城門阻擋邏輯】：如果前方道路有城門，停下攻擊城門
             let gate = towers.find(t => t.id === 'gate' && t.x === target.x && t.y === target.y);
             if (gate) {
                 if (this.cooldown > 0) this.cooldown--;
                 else { gate.hp -= this.damage; this.cooldown = this.fireRate; }
-                if (gate.hp <= 0) towers = towers.filter(t => t !== gate); // 城門被擊破
+                if (gate.hp <= 0) towers = towers.filter(t => t !== gate); 
                 return false; 
             }
 
             const tx = target.x * TILE_SIZE + TILE_SIZE / 2, ty = target.y * TILE_SIZE + TILE_SIZE / 2;
             const dx = tx - this.x, dy = ty - this.y;
+            
+            // 計算並排視覺偏移
+            if (Math.abs(dx) > Math.abs(dy)) { this.drawOffsetX = 0; this.drawOffsetY = this.laneOffset; } 
+            else { this.drawOffsetX = this.laneOffset; this.drawOffsetY = 0; }
+
+            // 【防死鎖排隊邏輯】：只會被「同車道」且「比自己更靠近目標」的友軍擋住
+            let isBlocked = enemies.some(e => {
+                if (e === this || e.lane !== this.lane) return false;
+                if (Math.hypot(e.x - this.x, e.y - this.y) < 24) { 
+                    if (e.pathIndex > this.pathIndex) return true;
+                    if (e.pathIndex === this.pathIndex) {
+                        let myDist = Math.hypot(tx - this.x, ty - this.y);
+                        let eDist = Math.hypot(tx - e.x, ty - e.y);
+                        if (eDist < myDist - 0.1) return true; 
+                        if (Math.abs(eDist - myDist) <= 0.1) return enemies.indexOf(e) < enemies.indexOf(this); 
+                    }
+                }
+                return false;
+            });
+            if (isBlocked) return false;
+
             const dist = Math.hypot(dx, dy);
-            if (dist < this.speed) {
-                this.x = tx; this.y = ty; this.pathIndex++;
-            } else {
-                this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed;
-            }
+            if (dist < this.speed) { this.x = tx; this.y = ty; this.pathIndex++; } 
+            else { this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed; }
             return false;
         }
         draw() {
-            ctx.fillStyle = this.color;
-            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = 'red'; ctx.fillRect(this.x - 10, this.y - this.radius - 8, 20, 4);
-            ctx.fillStyle = '#2ecc71'; ctx.fillRect(this.x - 10, this.y - this.radius - 8, 20 * (this.hp / this.maxHp), 4);
+            let cx = this.x + this.drawOffsetX, cy = this.y + this.drawOffsetY;
+            ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(cx, cy, this.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - this.radius - 8, 20, 4);
+            ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx - 10, cy - this.radius - 8, 20 * (this.hp / this.maxHp), 4);
         }
     }
 
     class PlayerUnit {
         constructor(id, level) {
             this.unitData = BASIC_UNITS[id] || GENERALS[id];
-            this.id = id;
-            this.level = level;
+            this.id = id; this.level = level;
             this.pathIndex = pathCoords.length - 1;
             this.x = pathCoords[this.pathIndex].x * TILE_SIZE + TILE_SIZE / 2;
             this.y = pathCoords[this.pathIndex].y * TILE_SIZE + TILE_SIZE / 2;
-            this.maxHp = 50 * level * (this.unitData.hpMult || 1); 
-            this.hp = this.maxHp;
+            this.maxHp = 50 * level * (this.unitData.hpMult || 1); this.hp = this.maxHp;
             this.speed = this.unitData.spd * 1.5; 
             this.range = 30 + (this.unitData.range * 20); 
             this.damage = 10 * this.unitData.dmg * level; 
             this.fireRate = Math.max(10, 60 / this.unitData.spd - (level * 2));
-            this.cooldown = 0;
-            this.state = 0; 
-            this.frame = 0;
-            this.facingLeft = true; 
+            this.cooldown = 0; this.state = 0; this.frame = 0; this.facingLeft = true; 
+            
+            // 【雙排系統】：隨機分配左右車道
+            this.lane = Math.random() > 0.5 ? 1 : -1;
+            this.laneOffset = this.lane * 12; 
+            this.drawOffsetX = 0; this.drawOffsetY = 0;
         }
 
         update(targetEnemy) {
             if (this.cooldown > 0) this.cooldown--;
 
-            if (targetEnemy && Math.hypot(targetEnemy.x - this.x, targetEnemy.y - this.y) <= this.range) {
+            const targetPath = pathCoords[this.pathIndex - 1];
+            if (targetPath) {
+                const tx = targetPath.x * TILE_SIZE + TILE_SIZE / 2, ty = targetPath.y * TILE_SIZE + TILE_SIZE / 2;
+                if (Math.abs(tx - this.x) > Math.abs(ty - this.y)) { this.drawOffsetX = 0; this.drawOffsetY = this.laneOffset; } 
+                else { this.drawOffsetX = this.laneOffset; this.drawOffsetY = 0; }
+            }
+
+            if (targetEnemy && Math.hypot((targetEnemy.x + targetEnemy.drawOffsetX) - (this.x + this.drawOffsetX), (targetEnemy.y + targetEnemy.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
                 this.state = 1; 
                 if (this.cooldown <= 0) {
-                    targetEnemy.hp -= this.damage;
-                    this.cooldown = this.fireRate;
-                    this.frame = 0;
+                    targetEnemy.hp -= this.damage; this.cooldown = this.fireRate; this.frame = 0;
                     ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
-                    ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(targetEnemy.x, targetEnemy.y); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
                 }
             } else {
                 if (this.cooldown < this.fireRate / 2) this.state = 0;
-                const targetPath = pathCoords[this.pathIndex - 1];
                 if (!targetPath) return true;
 
                 const tx = targetPath.x * TILE_SIZE + TILE_SIZE / 2, ty = targetPath.y * TILE_SIZE + TILE_SIZE / 2;
                 const dx = tx - this.x, dy = ty - this.y;
-                const dist = Math.hypot(dx, dy);
 
-                if (dist < this.speed) {
-                    this.x = tx; this.y = ty; this.pathIndex--;
-                } else {
-                    this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed;
-                }
+                // 【防死鎖排隊邏輯】
+                let isBlocked = playerUnits.some(p => {
+                    if (p === this || p.lane !== this.lane) return false;
+                    if (Math.hypot(p.x - this.x, p.y - this.y) < 24) { 
+                        if (p.pathIndex < this.pathIndex) return true; 
+                        if (p.pathIndex === this.pathIndex) {
+                            let myDist = Math.hypot(tx - this.x, ty - this.y);
+                            let pDist = Math.hypot(tx - p.x, ty - p.y);
+                            if (pDist < myDist - 0.1) return true;
+                            if (Math.abs(pDist - myDist) <= 0.1) return playerUnits.indexOf(p) < playerUnits.indexOf(this);
+                        }
+                    }
+                    return false;
+                });
+                if (isBlocked) return false;
+
+                const dist = Math.hypot(dx, dy);
+                if (dist < this.speed) { this.x = tx; this.y = ty; this.pathIndex--; } 
+                else { this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed; }
             }
             return false;
         }
         
         draw() {
-            if (this.state === 0) {
-                this.frame = Math.floor(globalAnimTick / 12) % 5; 
-            } else {
-                let attackProgress = 1 - (this.cooldown / this.fireRate);
-                this.frame = Math.min(4, Math.floor(attackProgress * 10)); 
-            }
+            if (this.state === 0) this.frame = Math.floor(globalAnimTick / 12) % 5; 
+            else { let attackProgress = 1 - (this.cooldown / this.fireRate); this.frame = Math.min(4, Math.floor(attackProgress * 10)); }
+
+            let cx = this.x + this.drawOffsetX, cy = this.y + this.drawOffsetY;
 
             if (this.unitData.img && this.unitData.img.complete && !this.unitData.img.isFailed && this.unitData.img.naturalWidth > 0) {
-                let frameWidth = this.unitData.img.naturalWidth / 5;
-                let frameHeight = this.unitData.img.naturalHeight / 5;
-                let sx = this.frame * frameWidth;
-                let sy = this.state * frameHeight;
-                let drawSize = TILE_SIZE * 1.5; 
-                
-                ctx.save();
-                ctx.translate(this.x, this.y - 5);
+                let frameWidth = this.unitData.img.naturalWidth / 5; let frameHeight = this.unitData.img.naturalHeight / 5;
+                let sx = this.frame * frameWidth; let sy = this.state * frameHeight; let drawSize = TILE_SIZE * 1.5; 
+                ctx.save(); ctx.translate(cx, cy - 5);
                 if (this.facingLeft) { ctx.scale(-1, 1); }
-                ctx.drawImage(this.unitData.img, sx, sy, frameWidth, frameHeight, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
-                ctx.restore();
+                ctx.drawImage(this.unitData.img, sx, sy, frameWidth, frameHeight, -drawSize / 2, -drawSize / 2, drawSize, drawSize); ctx.restore();
             } else {
-                ctx.fillStyle = this.unitData.isGeneral ? '#fcf3cf' : 'white'; 
-                ctx.fillRect(this.x - TILE_SIZE/2 + 2, this.y - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-                if(this.unitData.isGeneral) {
-                    ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
-                    ctx.strokeRect(this.x - TILE_SIZE/2 + 2, this.y - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-                }
-                ctx.fillStyle = this.unitData.color; ctx.font = '22px Microsoft JhengHei';
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(this.unitData.symbol, this.x, this.y);
+                ctx.fillStyle = this.unitData.isGeneral ? '#fcf3cf' : 'white'; ctx.fillRect(cx - TILE_SIZE/2 + 2, cy - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                if(this.unitData.isGeneral) { ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2; ctx.strokeRect(cx - TILE_SIZE/2 + 2, cy - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4); }
+                ctx.fillStyle = this.unitData.color; ctx.font = '22px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(this.unitData.symbol, cx, cy);
             }
-
-            ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial';
-            ctx.fillText('Lv'+this.level, this.x, this.y + TILE_SIZE/2);
-            ctx.fillStyle = 'red'; ctx.fillRect(this.x - 10, this.y - TILE_SIZE/2 - 10, 20, 3);
-            ctx.fillStyle = '#3498db'; ctx.fillRect(this.x - 10, this.y - TILE_SIZE/2 - 10, 20 * (this.hp / this.maxHp), 3);
+            ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
+            ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20, 3);
+            ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20 * (this.hp / this.maxHp), 3);
         }
     }
 
     // --- 遊戲主迴圈 ---
-    function gameLoop() {
+function gameLoop() {
         if (gameOver || gameWon) return;
         ctx.clearRect(0, 0, 800, 800);
         globalAnimTick++;
 
-        // 結算資源 (每秒)
+        // 【新增】：處理出兵佇列 (每 30 幀 / 0.5秒 出最多 2 隻)
+        if (globalAnimTick % 30 === 0 && deployQueue.length > 0) {
+            let spawnCount = Math.min(2, deployQueue.length);
+            for(let i=0; i<spawnCount; i++) {
+                let u = deployQueue.shift();
+                let newU = new PlayerUnit(u.id, u.level); 
+                newU.pathIndex = u.spawnIndex;
+                newU.x = pathCoords[u.spawnIndex].x * TILE_SIZE + TILE_SIZE / 2; 
+                newU.y = pathCoords[u.spawnIndex].y * TILE_SIZE + TILE_SIZE / 2;
+                playerUnits.push(newU); 
+            }
+        }
+
+        // 結算資源 (每秒 60 幀)
+
         if (globalAnimTick % 60 === 0) {
             towers.forEach(t => {
                 let bData = BUILDINGS[t.id];
@@ -703,7 +749,7 @@
         // 敵人行動
         for (let i = enemies.length - 1; i >= 0; i--) {
             let e = enemies[i];
-            let closestPlayer = playerUnits.find(p => Math.hypot(p.x - e.x, p.y - e.y) < 50); 
+            let closestPlayer = playerUnits.find(p => Math.hypot((p.x + p.drawOffsetX) - (e.x + e.drawOffsetX), (p.y + p.drawOffsetY) - (e.y + e.drawOffsetY)) < 50);
             
             if (closestPlayer) {
                 if(e.cooldown > 0) { e.cooldown--; } 
