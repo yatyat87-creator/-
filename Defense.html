@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>城池守衛戰 - 精靈圖升級版</title>
+    <title>城池守衛戰 - 世紀帝國 RTS 版</title>
     <style>
         body { font-family: 'Microsoft JhengHei', sans-serif; background-color: #2c3e50; color: #fff; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
-        #game-wrapper { max-width: 550px; width: 100%; background: #f4e8d3; border: 4px solid #d35400; border-radius: 15px; padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); color: #333; }
+        /* 擴大外框以容納兩倍大的地圖 */
+        #game-wrapper { max-width: 850px; width: 100%; background: #f4e8d3; border: 4px solid #d35400; border-radius: 15px; padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); color: #333; }
         
         #setup-screen { display: block; }
         .title { text-align: center; color: #c0392b; text-shadow: 1px 1px 0px #fff; font-size: 28px; font-weight: bold; margin-bottom: 20px; }
@@ -22,21 +23,29 @@
         
         .char-symbol { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
         .char-price { font-size: 12px; color: #e74c3c; font-weight: bold; }
-        .char-desc { font-size: 11px; color: #7f8c8d; margin-top: 5px; }
+        .char-desc { font-size: 11px; color: #7f8c8d; margin-top: 5px; font-weight: bold; }
         
         .btn-start { width: 100%; background: #d35400; color: #fff; padding: 12px; font-size: 20px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; }
         .btn-start:disabled { background: #95a5a6; cursor: not-allowed; }
 
         #play-screen { display: none; }
         #header { display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; margin-bottom: 10px; }
-        canvas { background-color: #dcb88e; border: 2px solid #333; cursor: pointer; width: 100%; border-radius: 5px; image-rendering: pixelated; } /* 讓像素圖保持清晰 */
+        canvas { background-color: #dcb88e; border: 2px solid #333; cursor: pointer; width: 100%; max-width: 800px; border-radius: 5px; image-rendering: pixelated; margin: 0 auto; display: block; }
         
-        #camp { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin: 15px 0; background-color: #ecf0f1; padding: 10px; border-radius: 8px; border: 2px dashed #bdc3c7; }
-        .slot { height: 50px; background-color: #fff; border: 2px solid #7f8c8d; display: flex; justify-content: center; align-items: center; font-size: 22px; font-weight: bold; cursor: pointer; position: relative; border-radius: 5px; overflow: hidden; }
+        /* 雙兵營介面樣式 */
+        #camps-container { background: #ecf0f1; padding: 10px; border-radius: 8px; border: 2px dashed #bdc3c7; margin: 15px 0; width: 100%; box-sizing: border-box;}
+        .camp-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .camp-label { font-weight: bold; color: #2c3e50; width: 85px; font-size: 15px;}
+        .camp-slots { display: flex; gap: 5px; flex: 1; flex-wrap: wrap; }
+        .slot { width: 45px; height: 45px; background-color: #fff; border: 2px solid #7f8c8d; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; cursor: pointer; position: relative; border-radius: 5px; overflow: hidden; }
         .slot.selected { border-color: #e74c3c; box-shadow: 0 0 8px red; background-color: #ffe6e6; }
         .slot.general { border-color: #f1c40f; background-color: #fcf3cf; }
-        .slot-level { position: absolute; top: 2px; right: 4px; font-size: 12px; color: #000; font-weight:bold; text-shadow: 1px 1px 0 #fff; z-index: 10; }
+        .slot-level { position: absolute; top: 2px; right: 2px; font-size: 10px; color: #000; font-weight:bold; text-shadow: 1px 1px 0 #fff; z-index: 10; }
         
+        #btn-deploy { background: #c0392b; color: white; border: none; padding: 8px; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 14px; margin-left: 5px;}
+        #btn-delete { background: #7f8c8d; color: white; border: none; padding: 6px; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold; transition: 0.2s;}
+        #btn-delete.active { background: #e74c3c; box-shadow: 0 0 10px red;}
+
         #quiz-section { background: #34495e; padding: 15px; border-radius: 8px; text-align: center; color: #fff; }
         #question { font-size: 24px; font-weight: bold; margin: 0 0 15px 0; color: #f1c40f; }
         .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -60,264 +69,441 @@
 
     <div id="play-screen">
         <div id="header">
-            <span id="wave-display" style="color: #2980b9;">第 1 波 / 共 5 波</span>
-            <span style="color: #e74c3c;">❤️ 城池生命: <span id="hp-display">10</span></span>
+            <span style="color: #8e44ad;">👿 敵軍: <span id="enemy-hp-display">1000</span></span>
+            <span id="wave-display" style="color: #2980b9; margin: 0 10px;">強度: Lv.1</span>
+            <span style="color: #e74c3c;">❤️ 我方: <span id="hp-display">1000</span></span>
         </div>
-        <canvas id="gameCanvas" width="400" height="400"></canvas>
-        <div id="camp">
-            <div class="slot" onclick="selectSlot(0)"></div><div class="slot" onclick="selectSlot(1)"></div>
-            <div class="slot" onclick="selectSlot(2)"></div><div class="slot" onclick="selectSlot(3)"></div>
-            <div class="slot" onclick="selectSlot(4)"></div><div class="slot" onclick="selectSlot(5)"></div>
+        
+        <!-- 局內資源顯示 (加入石頭) -->
+        <div style="display:flex; justify-content:space-around; background:#ecf0f1; padding:8px; border-radius:8px; border:2px dashed #bdc3c7; font-weight:bold; margin-bottom:5px;">
+            <span style="color:#f39c12;">💰 <span id="game-gold">50</span></span>
+            <span style="color:#e67e22;">🪵 <span id="game-wood">1000</span></span>
+            <span style="color:#c0392b;">🍖 <span id="game-meat">0</span></span>
+            <span style="color:#7f8c8d;">🪨 <span id="game-stone">0</span></span>
         </div>
+
+        <canvas id="gameCanvas" width="800" height="800"></canvas>
+        
+        <div id="camps-container">
+            <div class="camp-row">
+                <span class="camp-label">🏗️ 建築</span>
+                <div id="build-menu" class="camp-slots">
+                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-farm" onclick="selectBuilding('farm')">🌾農田<br>50金</button>
+                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-lumber" onclick="selectBuilding('lumber')">🪓伐木<br>50金</button>
+                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-market" onclick="selectBuilding('market')">⚖️市場<br>50木</button>
+                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-quarry" onclick="selectBuilding('quarry')">⛏️石礦<br>50木</button>
+                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-barracks" onclick="selectBuilding('barracks')">⛺軍營<br>100木</button>
+                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-tower" onclick="selectBuilding('tower')">🏹箭塔<br>100木</button>
+                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-gate" onclick="selectBuilding('gate')">⛩️城門<br>100石</button>
+                </div>
+            </div>
+            <div class="camp-row">
+                <span class="camp-label">⚔️ 兵營</span>
+                <button id="btn-buy-soldier" style="font-size:12px; background:#2ecc71; color:white; border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="buySoldier()">招募<br>50肉</button>
+                <div id="offense-camp" class="camp-slots" style="margin-left:5px;">
+                    <div class="slot" onclick="selectOffenseSlot(0)"></div><div class="slot" onclick="selectOffenseSlot(1)"></div>
+                    <div class="slot" onclick="selectOffenseSlot(2)"></div><div class="slot" onclick="selectOffenseSlot(3)"></div>
+                    <div class="slot" onclick="selectOffenseSlot(4)"></div><div class="slot" onclick="selectOffenseSlot(5)"></div>
+                    <div class="slot" onclick="selectOffenseSlot(6)"></div><div class="slot" onclick="selectOffenseSlot(7)"></div>
+                    <div class="slot" onclick="selectOffenseSlot(8)"></div><div class="slot" onclick="selectOffenseSlot(9)"></div>
+                </div>
+                <button id="btn-deploy" onclick="deployOffense()">全軍<br>出擊</button>
+            </div>
+            <button id="btn-delete" onclick="toggleDeleteMode()">🛠️ 拆除模式: 關閉 (關閉時點擊建築即為升級)</button>
+        </div>
+
         <div id="quiz-section">
             <div id="question">題目加載中...</div>
             <div class="options-grid" id="options-container"></div>
-            <div id="feedback">答對即可招募兵馬！</div>
+            <div id="feedback">答對即可賺取金幣！</div>
         </div>
     </div>
 </div>
 
 <script>
-    // 預設精靈圖每一格的大小 (假設 AI 畫出來的圖是 256x128，切成 4行2列，每格為 64x64)
-    const SPRITE_SIZE = 64; 
-
-    // 建立 Image 載入器
+    // --- 圖片載入器 ---
     function loadSprite(src) {
         if (!src) return null;
         let img = new Image();
         img.src = src;
-        // 若圖片載入失敗會回傳 null，系統會自動 fallback 成文字方塊
         img.onerror = () => { img.isFailed = true; }; 
         return img;
     }
 
-    // --- 兵種資料庫 ---
-    // 請在這裡的 imgSrc 替換成您做好的透明背景 PNG 連結
+    // --- 建築物與兵種資料庫 ---
+    const BUILDINGS = {
+        "farm": { id: "farm", name: "農田", symbol: "🌾", color: "#f1c40f", type: "resource", resType: "meat", resAmount: 10, costType: "gold", cost: 50 },
+        "lumber": { id: "lumber", name: "伐木廠", symbol: "🪓", color: "#e67e22", type: "resource", resType: "wood", resAmount: 10, costType: "gold", cost: 50 },
+        "market": { id: "market", name: "市場", symbol: "⚖️", color: "#f39c12", type: "resource", resType: "gold", resAmount: 5, costType: "wood", cost: 50 },
+        "quarry": { id: "quarry", name: "石礦場", symbol: "⛏️", color: "#7f8c8d", type: "resource", resType: "stone", resAmount: 10, costType: "wood", cost: 50 },
+        "barracks": { id: "barracks", name: "軍營", symbol: "⛺", color: "#d35400", type: "military", costType: "wood", cost: 100 },
+        "tower": { id: "tower", name: "箭塔", symbol: "🏹", color: "#bdc3c7", type: "attack", dmg: 1.5, range: 2.5, spd: 1.2, costType: "wood", cost: 100 },
+        "gate": { id: "gate", name: "城門", symbol: "⛩️", color: "#2c3e50", type: "wall", costType: "stone", cost: 100, hp: 1000 }
+    };
+
+    const ENEMY_TYPES = {
+        'normal': { color: '#555', hpMult: 1, spdMult: 1, radius: 10 },
+        'fast':   { color: '#f39c12', hpMult: 0.5, spdMult: 1.6, radius: 8 },
+        'tank':   { color: '#2c3e50', hpMult: 2.5, spdMult: 0.6, radius: 12 },
+        'boss':   { color: '#c0392b', hpMult: 6.0, spdMult: 0.5, radius: 16 }
+    };
+
     const BASIC_UNITS = {
-        "b1": { id: "b1", name: "刀兵", symbol: "刀", color: "#34495e", isGeneral: false, dmg: 1, range: 1, spd: 1, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/刀兵4.png" },
-        "b2": { id: "b2", name: "槍兵", symbol: "槍", color: "#34495e", isGeneral: false, dmg: 1.2, range: 1.2, spd: 0.8, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/槍兵.png" },
-        "b3": { id: "b3", name: "弓兵", symbol: "弓", color: "#34495e", isGeneral: false, dmg: 0.8, range: 2, spd: 1.5, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/弓兵1.png" },
-        "b4": { id: "b4", name: "盾兵", symbol: "盾", color: "#34495e", isGeneral: false, dmg: 1.5, range: 0.8, spd: 0.5, imgSrc: "" },
-        "b5": { id: "b5", name: "斧兵", symbol: "斧", color: "#34495e", isGeneral: false, dmg: 1.8, range: 1, spd: 0.6, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/斧兵.png" },
-        "b6": { id: "b6", name: "弩兵", symbol: "弩", color: "#34495e", isGeneral: false, dmg: 1, range: 2.5, spd: 0.8, imgSrc: "" }
+        "b4": { id: "b4", name: "槍兵", symbol: "槍", color: "#c0392b", dmg: 1.2, range: 0.5, spd: 0.8, hpMult: 1, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/槍兵.png" },
+        "b5": { id: "b5", name: "盾兵", symbol: "盾", color: "#f39c12", dmg: 0.5, range: 0.5, spd: 0.5, hpMult: 3, imgSrc: "" },
+        "b6": { id: "b6", name: "騎兵", symbol: "騎", color: "#d35400", dmg: 1.5, range: 0.5, spd: 2.0, hpMult: 1.2, imgSrc: "" }
     };
 
     const GENERALS = {
-        "g1": { id: "g1", name: "關羽", symbol: "關", color: "#c0392b", price: 100, isGeneral: true, dmg: 3, range: 1.5, spd: 1, desc: "高額傷害", imgSrc: "" },
-        "g2": { id: "g2", name: "趙雲", symbol: "趙", color: "#2980b9", price: 100, isGeneral: true, dmg: 1.5, range: 1.2, spd: 2.5, desc: "極快攻速", imgSrc: "" },
-        "g3": { id: "g3", name: "諸葛", symbol: "諸", color: "#8e44ad", price: 150, isGeneral: true, dmg: 2, range: 2.5, spd: 1.2, desc: "超遠射程", imgSrc: "" },
-        "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, spd: 1.5, desc: "戰神降臨", imgSrc: "" },
-        "g5": { id: "g5", name: "貂蟬", symbol: "貂", color: "#d68910", price: 150, isGeneral: true, dmg: 1, range: 2, spd: 2, desc: "飛速牽制", imgSrc: "" }
+        "g1": { id: "g1", name: "關羽", symbol: "關", color: "#c0392b", price: 100, isGeneral: true, dmg: 3, range: 1, spd: 1.2, hpMult: 2, desc: "進攻：高額傷害", imgSrc: "" },
+        "g2": { id: "g2", name: "趙雲", symbol: "趙", color: "#2980b9", price: 100, isGeneral: true, dmg: 1.5, range: 1, spd: 2.5, hpMult: 1.5, desc: "進攻：極快衝陣", imgSrc: "" },
+        "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, spd: 1.5, hpMult: 2.5, desc: "進攻：戰神降臨", imgSrc: "" }
     };
 
-    // 預先載入所有圖片
     for (let key in BASIC_UNITS) BASIC_UNITS[key].img = loadSprite(BASIC_UNITS[key].imgSrc);
     for (let key in GENERALS) GENERALS[key].img = loadSprite(GENERALS[key].imgSrc);
 
+    // --- 全域變數狀態 ---
     let playerGold = parseInt(localStorage.getItem('tdGameGold_v2')) || 0;
     let unlockedGenerals = JSON.parse(localStorage.getItem('tdGameUnlocked_v2')) || [];
     let selectedGenerals = [];
 
-    // --- 初始化大廳 (與之前相同) ---
+    // 起始資源給予 1000 木材
+    let gameGold = 50, gameWood = 1000, gameMeat = 0, gameStone = 0; 
+    let selectedBuilding = null;
+    let isDeleteMode = false;
+    let offenseCamp = new Array(10).fill(null);
+    
+    let myBaseHp = 1000, enemyBaseHp = 1000;
+    let difficultyLevel = 1, frameCount = 0, spawnTimer = 0;
+    let gameOver = false, gameWon = false;
+    let enemies = [], playerUnits = [], towers = [];
+    let globalAnimTick = 0;
+
+    // --- 大廳邏輯 ---
     function updateLobbyUI() {
         document.getElementById('gold-count').innerText = playerGold;
-        const basicGrid = document.getElementById('basic-grid');
-        basicGrid.innerHTML = '';
-        for (let key in BASIC_UNITS) {
-            let b = BASIC_UNITS[key];
-            basicGrid.innerHTML += `<div class="char-card basic"><div class="char-symbol" style="color:${b.color}">${b.symbol}</div><div style="font-size:14px; font-weight:bold;">${b.name}</div></div>`;
+        const basicGrid = document.getElementById('basic-grid'); basicGrid.innerHTML = '';
+        for (let key in BASIC_UNITS) { 
+            let b = BASIC_UNITS[key]; 
+            basicGrid.innerHTML += `<div class="char-card basic"><div class="char-symbol" style="color:${b.color}">${b.symbol}</div><div style="font-size:14px; font-weight:bold;">${b.name}</div></div>`; 
         }
 
-        const genGrid = document.getElementById('general-grid');
-        genGrid.innerHTML = '';
+        const genGrid = document.getElementById('general-grid'); genGrid.innerHTML = '';
         for (let key in GENERALS) {
-            let g = GENERALS[key];
-            let isUnlocked = unlockedGenerals.includes(key);
+            let g = GENERALS[key]; 
+            let isUnlocked = unlockedGenerals.includes(key); 
             let isSelected = selectedGenerals.includes(key);
-            let card = document.createElement('div');
+            let card = document.createElement('div'); 
             card.className = `char-card ${isUnlocked ? 'unlocked' : 'locked'} ${isSelected ? 'selected' : ''}`;
-            let priceHtml = isUnlocked ? `<div class="char-price" style="color:green">已解鎖</div>` : `<div class="char-price">💰 ${g.price}解鎖</div>`;
-            card.innerHTML = `<div class="char-symbol" style="color:${g.color}">${g.symbol}</div><div style="font-size:14px; font-weight:bold;">${g.name}</div><div class="char-desc">${g.desc}</div>${priceHtml}`;
-            card.onclick = () => handleGeneralClick(key, g, isUnlocked);
+            card.innerHTML = `<div class="char-symbol" style="color:${g.color}">${g.symbol}</div><div style="font-size:14px; font-weight:bold;">${g.name}</div><div class="char-desc">${g.desc}</div>${isUnlocked ? '<div class="char-price" style="color:green">已解鎖</div>' : `<div class="char-price">💰 ${g.price}解鎖</div>`}`;
+            card.onclick = () => handleGeneralClick(key, g, isUnlocked); 
             genGrid.appendChild(card);
         }
-        
-        document.getElementById('select-count').innerText = selectedGenerals.length;
+        document.getElementById('select-count').innerText = selectedGenerals.length; 
         document.getElementById('btn-start-game').disabled = selectedGenerals.length > 3;
     }
 
     function handleGeneralClick(key, g, isUnlocked) {
         if (!isUnlocked) {
-            if (playerGold >= g.price) {
-                if (confirm(`花費 ${g.price} 金幣解鎖傳奇武將【${g.name}】？`)) {
-                    playerGold -= g.price;
-                    unlockedGenerals.push(key);
-                    localStorage.setItem('tdGameGold_v2', playerGold);
-                    localStorage.setItem('tdGameUnlocked_v2', JSON.stringify(unlockedGenerals));
-                    updateLobbyUI();
-                }
-            } else { alert("金幣不足！"); }
+            if (playerGold >= g.price && confirm(`花費 ${g.price} 金幣解鎖【${g.name}】？`)) {
+                playerGold -= g.price; 
+                unlockedGenerals.push(key); 
+                localStorage.setItem('tdGameGold_v2', playerGold); 
+                localStorage.setItem('tdGameUnlocked_v2', JSON.stringify(unlockedGenerals)); 
+                updateLobbyUI();
+            } else if (playerGold < g.price) alert("金幣不足！");
             return;
         }
         if (selectedGenerals.includes(key)) selectedGenerals = selectedGenerals.filter(c => c !== key);
         else if (selectedGenerals.length < 3) selectedGenerals.push(key);
-        else alert("最多只能攜帶 3 名武將出戰喔！");
+        else alert("最多攜帶 3 名武將出戰！");
         updateLobbyUI();
     }
 
-    // --- 題庫系統 ---
+    function startGame() {
+        document.getElementById('setup-screen').style.display = 'none'; 
+        document.getElementById('play-screen').style.display = 'block';
+        loadNextQuestion(); updateResourcesUI(); updateCampsUI(); gameLoop();
+    }
+
+    // --- 答題與資源邏輯 ---
+    let currentAnswer = 0;
     function generateQuestion() {
-        const isAdd = Math.random() > 0.5;
+        const isAdd = Math.random() > 0.5; 
         let a = Math.floor(Math.random() * 15) + 1, b = Math.floor(Math.random() * 15) + 1;
         let cAnswer = isAdd ? a + b : (a + b) - a; 
         let qText = isAdd ? `${a} + ${b} = ?` : `${a + b} - ${a} = ?`;
-        
-        let options = new Set([cAnswer]);
-        while (options.size < 4) {
-            let offset = (Math.floor(Math.random() * 5) + 1) * (Math.random() > 0.5 ? 1 : -1);
-            if (cAnswer + offset >= 0) options.add(cAnswer + offset);
+        let options = new Set([cAnswer]); 
+        while (options.size < 4) { 
+            let offset = (Math.floor(Math.random() * 5) + 1) * (Math.random() > 0.5 ? 1 : -1); 
+            if (cAnswer + offset >= 0) options.add(cAnswer + offset); 
         }
         return { questionText: qText, correctAnswer: cAnswer, options: Array.from(options).sort(() => Math.random() - 0.5) };
     }
 
-    let currentAnswer = 0;
     function loadNextQuestion() {
-        if (gameOver || gameWon) return;
-        const qData = generateQuestion();
+        if (gameOver || gameWon) return; 
+        const qData = generateQuestion(); 
         currentAnswer = qData.correctAnswer;
-        document.getElementById('question').innerText = qData.questionText;
-        
+        document.getElementById('question').innerText = qData.questionText; 
         let optionsHtml = '';
         qData.options.forEach(opt => { optionsHtml += `<button class="option-btn" onclick="checkAnswer(${opt})">${opt}</button>`; });
         document.getElementById('options-container').innerHTML = optionsHtml;
     }
 
     function checkAnswer(selected) {
-        if (gameOver || gameWon) return;
+        if (gameOver || gameWon) return; 
         const feedback = document.getElementById('feedback');
         if (selected === currentAnswer) {
-            feedback.innerText = "✔️ 答對了！招募到一名單位！"; feedback.style.color = "#2ecc71";
-            addRandomUnitToCamp(); loadNextQuestion();
-        } else {
-            feedback.innerText = "❌ 答錯囉，重新計算！"; feedback.style.color = "#e74c3c";
+            gameGold += 50; updateResourcesUI(); 
+            feedback.innerText = "✔️ 答對了！獲得 50 金幣！快去建造或升級吧！"; feedback.style.color = "#2ecc71"; 
+            loadNextQuestion();
+        } else { 
+            feedback.innerText = "❌ 答錯囉！請再試一次！"; feedback.style.color = "#e74c3c"; 
         }
     }
 
-// --- 遊戲核心邏輯 ---
-    const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
-    
-    // 【提升解像度秘訣】：引入 Retina 高清縮放
-    const dpr = window.devicePixelRatio || 1;
-    // 邏輯大小為 400，將內部物理畫布像素乘上 dpr
-    canvas.width = 400 * dpr;
-    canvas.height = 400 * dpr;
-    // 用 CSS 鎖定顯示的視覺大小
-    canvas.style.width = "100%";
-    canvas.style.maxWidth = "400px";
-    // 將繪圖環境整體放大，後續程式碼座標都不用改！
-    ctx.scale(dpr, dpr);
-    
-    // 【重要】：大圖縮小必須「開啟」平滑化，否則線條會破碎
-    ctx.imageSmoothingEnabled = true; 
-
-    const TILE_SIZE = 40;
-    const pathCoords = [
-        {x: 0, y: 2}, {x: 1, y: 2}, {x: 2, y: 2}, {x: 3, y: 2}, {x: 4, y: 2},
-        {x: 4, y: 3}, {x: 4, y: 4}, {x: 4, y: 5}, {x: 5, y: 5}, {x: 6, y: 5},
-        {x: 7, y: 5}, {x: 8, y: 5}, {x: 8, y: 6}, {x: 8, y: 7}, {x: 8, y: 8},
-        {x: 7, y: 8}, {x: 6, y: 8}, {x: 5, y: 8}, {x: 4, y: 8}, {x: 3, y: 8},
-        {x: 2, y: 8}, {x: 1, y: 8}, {x: 1, y: 9}
-    ];
-
-    const ENEMY_TYPES = {
-        'normal': { color: '#555', hpMult: 1, spdMult: 1, radius: 10, typeName: "步兵" },
-        'fast':   { color: '#f39c12', hpMult: 0.5, spdMult: 1.6, radius: 8, typeName: "刺客" },
-        'tank':   { color: '#2c3e50', hpMult: 2.5, spdMult: 0.6, radius: 12, typeName: "重甲" },
-        'boss':   { color: '#c0392b', hpMult: 6.0, spdMult: 0.5, radius: 16, typeName: "首領" }
-    };
-
-    let life = 10, wave = 1, maxWaves = 5;
-    let gameOver = false, gameWon = false;
-    let enemies = [], enemiesToSpawn = [], spawnTimer = 0;
-    
-    // 【升級】tower 增加了 frame, state, animTimer 屬性來追蹤動畫
-    let towers = [], camp = [null, null, null, null, null, null], selectedSlotIndex = -1;
-    let globalAnimTick = 0; // 全局動畫計時器 (用於控制待機動畫節奏)
-
-    function startGame() {
-        document.getElementById('setup-screen').style.display = 'none';
-        document.getElementById('play-screen').style.display = 'block';
-        loadNextQuestion(); startWave(); updateCampUI(); gameLoop();
+    function updateResourcesUI() {
+        document.getElementById('game-gold').innerText = gameGold; 
+        document.getElementById('game-wood').innerText = gameWood; 
+        document.getElementById('game-meat').innerText = gameMeat;
+        document.getElementById('game-stone').innerText = gameStone;
     }
 
-    function addRandomUnitToCamp() {
-        const emptyIndex = camp.findIndex(slot => slot === null);
+    // --- 建造與兵營操作 ---
+    function toggleDeleteMode() {
+        isDeleteMode = !isDeleteMode; 
+        const btn = document.getElementById('btn-delete');
+        if(isDeleteMode) { 
+            btn.style.background = "#e74c3c"; 
+            btn.innerText = "🛠️ 拆除模式: 開啟 (點擊地圖建築或兵種即可拆除)"; 
+            selectedBuilding = null; 
+            document.querySelectorAll('#build-menu .slot').forEach(btn => btn.style.borderColor = '#7f8c8d');
+        } else { 
+            btn.style.background = "#7f8c8d"; 
+            btn.innerText = "🛠️ 拆除模式: 關閉 (關閉時點擊建築即為升級)"; 
+        }
+    }
+
+    function selectBuilding(bId) {
+        if (isDeleteMode) return;
+        selectedBuilding = selectedBuilding === bId ? null : bId;
+        document.querySelectorAll('#build-menu .slot').forEach(btn => btn.style.borderColor = '#7f8c8d');
+        if (selectedBuilding) {
+            document.getElementById('btn-b-' + bId).style.borderColor = '#e74c3c';
+            document.getElementById('feedback').innerText = `已選取【${BUILDINGS[bId].name}】，請點擊地圖進行建造！`;
+            document.getElementById('feedback').style.color = "#f1c40f";
+        }
+    }
+
+    function buySoldier() {
+        const feedback = document.getElementById('feedback');
+        if (gameMeat < 50) { 
+            feedback.innerText = "⚠️ 食物(肉)不足 50！請多建農田。"; 
+            feedback.style.color = "#e74c3c";
+            return; 
+        }
+        let emptyIndex = offenseCamp.findIndex(s => s === null);
         if (emptyIndex !== -1) {
-            let chosenId = (Math.random() < 0.20 && selectedGenerals.length > 0) ? 
-                selectedGenerals[Math.floor(Math.random() * selectedGenerals.length)] : 
-                Object.keys(BASIC_UNITS)[Math.floor(Math.random() * Object.keys(BASIC_UNITS).length)];
-            camp[emptyIndex] = { id: chosenId, level: 1 };
-            updateCampUI();
-        } else {
-            document.getElementById('feedback').innerText = "⚠️ 營地已滿！請先放置或合成。";
-            document.getElementById('feedback').style.color = "#f39c12";
+            gameMeat -= 50; updateResourcesUI();
+            let pool = Object.keys(BASIC_UNITS); 
+            if (selectedGenerals.length > 0 && Math.random() < 0.20) pool = selectedGenerals;
+            offenseCamp[emptyIndex] = { id: pool[Math.floor(Math.random() * pool.length)], level: 1 };
+            feedback.innerText = `✔️ 花費 50 肉招募部隊！`; 
+            feedback.style.color = "#2ecc71";
+            updateCampsUI();
+        } else { 
+            feedback.innerText = "⚠️ 兵營已滿！請先全軍出擊！"; 
+            feedback.style.color = "#e74c3c";
         }
     }
 
-    function updateCampUI() {
-        const slots = document.querySelectorAll('.slot');
-        slots.forEach((slot, index) => {
-            slot.innerHTML = ''; slot.className = 'slot';
-            if (camp[index]) {
-                let unitData = BASIC_UNITS[camp[index].id] || GENERALS[camp[index].id];
-                if(unitData.isGeneral) slot.classList.add('general');
-                
-                // 營地內若有圖也可以顯示圖，但為求簡單清晰，營地先保留文字
-                slot.innerText = unitData.symbol;
-                slot.style.color = unitData.color;
-                
-                const levelSpan = document.createElement('span');
-                levelSpan.className = 'slot-level'; levelSpan.innerText = 'Lv.' + camp[index].level;
-                slot.appendChild(levelSpan);
+    function updateCampsUI() {
+        const offSlots = document.querySelectorAll('#offense-camp .slot');
+        offSlots.forEach((s, i) => {
+            s.innerHTML = ''; s.className = 'slot';
+            if (offenseCamp[i]) {
+                let u = BASIC_UNITS[offenseCamp[i].id] || GENERALS[offenseCamp[i].id];
+                if (u) {
+                    if(u.isGeneral) s.classList.add('general'); 
+                    s.innerText = u.symbol; s.style.color = u.color;
+                    const lvlSpan = document.createElement('span'); 
+                    lvlSpan.className = 'slot-level'; lvlSpan.innerText = 'Lv.' + offenseCamp[i].level; 
+                    s.appendChild(lvlSpan);
+                }
             }
-            if (index === selectedSlotIndex) slot.classList.add('selected');
         });
     }
 
-    window.selectSlot = function(index) {
-        if (camp[index]) { selectedSlotIndex = index === selectedSlotIndex ? -1 : index; updateCampUI(); }
+    window.selectOffenseSlot = function(index) {
+        if (!offenseCamp[index]) return;
+        const feedback = document.getElementById('feedback');
+        if (isDeleteMode) {
+            offenseCamp[index] = null; 
+            feedback.innerText = "🗑️ 已解散該部隊。"; 
+            feedback.style.color = "#e74c3c";
+            updateCampsUI();
+        } else {
+            let cost = 50 * offenseCamp[index].level;
+            if (gameGold >= cost) { 
+                gameGold -= cost; offenseCamp[index].level++; 
+                updateResourcesUI(); updateCampsUI(); 
+                feedback.innerText = `✨ 士兵升級成功！`; 
+                feedback.style.color = "#f1c40f";
+            } else {
+                feedback.innerText = `⚠️ 升級此士兵需 ${cost} 金幣！請先答題賺錢。`;
+                feedback.style.color = "#e74c3c";
+            }
+        }
     };
 
+    window.deployOffense = function() {
+        if (isDeleteMode || gameOver || gameWon) return; let count = 0;
+        
+        // 【出兵點邏輯】：找出軍營旁最靠近城鎮中心(終點)的道路
+        let spawnIndex = pathCoords.length - 1; 
+        let barracks = towers.filter(t => t.id === 'barracks');
+        if (barracks.length > 0) {
+            let validIndices = [];
+            barracks.forEach(b => {
+                pathCoords.forEach((p, i) => { if (Math.abs(p.x - b.x) <= 1 && Math.abs(p.y - b.y) <= 1) validIndices.push(i); });
+            });
+            if (validIndices.length > 0) spawnIndex = Math.max(...validIndices); // 取最大 index (最靠近我方城鎮)
+        }
+
+        for(let i=0; i<offenseCamp.length; i++) {
+            if(offenseCamp[i]) {
+                let u = offenseCamp[i]; let existingUnit = playerUnits.find(p => p.id === u.id && p.level === u.level && p.pathIndex === spawnIndex);
+                let unitData = BASIC_UNITS[u.id] || GENERALS[u.id];
+                
+                if (existingUnit && unitData) { 
+                    existingUnit.level++; 
+                    existingUnit.maxHp = 50 * existingUnit.level * (unitData.hpMult || 1); 
+                    existingUnit.hp = existingUnit.maxHp; 
+                    existingUnit.damage = 10 * unitData.dmg * existingUnit.level; 
+                } else if (unitData) { 
+                    let newU = new PlayerUnit(u.id, u.level); 
+                    newU.pathIndex = spawnIndex;
+                    newU.x = pathCoords[spawnIndex].x * TILE_SIZE + TILE_SIZE / 2; 
+                    newU.y = pathCoords[spawnIndex].y * TILE_SIZE + TILE_SIZE / 2;
+                    playerUnits.push(newU); 
+                }
+                offenseCamp[i] = null; count++;
+            }
+        }
+        if(count > 0) { 
+            document.getElementById('feedback').innerText = `⚔️ 從前線派出了 ${count} 支部隊！`; 
+            document.getElementById('feedback').style.color = "#e74c3c";
+            updateCampsUI(); 
+        }
+    };
+
+    // --- Canvas 與地圖建造邏輯 ---
+    const canvas = document.getElementById('gameCanvas'); 
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1; 
+    
+    // 【擴大地圖兩倍】：邏輯大小改為 800x800
+    canvas.width = 800 * dpr; canvas.height = 800 * dpr; 
+    canvas.style.width = "100%"; canvas.style.maxWidth = "800px"; 
+    ctx.scale(dpr, dpr); ctx.imageSmoothingEnabled = true; 
+    const TILE_SIZE = 40;
+    
+    // 【全新 20x20 蛇行道路】(終點城鎮中心在 18,18)
+    const pathCoords = [];
+    for(let x=0; x<=16; x++) pathCoords.push({x:x, y:2});
+    for(let y=3; y<=8; y++) pathCoords.push({x:16, y:y});
+    for(let x=15; x>=4; x--) pathCoords.push({x:x, y:8});
+    for(let y=9; y<=15; y++) pathCoords.push({x:4, y:y});
+    for(let x=5; x<=18; x++) pathCoords.push({x:x, y:15});
+    for(let y=16; y<=18; y++) pathCoords.push({x:18, y:y});
+    
     function isPath(gx, gy) { return pathCoords.some(p => p.x === gx && p.y === gy); }
     function getTowerAt(gx, gy) { return towers.find(t => t.x === gx && t.y === gy); }
 
-canvas.addEventListener('click', (e) => {
-        if (selectedSlotIndex === -1 || gameOver || gameWon) return;
-        const rect = canvas.getBoundingClientRect();
+    // 【核心點擊建造邏輯】
+    canvas.addEventListener('click', (e) => {
+        if (gameOver || gameWon) return;
         
-        // 【修改】：使用固定的邏輯畫布大小 400 來計算，不受 dpr 影響
-        const scaleX = 400 / rect.width; 
-        const scaleY = 400 / rect.height; 
+        const rect = canvas.getBoundingClientRect(); 
+        if (rect.width === 0) return; 
         
+        const scaleX = 800 / rect.width, scaleY = 800 / rect.height; 
         const gx = Math.floor(((e.clientX - rect.left) * scaleX) / TILE_SIZE);
         const gy = Math.floor(((e.clientY - rect.top) * scaleY) / TILE_SIZE);
+        if (gx < 0 || gx >= 20 || gy < 0 || gy >= 20) return; 
 
-        if (isPath(gx, gy)) { document.getElementById('feedback').innerText = "不能放置在道路上！"; return; }
-
-        const unitToPlace = camp[selectedSlotIndex];
         const existingTower = getTowerAt(gx, gy);
+        const feedback = document.getElementById('feedback');
 
-        if (!existingTower) {
-            // 【升級】加入精靈圖狀態機屬性
-            towers.push({ x: gx, y: gy, id: unitToPlace.id, level: unitToPlace.level, cooldown: 0, state: 0, frame: 0, animTimer: 0 });
-            camp[selectedSlotIndex] = null; selectedSlotIndex = -1; updateCampUI();
-        } else if (existingTower.id === unitToPlace.id && existingTower.level === unitToPlace.level) {
-            existingTower.level++;
-            camp[selectedSlotIndex] = null; selectedSlotIndex = -1; updateCampUI();
-            document.getElementById('feedback').innerText = "✨ 合成升級成功！"; document.getElementById('feedback').style.color = "#f1c40f";
-        } else {
-            document.getElementById('feedback').innerText = "必須是相同的兵種與等級才能合成喔！"; document.getElementById('feedback').style.color = "#e74c3c";
+        // 1. 拆除模式
+        if (isDeleteMode) {
+            if (existingTower) { 
+                towers = towers.filter(t => t !== existingTower); 
+                feedback.innerText = "🗑️ 成功拆除建築物！"; 
+                feedback.style.color = "#e74c3c";
+            } 
+            return;
+        }
+
+        // 2. 升級模式
+        if (existingTower && !selectedBuilding) {
+            let cost = 50 * existingTower.level;
+            if (gameGold >= cost) { 
+                gameGold -= cost; existingTower.level++; 
+                if(existingTower.id === 'gate') { existingTower.maxHp += 500; existingTower.hp += 500; } // 城門升級加血
+                updateResourcesUI(); 
+                feedback.innerText = `✨ 建築升級為 Lv.${existingTower.level}！`; 
+                feedback.style.color = "#f1c40f";
+            } else {
+                feedback.innerText = `⚠️ 升級需要 ${cost} 金幣！請答題賺錢。`; 
+                feedback.style.color = "#e74c3c";
+            }
+            return;
+        }
+
+        // 3. 建造模式
+        if (selectedBuilding) {
+            let bData = BUILDINGS[selectedBuilding];
+            
+            // 【軍營數量限制】
+            if (bData.id === 'barracks' && towers.some(t => t.id === 'barracks')) {
+                feedback.innerText = "⚠️ 軍營只可以起一個！"; 
+                feedback.style.color = "#e74c3c"; return;
+            }
+
+            // 道路與空地判定
+            if (bData.id === 'gate') { 
+                if (!isPath(gx, gy)) { feedback.innerText = "⚠️ 城門必須蓋在道路上！"; feedback.style.color = "#e74c3c"; return; } 
+            } else { 
+                if (isPath(gx, gy)) { feedback.innerText = "⚠️ 建築不能蓋在道路上！"; feedback.style.color = "#e74c3c"; return; } 
+            }
+            if (existingTower) { feedback.innerText = "⚠️ 這裡已經有建築了！"; feedback.style.color = "#e74c3c"; return; }
+            
+            // 領地範圍判定 (城鎮中心或現有建築 3 格內)
+            let tc = pathCoords[pathCoords.length - 1]; 
+            let inRange = (Math.abs(tc.x - gx) <= 3 && Math.abs(tc.y - gy) <= 3) || towers.some(t => Math.abs(t.x - gx) <= 3 && Math.abs(t.y - gy) <= 3);
+            if (!inRange) { feedback.innerText = "⚠️ 只能在我方建築或城鎮中心方圓 3 格內領地建造！"; feedback.style.color = "#e74c3c"; return; }
+
+            // 扣除資源
+            if (bData.costType === 'gold' && gameGold >= bData.cost) {
+                gameGold -= bData.cost;
+            } else if (bData.costType === 'wood' && gameWood >= bData.cost) {
+                gameWood -= bData.cost;
+            } else if (bData.costType === 'stone' && gameStone >= bData.cost) {
+                gameStone -= bData.cost;
+            } else { 
+                const resName = bData.costType === 'gold' ? '金幣' : (bData.costType === 'wood' ? '木材' : '石頭');
+                feedback.innerText = `⚠️ 資源不足！建造 ${bData.name} 需要 ${bData.cost} ${resName}！`; 
+                feedback.style.color = "#e74c3c"; return; 
+            }
+            
+            updateResourcesUI(); 
+            towers.push({ x: gx, y: gy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0 });
+            feedback.innerText = `🏗️ 成功建造 ${bData.name}！`; 
+            feedback.style.color = "#2ecc71";
+            selectBuilding(selectedBuilding); 
         }
     });
 
@@ -329,17 +515,29 @@ canvas.addEventListener('click', (e) => {
             this.maxHp = (25 + wave * 15) * baseData.hpMult; this.hp = this.maxHp;
             this.speed = (0.8 + wave * 0.1) * baseData.spdMult;
             this.color = baseData.color; this.radius = baseData.radius;
+            this.baseDamage = 40 * baseData.hpMult; 
+            this.cooldown = 0;
+            this.fireRate = 30; 
+            this.damage = 10 + wave * 5; 
         }
         update() {
             const target = pathCoords[this.pathIndex + 1];
             if (!target) return true;
+
+            // 【城門阻擋邏輯】：如果前方道路有城門，停下攻擊城門
+            let gate = towers.find(t => t.id === 'gate' && t.x === target.x && t.y === target.y);
+            if (gate) {
+                if (this.cooldown > 0) this.cooldown--;
+                else { gate.hp -= this.damage; this.cooldown = this.fireRate; }
+                if (gate.hp <= 0) towers = towers.filter(t => t !== gate); // 城門被擊破
+                return false; 
+            }
+
             const tx = target.x * TILE_SIZE + TILE_SIZE / 2, ty = target.y * TILE_SIZE + TILE_SIZE / 2;
             const dx = tx - this.x, dy = ty - this.y;
             const dist = Math.hypot(dx, dy);
-
             if (dist < this.speed) {
                 this.x = tx; this.y = ty; this.pathIndex++;
-                if (this.pathIndex >= pathCoords.length - 1) return true;
             } else {
                 this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed;
             }
@@ -353,163 +551,231 @@ canvas.addEventListener('click', (e) => {
         }
     }
 
-    function startWave() {
-        enemiesToSpawn = [];
-        for(let i=0; i < 5 + wave * 3; i++) {
-            let type = 'normal';
-            if(wave >= 2 && Math.random() < 0.3) type = 'fast';
-            if(wave >= 3 && Math.random() < 0.3) type = 'tank';
-            enemiesToSpawn.push(type);
+    class PlayerUnit {
+        constructor(id, level) {
+            this.unitData = BASIC_UNITS[id] || GENERALS[id];
+            this.id = id;
+            this.level = level;
+            this.pathIndex = pathCoords.length - 1;
+            this.x = pathCoords[this.pathIndex].x * TILE_SIZE + TILE_SIZE / 2;
+            this.y = pathCoords[this.pathIndex].y * TILE_SIZE + TILE_SIZE / 2;
+            this.maxHp = 50 * level * (this.unitData.hpMult || 1); 
+            this.hp = this.maxHp;
+            this.speed = this.unitData.spd * 1.5; 
+            this.range = 30 + (this.unitData.range * 20); 
+            this.damage = 10 * this.unitData.dmg * level; 
+            this.fireRate = Math.max(10, 60 / this.unitData.spd - (level * 2));
+            this.cooldown = 0;
+            this.state = 0; 
+            this.frame = 0;
+            this.facingLeft = true; 
         }
-        if(wave >= 4) enemiesToSpawn.push('boss');
-        spawnTimer = 60; document.getElementById('wave-display').innerText = `第 ${wave} 波 / 共 5 波`;
+
+        update(targetEnemy) {
+            if (this.cooldown > 0) this.cooldown--;
+
+            if (targetEnemy && Math.hypot(targetEnemy.x - this.x, targetEnemy.y - this.y) <= this.range) {
+                this.state = 1; 
+                if (this.cooldown <= 0) {
+                    targetEnemy.hp -= this.damage;
+                    this.cooldown = this.fireRate;
+                    this.frame = 0;
+                    ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
+                    ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(targetEnemy.x, targetEnemy.y); ctx.stroke();
+                }
+            } else {
+                if (this.cooldown < this.fireRate / 2) this.state = 0;
+                const targetPath = pathCoords[this.pathIndex - 1];
+                if (!targetPath) return true;
+
+                const tx = targetPath.x * TILE_SIZE + TILE_SIZE / 2, ty = targetPath.y * TILE_SIZE + TILE_SIZE / 2;
+                const dx = tx - this.x, dy = ty - this.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist < this.speed) {
+                    this.x = tx; this.y = ty; this.pathIndex--;
+                } else {
+                    this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed;
+                }
+            }
+            return false;
+        }
+        
+        draw() {
+            if (this.state === 0) {
+                this.frame = Math.floor(globalAnimTick / 12) % 5; 
+            } else {
+                let attackProgress = 1 - (this.cooldown / this.fireRate);
+                this.frame = Math.min(4, Math.floor(attackProgress * 10)); 
+            }
+
+            if (this.unitData.img && this.unitData.img.complete && !this.unitData.img.isFailed && this.unitData.img.naturalWidth > 0) {
+                let frameWidth = this.unitData.img.naturalWidth / 5;
+                let frameHeight = this.unitData.img.naturalHeight / 5;
+                let sx = this.frame * frameWidth;
+                let sy = this.state * frameHeight;
+                let drawSize = TILE_SIZE * 1.5; 
+                
+                ctx.save();
+                ctx.translate(this.x, this.y - 5);
+                if (this.facingLeft) { ctx.scale(-1, 1); }
+                ctx.drawImage(this.unitData.img, sx, sy, frameWidth, frameHeight, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = this.unitData.isGeneral ? '#fcf3cf' : 'white'; 
+                ctx.fillRect(this.x - TILE_SIZE/2 + 2, this.y - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                if(this.unitData.isGeneral) {
+                    ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
+                    ctx.strokeRect(this.x - TILE_SIZE/2 + 2, this.y - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                }
+                ctx.fillStyle = this.unitData.color; ctx.font = '22px Microsoft JhengHei';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(this.unitData.symbol, this.x, this.y);
+            }
+
+            ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial';
+            ctx.fillText('Lv'+this.level, this.x, this.y + TILE_SIZE/2);
+            ctx.fillStyle = 'red'; ctx.fillRect(this.x - 10, this.y - TILE_SIZE/2 - 10, 20, 3);
+            ctx.fillStyle = '#3498db'; ctx.fillRect(this.x - 10, this.y - TILE_SIZE/2 - 10, 20 * (this.hp / this.maxHp), 3);
+        }
     }
 
+    // --- 遊戲主迴圈 ---
     function gameLoop() {
         if (gameOver || gameWon) return;
-        
-        // 【修改】：清除畫布時，改用固定的邏輯大小 400
-        ctx.clearRect(0, 0, 400, 400);
-        
+        ctx.clearRect(0, 0, 800, 800);
         globalAnimTick++;
 
-        // 畫地圖
-        for (let r = 0; r < 10; r++) {
-            for (let c = 0; c < 10; c++) {
-                if (isPath(c, r)) { ctx.fillStyle = '#c49f81'; ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE); } 
-                else { ctx.strokeStyle = '#b38b6d'; ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE); }
-            }
+        // 結算資源 (每秒)
+        if (globalAnimTick % 60 === 0) {
+            towers.forEach(t => {
+                let bData = BUILDINGS[t.id];
+                if (bData.type === 'resource') {
+                    let amount = bData.resAmount * t.level;
+                    if (bData.resType === 'meat') gameMeat += amount;
+                    if (bData.resType === 'wood') gameWood += amount;
+                    if (bData.resType === 'gold') gameGold += amount;
+                    if (bData.resType === 'stone') gameStone += amount;
+                }
+            });
+            updateResourcesUI();
         }
 
-        // 產怪
-        if (enemiesToSpawn.length > 0) {
-            spawnTimer--;
-            if (spawnTimer <= 0) {
-                enemies.push(new Enemy(wave, enemiesToSpawn.shift())); spawnTimer = 70 - wave * 5;
+        // 畫地圖 (20x20)
+        for (let r = 0; r < 20; r++) {
+            for (let c = 0; c < 20; c++) {
+                if (isPath(c, r)) { 
+                    ctx.fillStyle = '#c49f81'; ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE); 
+                } 
+                else { 
+                    ctx.fillStyle = '#8fbc8f'; ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    ctx.strokeStyle = '#7da27d'; ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE); 
+                }
             }
-        } else if (enemies.length === 0) {
-            if (wave === maxWaves) {
-                gameWon = true; playerGold += 100; localStorage.setItem('tdGameGold_v2', playerGold);
-                alert("🎉 恭喜守護城池！獲得 100 金幣！");
-            } else { wave++; startWave(); }
+        }
+        
+        // 標記城鎮中心與敵軍營地
+        ctx.fillStyle = '#2980b9'; ctx.fillRect(18 * TILE_SIZE, 18 * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        ctx.fillStyle = 'white'; ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('👑', 18 * TILE_SIZE + TILE_SIZE/2, 18 * TILE_SIZE + TILE_SIZE/2);
+        
+        ctx.fillStyle = '#8e44ad'; ctx.fillRect(0 * TILE_SIZE, 2 * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        ctx.fillStyle = 'white'; ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('👿', 0 * TILE_SIZE + TILE_SIZE/2, 2 * TILE_SIZE + TILE_SIZE/2);
+
+        // 動態難度產怪
+        frameCount++;
+        if (frameCount % 600 === 0 && difficultyLevel < 15) {
+            difficultyLevel += 0.5;
+            document.getElementById('wave-display').innerText = `強度: Lv.${Math.floor(difficultyLevel)}`;
         }
 
+        spawnTimer--;
+        if (spawnTimer <= 0) {
+            let type = 'normal';
+            let rand = Math.random();
+            if (difficultyLevel >= 2 && rand < 0.3) type = 'fast';
+            if (difficultyLevel >= 3 && rand >= 0.3 && rand < 0.6) type = 'tank';
+            if (difficultyLevel >= 4 && rand >= 0.8) type = 'boss';
+            
+            enemies.push(new Enemy(difficultyLevel, type));
+            spawnTimer = Math.max(150, 360 - difficultyLevel * 15); 
+        }
+
+        // 敵人行動
         for (let i = enemies.length - 1; i >= 0; i--) {
-            if (enemies[i].update()) {
-                life--; document.getElementById('hp-display').innerText = life; enemies.splice(i, 1);
-                if (life <= 0) { gameOver = true; alert("💥 城池被攻破了！"); }
-            } else { enemies[i].draw(); }
+            let e = enemies[i];
+            let closestPlayer = playerUnits.find(p => Math.hypot(p.x - e.x, p.y - e.y) < 50); 
+            
+            if (closestPlayer) {
+                if(e.cooldown > 0) { e.cooldown--; } 
+                else { closestPlayer.hp -= e.damage; e.cooldown = e.fireRate; }
+            } else {
+                if (e.update()) {
+                    myBaseHp -= e.baseDamage; 
+                    document.getElementById('hp-display').innerText = Math.max(0, Math.floor(myBaseHp)); 
+                    enemies.splice(i, 1);
+                    if (myBaseHp <= 0 && !gameOver) { 
+                        gameOver = true; 
+                        setTimeout(() => alert("💥 我方城池被敵軍攻破了！重新整理網頁再來一次！"), 100); 
+                    }
+                }
+            }
+            if (enemies[i] && e.hp > 0) e.draw();
         }
 
-    // 塔攻擊與【精靈圖繪製】
-        towers.forEach(tower => {
+        // 我方進攻部隊行動
+        playerUnits.sort((a, b) => a.y - b.y);
+        for (let i = playerUnits.length - 1; i >= 0; i--) {
+            let pUnit = playerUnits[i];
+            let targetEnemy = enemies.find(e => Math.hypot(e.x - pUnit.x, e.y - pUnit.y) <= pUnit.range);
+            
+            if (pUnit.update(targetEnemy)) {
+                enemyBaseHp -= pUnit.damage * 5; 
+                document.getElementById('enemy-hp-display').innerText = Math.max(0, Math.floor(enemyBaseHp));
+                playerUnits.splice(i, 1); 
+                
+                if (enemyBaseHp <= 0 && !gameWon) {
+                    gameWon = true;
+                    playerGold += 200; localStorage.setItem('tdGameGold_v2', playerGold);
+                    setTimeout(() => alert("🎉 成功推平敵軍主堡！獲得 200 金幣！"), 100);
+                }
+            } else {
+                if (pUnit.hp <= 0) playerUnits.splice(i, 1);
+                else pUnit.draw(); 
+            }
+        }
+
+        // 建築物邏輯與渲染
+        towers.sort((a, b) => a.y - b.y).forEach(tower => {
             const cx = tower.x * TILE_SIZE, cy = tower.y * TILE_SIZE;
-            let unitData = BASIC_UNITS[tower.id] || GENERALS[tower.id];
+            let bData = BUILDINGS[tower.id];
             
-            const range = 60 + (unitData.range * 30) + (tower.level * 10);
-            const damage = 10 * unitData.dmg * tower.level;
-            const fireRate = Math.max(10, 60 / unitData.spd - (tower.level * 2)); 
-            
-// 處理攻擊邏輯與切換動畫狀態
-            if (tower.cooldown > 0) { 
-                tower.cooldown--; 
-                if(tower.cooldown < fireRate / 2) tower.state = 0;
-            } else {
-                if (tower.id === 'b1') {
-                    const targets = enemies.filter(e => Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
-                    
-                    if (targets.length > 0) {
-                        // 【新增】判斷第一個目標的方向，決定角色是否朝左
-                        tower.facingLeft = (targets[0].x < cx + TILE_SIZE / 2);
-                        
-                        targets.forEach(target => {
-                            target.hp -= damage; 
-                            ctx.strokeStyle = unitData.color; ctx.lineWidth = unitData.isGeneral ? 4 : 2;
-                            ctx.beginPath(); ctx.moveTo(cx + TILE_SIZE / 2, cy + TILE_SIZE / 2); ctx.lineTo(target.x, target.y); ctx.stroke();
-                        });
-                        tower.cooldown = fireRate;
-                        tower.state = 1; 
-                        tower.frame = 0;
-                    } else {
-                        tower.state = 0; 
-                    }
-                } else {
+            if (bData.type === 'attack') {
+                const range = 60 + (bData.range * 30) + (tower.level * 10);
+                const damage = 10 * bData.dmg * tower.level;
+                const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
+                
+                if (tower.cooldown > 0) tower.cooldown--;
+                else {
                     const target = enemies.find(e => Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
-                    
                     if (target) {
-                        // 【新增】判斷單一目標的方向，決定角色是否朝左
-                        tower.facingLeft = (target.x < cx + TILE_SIZE / 2);
-                        
-                        target.hp -= damage; 
-                        tower.cooldown = fireRate;
-                        tower.state = 1; 
-                        tower.frame = 0; 
-                        
-                        ctx.strokeStyle = unitData.color; ctx.lineWidth = unitData.isGeneral ? 4 : 2;
+                        target.hp -= damage; tower.cooldown = fireRate;
+                        ctx.strokeStyle = bData.color; ctx.lineWidth = 3;
                         ctx.beginPath(); ctx.moveTo(cx + TILE_SIZE / 2, cy + TILE_SIZE / 2); ctx.lineTo(target.x, target.y); ctx.stroke();
-                    } else {
-                        tower.state = 0; 
                     }
                 }
             }
 
-            // 更新動畫幀數 (因應 5x5 網格，每行有 5 幀)
-            // 狀態定義 -> 0: 待機, 1: 普攻, 2: 必殺技, 3: 暈眩
-            if (tower.state === 0) {
-                // 待機狀態：5 幀循環
-                tower.frame = Math.floor(globalAnimTick / 12) % 5; 
-            } else if (tower.state === 1 || tower.state === 2) {
-                // 攻擊/必殺狀態：根據冷卻時間推算幀數，快速播放 5 幀
-                let attackProgress = 1 - (tower.cooldown / fireRate);
-                // 將進度映射到 0~4 幀
-                tower.frame = Math.min(4, Math.floor(attackProgress * 10)); 
-            } else if (tower.state === 3) {
-                // 暈眩狀態 (若未來觸發)：5 幀循環快速抖動
-                tower.frame = Math.floor(globalAnimTick / 8) % 5;
-            }
-
-// --- 渲染塔 (如果有精靈圖且載入成功就畫圖，否則畫文字方塊) ---
-            if (unitData.img && unitData.img.complete && !unitData.img.isFailed && unitData.img.naturalWidth > 0) {
-                let frameWidth = unitData.img.naturalWidth / 5;
-                let frameHeight = unitData.img.naturalHeight / 5;
-
-                let sx = tower.frame * frameWidth;
-                let sy = tower.state * frameHeight;
-                
-                let drawSize = TILE_SIZE * 1.5; 
-                let dx = cx - (drawSize - TILE_SIZE) / 2;
-                let dy = cy - (drawSize - TILE_SIZE) - 5; 
-                
-                // 【修改】根據面朝方向決定是否水平翻轉
-                if (tower.facingLeft) {
-                    ctx.save(); // 儲存當前畫布狀態
-                    // 將畫布原點移動到圖片中心點
-                    ctx.translate(dx + drawSize / 2, dy + drawSize / 2);
-                    // 水平翻轉畫布
-                    ctx.scale(-1, 1);
-                    // 畫布翻轉後，坐標需相對中心點偏移
-                    ctx.drawImage(unitData.img, sx, sy, frameWidth, frameHeight, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
-                    ctx.restore(); // 恢復畫布狀態，以免影響其他圖形
-                } else {
-                    // 預設面朝右，正常繪製
-                    ctx.drawImage(unitData.img, sx, sy, frameWidth, frameHeight, dx, dy, drawSize, drawSize);
-                }
-            } else {
-                // 找不到圖片的【防呆Fallback】：畫預設方塊與文字
-                ctx.fillStyle = unitData.isGeneral ? '#fcf3cf' : 'white'; 
-                ctx.fillRect(cx + 2, cy + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-                if(unitData.isGeneral) {
-                    ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
-                    ctx.strokeRect(cx + 2, cy + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-                }
-                ctx.fillStyle = unitData.color; ctx.font = '22px Microsoft JhengHei';
-                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(unitData.symbol, cx + TILE_SIZE / 2, cy + TILE_SIZE / 2);
-            }
-
-            // 畫等級標籤
+            ctx.fillStyle = bData.color; ctx.fillRect(cx + 2, cy + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+            ctx.fillStyle = 'white'; ctx.font = '22px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(bData.symbol, cx + TILE_SIZE / 2, cy + TILE_SIZE / 2);
             ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial';
             ctx.fillText('Lv'+tower.level, cx + TILE_SIZE/2, cy + TILE_SIZE - 5);
+            
+            // 城門血條
+            if (tower.id === 'gate') {
+                ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE, 4);
+                ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx, cy - 8, TILE_SIZE * (tower.hp / tower.maxHp), 4);
+            }
         });
 
         enemies = enemies.filter(e => e.hp > 0);
