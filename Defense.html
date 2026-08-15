@@ -90,8 +90,8 @@
                 <div id="build-menu" class="camp-slots">
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-farm" onclick="selectBuilding('farm')">🌾農田<br>50金</button>
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-lumber" onclick="selectBuilding('lumber')">🪓伐木<br>50金</button>
-                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-market" onclick="selectBuilding('market')">⚖️市場<br>50木</button>
-                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-quarry" onclick="selectBuilding('quarry')">⛏️石礦<br>50木</button>
+                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-market" onclick="selectBuilding('market')">⚖️市場<br>50金</button>
+                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-quarry" onclick="selectBuilding('quarry')">⛏️石礦<br>50金</button>
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-barracks" onclick="selectBuilding('barracks')">⛺軍營<br>100木</button>
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-tower" onclick="selectBuilding('tower')">🏹箭塔<br>100木</button>
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-gate" onclick="selectBuilding('gate')">⛩️城門<br>100石</button>
@@ -131,11 +131,14 @@
     }
 
     // --- 建築物與兵種資料庫 ---
+// --- 建築物與兵種資料庫 ---
     const BUILDINGS = {
         "farm": { id: "farm", name: "農田", symbol: "🌾", color: "#f1c40f", type: "resource", resType: "meat", resAmount: 10, costType: "gold", cost: 50 },
         "lumber": { id: "lumber", name: "伐木廠", symbol: "🪓", color: "#e67e22", type: "resource", resType: "wood", resAmount: 10, costType: "gold", cost: 50 },
-        "market": { id: "market", name: "市場", symbol: "⚖️", color: "#f39c12", type: "resource", resType: "gold", resAmount: 5, costType: "wood", cost: 50 },
-        "quarry": { id: "quarry", name: "石礦場", symbol: "⛏️", color: "#7f8c8d", type: "resource", resType: "stone", resAmount: 10, costType: "wood", cost: 50 },
+        // 【修改】：市場改為 buff 類型不再每秒產錢，消耗改為 gold
+        "market": { id: "market", name: "市場", symbol: "⚖️", color: "#f39c12", type: "buff", costType: "gold", cost: 50 },
+        // 【修改】：石礦場消耗改為 gold
+        "quarry": { id: "quarry", name: "石礦場", symbol: "⛏️", color: "#7f8c8d", type: "resource", resType: "stone", resAmount: 10, costType: "gold", cost: 50 },
         "barracks": { id: "barracks", name: "軍營", symbol: "⛺", color: "#d35400", type: "military", costType: "wood", cost: 100 },
         "tower": { id: "tower", name: "箭塔", symbol: "🏹", color: "#bdc3c7", type: "attack", dmg: 1.5, range: 2.5, spd: 1.2, costType: "wood", cost: 100 },
         "gate": { id: "gate", name: "城門", symbol: "⛩️", color: "#2c3e50", type: "wall", costType: "stone", cost: 100, hp: 1000 }
@@ -162,6 +165,13 @@
 
     for (let key in BASIC_UNITS) BASIC_UNITS[key].img = loadSprite(BASIC_UNITS[key].imgSrc);
     for (let key in GENERALS) GENERALS[key].img = loadSprite(GENERALS[key].imgSrc);
+
+    // --- 地形圖片預載 (預備放 PNG 圖的地方) ---
+    const TERRAIN_IMGS = {
+        grass: loadSprite(""),     // 在此填入 草地/沙地 的 PNG 網址
+        mountain: loadSprite(""),  // 在此填入 山地 的 PNG 網址
+        path: loadSprite("")       // 在此填入 泥土路 的 PNG 網址
+    };
 
     // --- 全域變數狀態 ---
     let playerGold = parseInt(localStorage.getItem('tdGameGold_v2')) || 0;
@@ -254,12 +264,20 @@
         document.getElementById('options-container').innerHTML = optionsHtml;
     }
 
-    function checkAnswer(selected) {
+function checkAnswer(selected) {
         if (gameOver || gameWon) return; 
         const feedback = document.getElementById('feedback');
         if (selected === currentAnswer) {
-            gameGold += 50; updateResourcesUI(); 
-            feedback.innerText = "✔️ 答對了！獲得 50 金幣！快去建造或升級吧！"; feedback.style.color = "#2ecc71"; 
+            // 【新增】：計算市場加成 (每蓋一座或每升級一次多 50 金幣)
+            let marketBonus = towers.filter(t => t.id === 'market').reduce((sum, t) => sum + (t.level * 50), 0);
+            let earnedGold = 50 + marketBonus;
+            
+            gameGold += earnedGold; 
+            updateResourcesUI(); 
+            
+            let bonusText = marketBonus > 0 ? ` (包含市場加成 +${marketBonus})` : "";
+            feedback.innerText = `✔️ 答對了！獲得 ${earnedGold} 金幣！${bonusText}`; 
+            feedback.style.color = "#2ecc71"; 
             loadNextQuestion();
         } else { 
             feedback.innerText = "❌ 答錯囉！請再試一次！"; feedback.style.color = "#e74c3c"; 
@@ -477,6 +495,26 @@ function buySoldier() {
         // 3. 建造模式
         if (selectedBuilding) {
             let bData = BUILDINGS[selectedBuilding];
+
+            // 【新增】：敵軍前線 6 行 (Y軸 0~5) 屬於危險交戰區，禁止任何建築
+            if (gy < 6) {
+                feedback.innerText = "⚠️ 敵軍前線山地 (前 6 行) 無法進行建築！"; 
+                feedback.style.color = "#e74c3c"; return;
+            }
+
+            // 【城門建造限制】：最多 3 個，且不能在另一個城門 2 格範圍內
+            if (bData.id === 'gate') {
+                let existingGates = towers.filter(t => t.id === 'gate');
+                if (existingGates.length >= 3) {
+                    feedback.innerText = "⚠️ 整個地圖最多只能建造 3 座城門！"; 
+                    feedback.style.color = "#e74c3c"; return;
+                }
+                let tooClose = existingGates.some(g => Math.abs(g.x - gx) <= 2 && Math.abs(g.y - gy) <= 2);
+                if (tooClose) {
+                    feedback.innerText = "⚠️ 城門不能蓋在另一座城門的 2 格範圍內！"; 
+                    feedback.style.color = "#e74c3c"; return;
+                }
+            }
             
             // 【軍營數量限制】
             if (bData.id === 'barracks' && towers.some(t => t.id === 'barracks')) {
@@ -707,15 +745,34 @@ function gameLoop() {
             updateResourcesUI();
         }
 
-        // 畫地圖 (20x20)
+// 畫地圖 (20x20)，並支援 PNG 圖片載入
         for (let r = 0; r < 20; r++) {
             for (let c = 0; c < 20; c++) {
+                let dx = c * TILE_SIZE, dy = r * TILE_SIZE;
+                
                 if (isPath(c, r)) { 
-                    ctx.fillStyle = '#c49f81'; ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE); 
-                } 
-                else { 
-                    ctx.fillStyle = '#8fbc8f'; ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    ctx.strokeStyle = '#7da27d'; ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE); 
+                    // 1. 泥土路
+                    if (TERRAIN_IMGS.path && TERRAIN_IMGS.path.complete && !TERRAIN_IMGS.path.isFailed && TERRAIN_IMGS.path.naturalWidth > 0) {
+                        ctx.drawImage(TERRAIN_IMGS.path, dx, dy, TILE_SIZE, TILE_SIZE);
+                    } else {
+                        ctx.fillStyle = '#c49f81'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                    }
+                } else if (r < 6) {
+                    // 2. 前 6 行禁止建築區 (山地)
+                    if (TERRAIN_IMGS.mountain && TERRAIN_IMGS.mountain.complete && !TERRAIN_IMGS.mountain.isFailed && TERRAIN_IMGS.mountain.naturalWidth > 0) {
+                        ctx.drawImage(TERRAIN_IMGS.mountain, dx, dy, TILE_SIZE, TILE_SIZE);
+                    } else {
+                        ctx.fillStyle = '#7f8c8d'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); // 灰色代表山地
+                        ctx.strokeStyle = '#95a5a6'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE);
+                    }
+                } else { 
+                    // 3. 一般可建築區 (草地/沙地)
+                    if (TERRAIN_IMGS.grass && TERRAIN_IMGS.grass.complete && !TERRAIN_IMGS.grass.isFailed && TERRAIN_IMGS.grass.naturalWidth > 0) {
+                        ctx.drawImage(TERRAIN_IMGS.grass, dx, dy, TILE_SIZE, TILE_SIZE);
+                    } else {
+                        ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                    }
                 }
             }
         }
