@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>城池守衛戰 - 精靈圖升級版</title>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; background-color: #2c3e50; color: #fff; display: flex; flex-direction: column; align-items: center; margin: 0; padding: 20px; }
+        #game-wrapper { max-width: 550px; width: 100%; background: #f4e8d3; border: 4px solid #d35400; border-radius: 15px; padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); color: #333; }
+        
+        #setup-screen { display: block; }
+        .title { text-align: center; color: #c0392b; text-shadow: 1px 1px 0px #fff; font-size: 28px; font-weight: bold; margin-bottom: 20px; }
+        .gold-display { font-size: 20px; font-weight: bold; color: #d35400; text-align: right; margin-bottom: 10px; }
+        .section-title { font-size: 18px; font-weight: bold; color: #2980b9; margin: 10px 0 5px 0; border-bottom: 2px dashed #bdc3c7; padding-bottom: 5px; }
+        .char-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+        
+        .char-card { background: #fff; border: 3px solid #bdc3c7; border-radius: 8px; padding: 10px; text-align: center; cursor: pointer; position: relative; transition: 0.2s; }
+        .char-card.basic { border-color: #7f8c8d; background: #ecf0f1; cursor: default; }
+        .char-card.unlocked:hover { transform: translateY(-3px); border-color: #f39c12; }
+        .char-card.selected { border-color: #e74c3c; background: #fadbd8; box-shadow: 0 0 10px rgba(231, 76, 60, 0.5); }
+        .char-card.locked { filter: grayscale(100%); opacity: 0.6; }
+        
+        .char-symbol { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+        .char-price { font-size: 12px; color: #e74c3c; font-weight: bold; }
+        .char-desc { font-size: 11px; color: #7f8c8d; margin-top: 5px; }
+        
+        .btn-start { width: 100%; background: #d35400; color: #fff; padding: 12px; font-size: 20px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; margin-top: 15px; }
+        .btn-start:disabled { background: #95a5a6; cursor: not-allowed; }
+
+        #play-screen { display: none; }
+        #header { display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; margin-bottom: 10px; }
+        canvas { background-color: #dcb88e; border: 2px solid #333; cursor: pointer; width: 100%; border-radius: 5px; image-rendering: pixelated; } /* 讓像素圖保持清晰 */
+        
+        #camp { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin: 15px 0; background-color: #ecf0f1; padding: 10px; border-radius: 8px; border: 2px dashed #bdc3c7; }
+        .slot { height: 50px; background-color: #fff; border: 2px solid #7f8c8d; display: flex; justify-content: center; align-items: center; font-size: 22px; font-weight: bold; cursor: pointer; position: relative; border-radius: 5px; overflow: hidden; }
+        .slot.selected { border-color: #e74c3c; box-shadow: 0 0 8px red; background-color: #ffe6e6; }
+        .slot.general { border-color: #f1c40f; background-color: #fcf3cf; }
+        .slot-level { position: absolute; top: 2px; right: 4px; font-size: 12px; color: #000; font-weight:bold; text-shadow: 1px 1px 0 #fff; z-index: 10; }
+        
+        #quiz-section { background: #34495e; padding: 15px; border-radius: 8px; text-align: center; color: #fff; }
+        #question { font-size: 24px; font-weight: bold; margin: 0 0 15px 0; color: #f1c40f; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .option-btn { background: #2980b9; color: white; border: none; padding: 12px; font-size: 20px; font-weight: bold; border-radius: 5px; cursor: pointer; }
+        .option-btn:hover { background: #3498db; }
+        #feedback { margin-top: 10px; font-weight: bold; height: 20px; }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <div id="setup-screen">
+        <div class="title">城池守衛戰</div>
+        <div class="gold-display">💰 金幣: <span id="gold-count">0</span></div>
+        <div class="section-title">🛡️ 基本兵種 (預設出戰)</div>
+        <div id="basic-grid" class="char-grid"></div>
+        <div class="section-title">🔥 傳奇武將 (最多選擇 <span id="select-count">0</span>/3)</div>
+        <div id="general-grid" class="char-grid"></div>
+        <button id="btn-start-game" class="btn-start" onclick="startGame()">發兵出戰！</button>
+    </div>
+
+    <div id="play-screen">
+        <div id="header">
+            <span id="wave-display" style="color: #2980b9;">第 1 波 / 共 5 波</span>
+            <span style="color: #e74c3c;">❤️ 城池生命: <span id="hp-display">10</span></span>
+        </div>
+        <canvas id="gameCanvas" width="400" height="400"></canvas>
+        <div id="camp">
+            <div class="slot" onclick="selectSlot(0)"></div><div class="slot" onclick="selectSlot(1)"></div>
+            <div class="slot" onclick="selectSlot(2)"></div><div class="slot" onclick="selectSlot(3)"></div>
+            <div class="slot" onclick="selectSlot(4)"></div><div class="slot" onclick="selectSlot(5)"></div>
+        </div>
+        <div id="quiz-section">
+            <div id="question">題目加載中...</div>
+            <div class="options-grid" id="options-container"></div>
+            <div id="feedback">答對即可招募兵馬！</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 預設精靈圖每一格的大小 (假設 AI 畫出來的圖是 256x128，切成 4行2列，每格為 64x64)
+    const SPRITE_SIZE = 64; 
+
+    // 建立 Image 載入器
+    function loadSprite(src) {
+        if (!src) return null;
+        let img = new Image();
+        img.src = src;
+        // 若圖片載入失敗會回傳 null，系統會自動 fallback 成文字方塊
+        img.onerror = () => { img.isFailed = true; }; 
+        return img;
+    }
+
+    // --- 兵種資料庫 ---
+    // 請在這裡的 imgSrc 替換成您做好的透明背景 PNG 連結
+    const BASIC_UNITS = {
+        "b1": { id: "b1", name: "刀兵", symbol: "刀", color: "#34495e", isGeneral: false, dmg: 1, range: 1, spd: 1, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/刀兵4.png" },
+        "b2": { id: "b2", name: "槍兵", symbol: "槍", color: "#34495e", isGeneral: false, dmg: 1.2, range: 1.2, spd: 0.8, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/槍兵.png" },
+        "b3": { id: "b3", name: "弓兵", symbol: "弓", color: "#34495e", isGeneral: false, dmg: 0.8, range: 2, spd: 1.5, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/弓兵1.png" },
+        "b4": { id: "b4", name: "盾兵", symbol: "盾", color: "#34495e", isGeneral: false, dmg: 1.5, range: 0.8, spd: 0.5, imgSrc: "" },
+        "b5": { id: "b5", name: "斧兵", symbol: "斧", color: "#34495e", isGeneral: false, dmg: 1.8, range: 1, spd: 0.6, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/斧兵.png" },
+        "b6": { id: "b6", name: "弩兵", symbol: "弩", color: "#34495e", isGeneral: false, dmg: 1, range: 2.5, spd: 0.8, imgSrc: "" }
+    };
+
+    const GENERALS = {
+        "g1": { id: "g1", name: "關羽", symbol: "關", color: "#c0392b", price: 100, isGeneral: true, dmg: 3, range: 1.5, spd: 1, desc: "高額傷害", imgSrc: "" },
+        "g2": { id: "g2", name: "趙雲", symbol: "趙", color: "#2980b9", price: 100, isGeneral: true, dmg: 1.5, range: 1.2, spd: 2.5, desc: "極快攻速", imgSrc: "" },
+        "g3": { id: "g3", name: "諸葛", symbol: "諸", color: "#8e44ad", price: 150, isGeneral: true, dmg: 2, range: 2.5, spd: 1.2, desc: "超遠射程", imgSrc: "" },
+        "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, spd: 1.5, desc: "戰神降臨", imgSrc: "" },
+        "g5": { id: "g5", name: "貂蟬", symbol: "貂", color: "#d68910", price: 150, isGeneral: true, dmg: 1, range: 2, spd: 2, desc: "飛速牽制", imgSrc: "" }
+    };
+
+    // 預先載入所有圖片
+    for (let key in BASIC_UNITS) BASIC_UNITS[key].img = loadSprite(BASIC_UNITS[key].imgSrc);
+    for (let key in GENERALS) GENERALS[key].img = loadSprite(GENERALS[key].imgSrc);
+
+    let playerGold = parseInt(localStorage.getItem('tdGameGold_v2')) || 0;
+    let unlockedGenerals = JSON.parse(localStorage.getItem('tdGameUnlocked_v2')) || [];
+    let selectedGenerals = [];
+
+    // --- 初始化大廳 (與之前相同) ---
+    function updateLobbyUI() {
+        document.getElementById('gold-count').innerText = playerGold;
+        const basicGrid = document.getElementById('basic-grid');
+        basicGrid.innerHTML = '';
+        for (let key in BASIC_UNITS) {
+            let b = BASIC_UNITS[key];
+            basicGrid.innerHTML += `<div class="char-card basic"><div class="char-symbol" style="color:${b.color}">${b.symbol}</div><div style="font-size:14px; font-weight:bold;">${b.name}</div></div>`;
+        }
+
+        const genGrid = document.getElementById('general-grid');
+        genGrid.innerHTML = '';
+        for (let key in GENERALS) {
+            let g = GENERALS[key];
+            let isUnlocked = unlockedGenerals.includes(key);
+            let isSelected = selectedGenerals.includes(key);
+            let card = document.createElement('div');
+            card.className = `char-card ${isUnlocked ? 'unlocked' : 'locked'} ${isSelected ? 'selected' : ''}`;
+            let priceHtml = isUnlocked ? `<div class="char-price" style="color:green">已解鎖</div>` : `<div class="char-price">💰 ${g.price}解鎖</div>`;
+            card.innerHTML = `<div class="char-symbol" style="color:${g.color}">${g.symbol}</div><div style="font-size:14px; font-weight:bold;">${g.name}</div><div class="char-desc">${g.desc}</div>${priceHtml}`;
+            card.onclick = () => handleGeneralClick(key, g, isUnlocked);
+            genGrid.appendChild(card);
+        }
+        
+        document.getElementById('select-count').innerText = selectedGenerals.length;
+        document.getElementById('btn-start-game').disabled = selectedGenerals.length > 3;
+    }
+
+    function handleGeneralClick(key, g, isUnlocked) {
+        if (!isUnlocked) {
+            if (playerGold >= g.price) {
+                if (confirm(`花費 ${g.price} 金幣解鎖傳奇武將【${g.name}】？`)) {
+                    playerGold -= g.price;
+                    unlockedGenerals.push(key);
+                    localStorage.setItem('tdGameGold_v2', playerGold);
+                    localStorage.setItem('tdGameUnlocked_v2', JSON.stringify(unlockedGenerals));
+                    updateLobbyUI();
+                }
+            } else { alert("金幣不足！"); }
+            return;
+        }
+        if (selectedGenerals.includes(key)) selectedGenerals = selectedGenerals.filter(c => c !== key);
+        else if (selectedGenerals.length < 3) selectedGenerals.push(key);
+        else alert("最多只能攜帶 3 名武將出戰喔！");
+        updateLobbyUI();
+    }
+
+    // --- 題庫系統 ---
+    function generateQuestion() {
+        const isAdd = Math.random() > 0.5;
+        let a = Math.floor(Math.random() * 15) + 1, b = Math.floor(Math.random() * 15) + 1;
+        let cAnswer = isAdd ? a + b : (a + b) - a; 
+        let qText = isAdd ? `${a} + ${b} = ?` : `${a + b} - ${a} = ?`;
+        
+        let options = new Set([cAnswer]);
+        while (options.size < 4) {
+            let offset = (Math.floor(Math.random() * 5) + 1) * (Math.random() > 0.5 ? 1 : -1);
+            if (cAnswer + offset >= 0) options.add(cAnswer + offset);
+        }
+        return { questionText: qText, correctAnswer: cAnswer, options: Array.from(options).sort(() => Math.random() - 0.5) };
+    }
+
+    let currentAnswer = 0;
+    function loadNextQuestion() {
+        if (gameOver || gameWon) return;
+        const qData = generateQuestion();
+        currentAnswer = qData.correctAnswer;
+        document.getElementById('question').innerText = qData.questionText;
+        
+        let optionsHtml = '';
+        qData.options.forEach(opt => { optionsHtml += `<button class="option-btn" onclick="checkAnswer(${opt})">${opt}</button>`; });
+        document.getElementById('options-container').innerHTML = optionsHtml;
+    }
+
+    function checkAnswer(selected) {
+        if (gameOver || gameWon) return;
+        const feedback = document.getElementById('feedback');
+        if (selected === currentAnswer) {
+            feedback.innerText = "✔️ 答對了！招募到一名單位！"; feedback.style.color = "#2ecc71";
+            addRandomUnitToCamp(); loadNextQuestion();
+        } else {
+            feedback.innerText = "❌ 答錯囉，重新計算！"; feedback.style.color = "#e74c3c";
+        }
+    }
+
+// --- 遊戲核心邏輯 ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 【提升解像度秘訣】：引入 Retina 高清縮放
+    const dpr = window.devicePixelRatio || 1;
+    // 邏輯大小為 400，將內部物理畫布像素乘上 dpr
+    canvas.width = 400 * dpr;
+    canvas.height = 400 * dpr;
+    // 用 CSS 鎖定顯示的視覺大小
+    canvas.style.width = "100%";
+    canvas.style.maxWidth = "400px";
+    // 將繪圖環境整體放大，後續程式碼座標都不用改！
+    ctx.scale(dpr, dpr);
+    
+    // 【重要】：大圖縮小必須「開啟」平滑化，否則線條會破碎
+    ctx.imageSmoothingEnabled = true; 
+
+    const TILE_SIZE = 40;
+    const pathCoords = [
+        {x: 0, y: 2}, {x: 1, y: 2}, {x: 2, y: 2}, {x: 3, y: 2}, {x: 4, y: 2},
+        {x: 4, y: 3}, {x: 4, y: 4}, {x: 4, y: 5}, {x: 5, y: 5}, {x: 6, y: 5},
+        {x: 7, y: 5}, {x: 8, y: 5}, {x: 8, y: 6}, {x: 8, y: 7}, {x: 8, y: 8},
+        {x: 7, y: 8}, {x: 6, y: 8}, {x: 5, y: 8}, {x: 4, y: 8}, {x: 3, y: 8},
+        {x: 2, y: 8}, {x: 1, y: 8}, {x: 1, y: 9}
+    ];
+
+    const ENEMY_TYPES = {
+        'normal': { color: '#555', hpMult: 1, spdMult: 1, radius: 10, typeName: "步兵" },
+        'fast':   { color: '#f39c12', hpMult: 0.5, spdMult: 1.6, radius: 8, typeName: "刺客" },
+        'tank':   { color: '#2c3e50', hpMult: 2.5, spdMult: 0.6, radius: 12, typeName: "重甲" },
+        'boss':   { color: '#c0392b', hpMult: 6.0, spdMult: 0.5, radius: 16, typeName: "首領" }
+    };
+
+    let life = 10, wave = 1, maxWaves = 5;
+    let gameOver = false, gameWon = false;
+    let enemies = [], enemiesToSpawn = [], spawnTimer = 0;
+    
+    // 【升級】tower 增加了 frame, state, animTimer 屬性來追蹤動畫
+    let towers = [], camp = [null, null, null, null, null, null], selectedSlotIndex = -1;
+    let globalAnimTick = 0; // 全局動畫計時器 (用於控制待機動畫節奏)
+
+    function startGame() {
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('play-screen').style.display = 'block';
+        loadNextQuestion(); startWave(); updateCampUI(); gameLoop();
+    }
+
+    function addRandomUnitToCamp() {
+        const emptyIndex = camp.findIndex(slot => slot === null);
+        if (emptyIndex !== -1) {
+            let chosenId = (Math.random() < 0.20 && selectedGenerals.length > 0) ? 
+                selectedGenerals[Math.floor(Math.random() * selectedGenerals.length)] : 
+                Object.keys(BASIC_UNITS)[Math.floor(Math.random() * Object.keys(BASIC_UNITS).length)];
+            camp[emptyIndex] = { id: chosenId, level: 1 };
+            updateCampUI();
+        } else {
+            document.getElementById('feedback').innerText = "⚠️ 營地已滿！請先放置或合成。";
+            document.getElementById('feedback').style.color = "#f39c12";
+        }
+    }
+
+    function updateCampUI() {
+        const slots = document.querySelectorAll('.slot');
+        slots.forEach((slot, index) => {
+            slot.innerHTML = ''; slot.className = 'slot';
+            if (camp[index]) {
+                let unitData = BASIC_UNITS[camp[index].id] || GENERALS[camp[index].id];
+                if(unitData.isGeneral) slot.classList.add('general');
+                
+                // 營地內若有圖也可以顯示圖，但為求簡單清晰，營地先保留文字
+                slot.innerText = unitData.symbol;
+                slot.style.color = unitData.color;
+                
+                const levelSpan = document.createElement('span');
+                levelSpan.className = 'slot-level'; levelSpan.innerText = 'Lv.' + camp[index].level;
+                slot.appendChild(levelSpan);
+            }
+            if (index === selectedSlotIndex) slot.classList.add('selected');
+        });
+    }
+
+    window.selectSlot = function(index) {
+        if (camp[index]) { selectedSlotIndex = index === selectedSlotIndex ? -1 : index; updateCampUI(); }
+    };
+
+    function isPath(gx, gy) { return pathCoords.some(p => p.x === gx && p.y === gy); }
+    function getTowerAt(gx, gy) { return towers.find(t => t.x === gx && t.y === gy); }
+
+canvas.addEventListener('click', (e) => {
+        if (selectedSlotIndex === -1 || gameOver || gameWon) return;
+        const rect = canvas.getBoundingClientRect();
+        
+        // 【修改】：使用固定的邏輯畫布大小 400 來計算，不受 dpr 影響
+        const scaleX = 400 / rect.width; 
+        const scaleY = 400 / rect.height; 
+        
+        const gx = Math.floor(((e.clientX - rect.left) * scaleX) / TILE_SIZE);
+        const gy = Math.floor(((e.clientY - rect.top) * scaleY) / TILE_SIZE);
+
+        if (isPath(gx, gy)) { document.getElementById('feedback').innerText = "不能放置在道路上！"; return; }
+
+        const unitToPlace = camp[selectedSlotIndex];
+        const existingTower = getTowerAt(gx, gy);
+
+        if (!existingTower) {
+            // 【升級】加入精靈圖狀態機屬性
+            towers.push({ x: gx, y: gy, id: unitToPlace.id, level: unitToPlace.level, cooldown: 0, state: 0, frame: 0, animTimer: 0 });
+            camp[selectedSlotIndex] = null; selectedSlotIndex = -1; updateCampUI();
+        } else if (existingTower.id === unitToPlace.id && existingTower.level === unitToPlace.level) {
+            existingTower.level++;
+            camp[selectedSlotIndex] = null; selectedSlotIndex = -1; updateCampUI();
+            document.getElementById('feedback').innerText = "✨ 合成升級成功！"; document.getElementById('feedback').style.color = "#f1c40f";
+        } else {
+            document.getElementById('feedback').innerText = "必須是相同的兵種與等級才能合成喔！"; document.getElementById('feedback').style.color = "#e74c3c";
+        }
+    });
+
+    class Enemy {
+        constructor(wave, eTypeKey) {
+            let baseData = ENEMY_TYPES[eTypeKey];
+            this.pathIndex = 0;
+            this.x = pathCoords[0].x * TILE_SIZE + TILE_SIZE / 2; this.y = pathCoords[0].y * TILE_SIZE + TILE_SIZE / 2;
+            this.maxHp = (25 + wave * 15) * baseData.hpMult; this.hp = this.maxHp;
+            this.speed = (0.8 + wave * 0.1) * baseData.spdMult;
+            this.color = baseData.color; this.radius = baseData.radius;
+        }
+        update() {
+            const target = pathCoords[this.pathIndex + 1];
+            if (!target) return true;
+            const tx = target.x * TILE_SIZE + TILE_SIZE / 2, ty = target.y * TILE_SIZE + TILE_SIZE / 2;
+            const dx = tx - this.x, dy = ty - this.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist < this.speed) {
+                this.x = tx; this.y = ty; this.pathIndex++;
+                if (this.pathIndex >= pathCoords.length - 1) return true;
+            } else {
+                this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed;
+            }
+            return false;
+        }
+        draw() {
+            ctx.fillStyle = this.color;
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'red'; ctx.fillRect(this.x - 10, this.y - this.radius - 8, 20, 4);
+            ctx.fillStyle = '#2ecc71'; ctx.fillRect(this.x - 10, this.y - this.radius - 8, 20 * (this.hp / this.maxHp), 4);
+        }
+    }
+
+    function startWave() {
+        enemiesToSpawn = [];
+        for(let i=0; i < 5 + wave * 3; i++) {
+            let type = 'normal';
+            if(wave >= 2 && Math.random() < 0.3) type = 'fast';
+            if(wave >= 3 && Math.random() < 0.3) type = 'tank';
+            enemiesToSpawn.push(type);
+        }
+        if(wave >= 4) enemiesToSpawn.push('boss');
+        spawnTimer = 60; document.getElementById('wave-display').innerText = `第 ${wave} 波 / 共 5 波`;
+    }
+
+    function gameLoop() {
+        if (gameOver || gameWon) return;
+        
+        // 【修改】：清除畫布時，改用固定的邏輯大小 400
+        ctx.clearRect(0, 0, 400, 400);
+        
+        globalAnimTick++;
+
+        // 畫地圖
+        for (let r = 0; r < 10; r++) {
+            for (let c = 0; c < 10; c++) {
+                if (isPath(c, r)) { ctx.fillStyle = '#c49f81'; ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE); } 
+                else { ctx.strokeStyle = '#b38b6d'; ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE); }
+            }
+        }
+
+        // 產怪
+        if (enemiesToSpawn.length > 0) {
+            spawnTimer--;
+            if (spawnTimer <= 0) {
+                enemies.push(new Enemy(wave, enemiesToSpawn.shift())); spawnTimer = 70 - wave * 5;
+            }
+        } else if (enemies.length === 0) {
+            if (wave === maxWaves) {
+                gameWon = true; playerGold += 100; localStorage.setItem('tdGameGold_v2', playerGold);
+                alert("🎉 恭喜守護城池！獲得 100 金幣！");
+            } else { wave++; startWave(); }
+        }
+
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            if (enemies[i].update()) {
+                life--; document.getElementById('hp-display').innerText = life; enemies.splice(i, 1);
+                if (life <= 0) { gameOver = true; alert("💥 城池被攻破了！"); }
+            } else { enemies[i].draw(); }
+        }
+
+    // 塔攻擊與【精靈圖繪製】
+        towers.forEach(tower => {
+            const cx = tower.x * TILE_SIZE, cy = tower.y * TILE_SIZE;
+            let unitData = BASIC_UNITS[tower.id] || GENERALS[tower.id];
+            
+            const range = 60 + (unitData.range * 30) + (tower.level * 10);
+            const damage = 10 * unitData.dmg * tower.level;
+            const fireRate = Math.max(10, 60 / unitData.spd - (tower.level * 2)); 
+            
+// 處理攻擊邏輯與切換動畫狀態
+            if (tower.cooldown > 0) { 
+                tower.cooldown--; 
+                if(tower.cooldown < fireRate / 2) tower.state = 0;
+            } else {
+                if (tower.id === 'b1') {
+                    const targets = enemies.filter(e => Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
+                    
+                    if (targets.length > 0) {
+                        // 【新增】判斷第一個目標的方向，決定角色是否朝左
+                        tower.facingLeft = (targets[0].x < cx + TILE_SIZE / 2);
+                        
+                        targets.forEach(target => {
+                            target.hp -= damage; 
+                            ctx.strokeStyle = unitData.color; ctx.lineWidth = unitData.isGeneral ? 4 : 2;
+                            ctx.beginPath(); ctx.moveTo(cx + TILE_SIZE / 2, cy + TILE_SIZE / 2); ctx.lineTo(target.x, target.y); ctx.stroke();
+                        });
+                        tower.cooldown = fireRate;
+                        tower.state = 1; 
+                        tower.frame = 0;
+                    } else {
+                        tower.state = 0; 
+                    }
+                } else {
+                    const target = enemies.find(e => Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
+                    
+                    if (target) {
+                        // 【新增】判斷單一目標的方向，決定角色是否朝左
+                        tower.facingLeft = (target.x < cx + TILE_SIZE / 2);
+                        
+                        target.hp -= damage; 
+                        tower.cooldown = fireRate;
+                        tower.state = 1; 
+                        tower.frame = 0; 
+                        
+                        ctx.strokeStyle = unitData.color; ctx.lineWidth = unitData.isGeneral ? 4 : 2;
+                        ctx.beginPath(); ctx.moveTo(cx + TILE_SIZE / 2, cy + TILE_SIZE / 2); ctx.lineTo(target.x, target.y); ctx.stroke();
+                    } else {
+                        tower.state = 0; 
+                    }
+                }
+            }
+
+            // 更新動畫幀數 (因應 5x5 網格，每行有 5 幀)
+            // 狀態定義 -> 0: 待機, 1: 普攻, 2: 必殺技, 3: 暈眩
+            if (tower.state === 0) {
+                // 待機狀態：5 幀循環
+                tower.frame = Math.floor(globalAnimTick / 12) % 5; 
+            } else if (tower.state === 1 || tower.state === 2) {
+                // 攻擊/必殺狀態：根據冷卻時間推算幀數，快速播放 5 幀
+                let attackProgress = 1 - (tower.cooldown / fireRate);
+                // 將進度映射到 0~4 幀
+                tower.frame = Math.min(4, Math.floor(attackProgress * 10)); 
+            } else if (tower.state === 3) {
+                // 暈眩狀態 (若未來觸發)：5 幀循環快速抖動
+                tower.frame = Math.floor(globalAnimTick / 8) % 5;
+            }
+
+// --- 渲染塔 (如果有精靈圖且載入成功就畫圖，否則畫文字方塊) ---
+            if (unitData.img && unitData.img.complete && !unitData.img.isFailed && unitData.img.naturalWidth > 0) {
+                let frameWidth = unitData.img.naturalWidth / 5;
+                let frameHeight = unitData.img.naturalHeight / 5;
+
+                let sx = tower.frame * frameWidth;
+                let sy = tower.state * frameHeight;
+                
+                let drawSize = TILE_SIZE * 1.5; 
+                let dx = cx - (drawSize - TILE_SIZE) / 2;
+                let dy = cy - (drawSize - TILE_SIZE) - 5; 
+                
+                // 【修改】根據面朝方向決定是否水平翻轉
+                if (tower.facingLeft) {
+                    ctx.save(); // 儲存當前畫布狀態
+                    // 將畫布原點移動到圖片中心點
+                    ctx.translate(dx + drawSize / 2, dy + drawSize / 2);
+                    // 水平翻轉畫布
+                    ctx.scale(-1, 1);
+                    // 畫布翻轉後，坐標需相對中心點偏移
+                    ctx.drawImage(unitData.img, sx, sy, frameWidth, frameHeight, -drawSize / 2, -drawSize / 2, drawSize, drawSize);
+                    ctx.restore(); // 恢復畫布狀態，以免影響其他圖形
+                } else {
+                    // 預設面朝右，正常繪製
+                    ctx.drawImage(unitData.img, sx, sy, frameWidth, frameHeight, dx, dy, drawSize, drawSize);
+                }
+            } else {
+                // 找不到圖片的【防呆Fallback】：畫預設方塊與文字
+                ctx.fillStyle = unitData.isGeneral ? '#fcf3cf' : 'white'; 
+                ctx.fillRect(cx + 2, cy + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                if(unitData.isGeneral) {
+                    ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2;
+                    ctx.strokeRect(cx + 2, cy + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                }
+                ctx.fillStyle = unitData.color; ctx.font = '22px Microsoft JhengHei';
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(unitData.symbol, cx + TILE_SIZE / 2, cy + TILE_SIZE / 2);
+            }
+
+            // 畫等級標籤
+            ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial';
+            ctx.fillText('Lv'+tower.level, cx + TILE_SIZE/2, cy + TILE_SIZE - 5);
+        });
+
+        enemies = enemies.filter(e => e.hp > 0);
+        if (!gameOver && !gameWon) requestAnimationFrame(gameLoop);
+    }
+
+    updateLobbyUI();
+</script>
+</body>
+</html>
