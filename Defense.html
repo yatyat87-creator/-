@@ -78,7 +78,7 @@
         <div style="display:flex; justify-content:space-around; background:#ecf0f1; padding:8px; border-radius:8px; border:2px dashed #bdc3c7; font-weight:bold; margin-bottom:5px;">
             <span style="color:#f39c12;">💰 <span id="game-gold">50</span></span>
             <span style="color:#e67e22;">🪵 <span id="game-wood">1000</span></span>
-            <span style="color:#c0392b;">🍖 <span id="game-meat">0</span></span>
+            <span style="color:#c0392b;">🍖 <span id="game-meat">1000</span></span>
             <span style="color:#7f8c8d;">🪨 <span id="game-stone">0</span></span>
         </div>
 
@@ -95,6 +95,8 @@
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-barracks" onclick="selectBuilding('barracks')">⛺軍營<br>100木</button>
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-tower" onclick="selectBuilding('tower')">🏹箭塔<br>100木</button>
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-gate" onclick="selectBuilding('gate')">⛩️城門<br>100石</button>
+                    <!-- 【新增】：大帳建築 -->
+                    <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-tent" onclick="selectBuilding('tent')">🎪大帳<br>200木</button>
                 </div>
             </div>
             <div class="camp-row">
@@ -107,10 +109,9 @@
                     <div class="slot" onclick="selectOffenseSlot(6)"></div><div class="slot" onclick="selectOffenseSlot(7)"></div>
                     <div class="slot" onclick="selectOffenseSlot(8)"></div><div class="slot" onclick="selectOffenseSlot(9)"></div>
                 </div>
-                <button id="btn-deploy" onclick="deployOffense()">全軍<br>出擊</button>
+                <!-- 【修改】：改為出擊選定按鈕 -->
+                <button id="btn-deploy" onclick="deployOffense()">出擊<br>選定</button>
             </div>
-            <button id="btn-delete" onclick="toggleDeleteMode()">🛠️ 拆除模式: 關閉 (關閉時點擊建築即為升級)</button>
-        </div>
 
         <div id="quiz-section">
             <div id="question">題目加載中...</div>
@@ -130,18 +131,16 @@
         return img;
     }
 
-    // --- 建築物與兵種資料庫 ---
 // --- 建築物與兵種資料庫 ---
     const BUILDINGS = {
         "farm": { id: "farm", name: "農田", symbol: "🌾", color: "#f1c40f", type: "resource", resType: "meat", resAmount: 10, costType: "gold", cost: 50 },
         "lumber": { id: "lumber", name: "伐木廠", symbol: "🪓", color: "#e67e22", type: "resource", resType: "wood", resAmount: 10, costType: "gold", cost: 50 },
-        // 【修改】：市場改為 buff 類型不再每秒產錢，消耗改為 gold
         "market": { id: "market", name: "市場", symbol: "⚖️", color: "#f39c12", type: "buff", costType: "gold", cost: 50 },
-        // 【修改】：石礦場消耗改為 gold
         "quarry": { id: "quarry", name: "石礦場", symbol: "⛏️", color: "#7f8c8d", type: "resource", resType: "stone", resAmount: 10, costType: "gold", cost: 50 },
         "barracks": { id: "barracks", name: "軍營", symbol: "⛺", color: "#d35400", type: "military", costType: "wood", cost: 100 },
         "tower": { id: "tower", name: "箭塔", symbol: "🏹", color: "#bdc3c7", type: "attack", dmg: 1.5, range: 2.5, spd: 1.2, costType: "wood", cost: 100 },
-        "gate": { id: "gate", name: "城門", symbol: "⛩️", color: "#2c3e50", type: "wall", costType: "stone", cost: 100, hp: 1000 }
+        "gate": { id: "gate", name: "城門", symbol: "⛩️", color: "#2c3e50", type: "wall", costType: "stone", cost: 100, hp: 1000 },
+        "tent": { id: "tent", name: "大帳", symbol: "🎪", color: "#8e44ad", type: "military", costType: "wood", cost: 200 } // 【新增】：大帳
     };
 
     const ENEMY_TYPES = {
@@ -151,18 +150,20 @@
         'boss':   { color: '#c0392b', hpMult: 6.0, spdMult: 0.5, radius: 16 }
     };
 
+    // 【修改】：將 spd 拆分為 moveSpd(走速) 與 atkSpd(攻速)，並加入弓兵
     const BASIC_UNITS = {
-        "b4": { id: "b4", name: "槍兵", symbol: "槍", color: "#c0392b", dmg: 1.2, range: 0.5, spd: 0.8, hpMult: 1, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/槍兵.png" },
-        "b5": { id: "b5", name: "盾兵", symbol: "盾", color: "#f39c12", dmg: 0.5, range: 0.5, spd: 0.5, hpMult: 3, imgSrc: "" },
-        "b6": { id: "b6", name: "騎兵", symbol: "騎", color: "#d35400", dmg: 1.5, range: 0.5, spd: 2.0, hpMult: 1.2, imgSrc: "" }
+        "b4": { id: "b4", name: "刀兵", symbol: "刀", color: "#c0392b", dmg: 1.2, range: 0.5, moveSpd: 0.8, atkSpd: 1.0, hpMult: 1, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/刀兵5x5.png" },
+        "b5": { id: "b5", name: "盾兵", symbol: "盾", color: "#f39c12", dmg: 0.5, range: 0.5, moveSpd: 0.5, atkSpd: 0.8, hpMult: 3, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/盾兵5x5.png" },
+        "b6": { id: "b6", name: "騎兵", symbol: "騎", color: "#d35400", dmg: 1.5, range: 0.5, moveSpd: 2.0, atkSpd: 1.2, hpMult: 1.2, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/騎兵5x5.png" },
+        "b7": { id: "b7", name: "弓兵", symbol: "弓", color: "#27ae60", dmg: 0.8, range: 2.5, moveSpd: 0.8, atkSpd: 1.5, hpMult: 0.8, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/弓兵5x5.png" } // 【新增】：弓兵
     };
 
     const GENERALS = {
-        "g1": { id: "g1", name: "關羽", symbol: "關", color: "#c0392b", price: 100, isGeneral: true, dmg: 3, range: 1, spd: 1.2, hpMult: 2, desc: "進攻：高額傷害", imgSrc: "" },
-        "g2": { id: "g2", name: "趙雲", symbol: "趙", color: "#2980b9", price: 100, isGeneral: true, dmg: 1.5, range: 1, spd: 2.5, hpMult: 1.5, desc: "進攻：極快衝陣", imgSrc: "" },
-        "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, spd: 1.5, hpMult: 2.5, desc: "進攻：戰神降臨", imgSrc: "" }
+        "g1": { id: "g1", name: "關羽", symbol: "關", color: "#c0392b", price: 100, isGeneral: true, dmg: 3, range: 1, moveSpd: 1.2, atkSpd: 1.2, hpMult: 2, desc: "進攻：高額傷害", imgSrc: "" },
+        "g2": { id: "g2", name: "趙雲", symbol: "趙", color: "#2980b9", price: 100, isGeneral: true, dmg: 1.5, range: 1, moveSpd: 2.5, atkSpd: 2.0, hpMult: 1.5, desc: "進攻：極快衝陣", imgSrc: "" },
+        "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, moveSpd: 1.5, atkSpd: 1.0, hpMult: 2.5, desc: "進攻：戰神降臨", imgSrc: "" }
     };
-
+    
     for (let key in BASIC_UNITS) BASIC_UNITS[key].img = loadSprite(BASIC_UNITS[key].imgSrc);
     for (let key in GENERALS) GENERALS[key].img = loadSprite(GENERALS[key].imgSrc);
 
@@ -179,7 +180,7 @@
     let selectedGenerals = [];
 
     // 起始資源給予 1000 木材
-    let gameGold = 50, gameWood = 1000, gameMeat = 0, gameStone = 0; 
+    let gameGold = 50, gameWood = 1000, gameMeat = 1000, gameStone = 0; 
     let selectedBuilding = null;
     let isDeleteMode = false;
     let offenseCamp = new Array(10).fill(null);
@@ -345,7 +346,7 @@ function buySoldier() {
         }
     }
 
-    function updateCampsUI() {
+function updateCampsUI() {
         const offSlots = document.querySelectorAll('#offense-camp .slot');
         offSlots.forEach((s, i) => {
             s.innerHTML = ''; s.className = 'slot';
@@ -354,9 +355,8 @@ function buySoldier() {
                 if (u) {
                     if(u.isGeneral) s.classList.add('general'); 
                     s.innerText = u.symbol; s.style.color = u.color;
-                    const lvlSpan = document.createElement('span'); 
-                    lvlSpan.className = 'slot-level'; lvlSpan.innerText = 'Lv.' + offenseCamp[i].level; 
-                    s.appendChild(lvlSpan);
+                    // 如果部隊處於被選取狀態，加入紅色發光特效
+                    if (offenseCamp[i].selected) s.classList.add('selected');
                 }
             }
         });
@@ -365,67 +365,99 @@ function buySoldier() {
     window.selectOffenseSlot = function(index) {
         if (!offenseCamp[index]) return;
         const feedback = document.getElementById('feedback');
+        
         if (isDeleteMode) {
             offenseCamp[index] = null; 
             feedback.innerText = "🗑️ 已解散該部隊。"; 
             feedback.style.color = "#e74c3c";
-            updateCampsUI();
         } else {
-            let cost = 50 * offenseCamp[index].level;
-            if (gameGold >= cost) { 
-                gameGold -= cost; offenseCamp[index].level++; 
-                updateResourcesUI(); updateCampsUI(); 
-                feedback.innerText = `✨ 士兵升級成功！`; 
-                feedback.style.color = "#f1c40f";
+            // 【修改】：一鍵全選/取消選取所有同類兵種
+            let targetId = offenseCamp[index].id;
+            let newState = !offenseCamp[index].selected; // 決定是要全選還是全取消
+            let count = 0;
+            
+            // 掃描整個兵營，把同兵種的狀態全部同步
+            for (let i = 0; i < offenseCamp.length; i++) {
+                if (offenseCamp[i] && offenseCamp[i].id === targetId) {
+                    offenseCamp[i].selected = newState;
+                    count++;
+                }
+            }
+            
+            let unitData = BASIC_UNITS[targetId] || GENERALS[targetId];
+            if (newState) {
+                feedback.innerText = `✔️ 已一鍵選取 ${count} 支【${unitData.name}】！`;
+                feedback.style.color = "#2ecc71";
             } else {
-                feedback.innerText = `⚠️ 升級此士兵需 ${cost} 金幣！請先答題賺錢。`;
+                feedback.innerText = `取消選取【${unitData.name}】。`;
                 feedback.style.color = "#e74c3c";
             }
         }
+        updateCampsUI();
     };
 
     window.deployOffense = function() {
         if (isDeleteMode || gameOver || gameWon) return; 
-        
-        let barracks = towers.filter(t => t.id === 'barracks');
-        if (barracks.length === 0) {
-            document.getElementById('feedback').innerText = "⚠️ 必須先建造【軍營】才能出兵！";
-            document.getElementById('feedback').style.color = "#e74c3c";
-            return;
+        const feedback = document.getElementById('feedback');
+
+        // 1. 取得玩家選取的部隊 (多選)
+        let selectedIndices = offenseCamp.map((u, i) => (u && u.selected) ? i : -1).filter(i => i !== -1);
+        if (selectedIndices.length === 0) {
+            feedback.innerText = "⚠️ 請先在兵營中點擊部隊進行多選，再按出擊！";
+            feedback.style.color = "#f39c12"; return;
         }
-        
-        let spawnIndex = pathCoords.length - 1; 
-        let validIndices = [];
-        barracks.forEach(b => {
-            pathCoords.forEach((p, i) => { if (Math.abs(p.x - b.x) <= 1 && Math.abs(p.y - b.y) <= 1) validIndices.push(i); });
-        });
-        if (validIndices.length > 0) spawnIndex = Math.max(...validIndices);
+
+        let barracks = towers.filter(t => t.id === 'barracks');
+        let tents = towers.filter(t => t.id === 'tent');
+        let barracksLvl = barracks.length > 0 ? Math.max(...barracks.map(b => b.level)) : 0;
+        let tentLvl = tents.length > 0 ? Math.max(...tents.map(t => t.level)) : 0;
 
         let readyUnits = [];
-        for(let i=0; i<offenseCamp.length; i++) {
-            if(offenseCamp[i]) {
-                readyUnits.push(offenseCamp[i]);
-                offenseCamp[i] = null; 
+        let cantDeployMsg = "";
+
+        selectedIndices.forEach(i => {
+            let u = offenseCamp[i];
+            let isGeneral = (GENERALS[u.id] !== undefined);
+            
+            // 2. 判斷對應建築與等級同步
+            if (isGeneral && tents.length === 0) {
+                cantDeployMsg = "⚠️ 必須先建造【大帳】才能派出將領！";
+            } else if (!isGeneral && barracks.length === 0) {
+                cantDeployMsg = "⚠️ 必須先建造【軍營】才能派出一般士兵！";
+            } else {
+                u.level = isGeneral ? tentLvl : barracksLvl; // 等級直接綁定建築！
+                
+                // 3. 計算出兵點 (各自從對應的建築旁出發)
+                let spawnBuildings = isGeneral ? tents : barracks;
+                let spawnIndex = pathCoords.length - 1; 
+                let validIndices = [];
+                spawnBuildings.forEach(b => {
+                    pathCoords.forEach((p, idx) => { if (Math.abs(p.x - b.x) <= 1 && Math.abs(p.y - b.y) <= 1) validIndices.push(idx); });
+                });
+                if (validIndices.length > 0) spawnIndex = Math.max(...validIndices);
+                
+                u.spawnIndex = spawnIndex;
+                readyUnits.push(u);
+                offenseCamp[i] = null; // 清空營地該格
             }
-        }
+        });
         
-        if(readyUnits.length > 0) { 
-            // 【修改】：依照速度降序排列，速度快的行先
+        if (readyUnits.length > 0) { 
+            // 依行走速度降序排列，速度快的行先出發！
             readyUnits.sort((a, b) => {
-                let spdA = (BASIC_UNITS[a.id] || GENERALS[a.id]).spd;
-                let spdB = (BASIC_UNITS[b.id] || GENERALS[b.id]).spd;
+                let spdA = (BASIC_UNITS[a.id] || GENERALS[a.id]).moveSpd;
+                let spdB = (BASIC_UNITS[b.id] || GENERALS[b.id]).moveSpd;
                 return spdB - spdA;
             });
             
-            readyUnits.forEach(u => {
-                u.spawnIndex = spawnIndex;
-                deployQueue.push(u); // 放入佇列等待慢慢出發
-            });
-
-            document.getElementById('feedback').innerText = `⚔️ 準備派出 ${readyUnits.length} 支部隊！部隊將依序出發！`; 
-            document.getElementById('feedback').style.color = "#e74c3c";
-            updateCampsUI(); 
+            readyUnits.forEach(u => deployQueue.push(u)); // 放入序列等待出營
+            feedback.innerText = `⚔️ 已下令 ${readyUnits.length} 支部隊依序出擊！`; 
+            feedback.style.color = "#e74c3c";
+        } else if (cantDeployMsg !== "") {
+            feedback.innerText = cantDeployMsg;
+            feedback.style.color = "#e74c3c";
         }
+        updateCampsUI(); 
     };
 
     // --- Canvas 與地圖建造邏輯 ---
@@ -567,8 +599,8 @@ class Enemy {
             this.baseDamage = 40 * baseData.hpMult; 
             this.cooldown = 0; this.fireRate = 30; this.damage = 10 + wave * 5; 
             
-            // 【雙排系統】：隨機分配左右車道，實現 2隻2隻 排隊
-            this.lane = Math.random() > 0.5 ? 1 : -1;
+            // 【三線系統】：隨機分配 -1(左), 0(中), 1(右) 車道
+            this.lane = Math.floor(Math.random() * 3) - 1;
             this.laneOffset = this.lane * 12; // 偏移 12 像素
             this.drawOffsetX = 0; this.drawOffsetY = 0;
         }
@@ -591,21 +623,38 @@ class Enemy {
             if (Math.abs(dx) > Math.abs(dy)) { this.drawOffsetX = 0; this.drawOffsetY = this.laneOffset; } 
             else { this.drawOffsetX = this.laneOffset; this.drawOffsetY = 0; }
 
-            // 【防死鎖排隊邏輯】：只會被「同車道」且「比自己更靠近目標」的友軍擋住
-            let isBlocked = enemies.some(e => {
-                if (e === this || e.lane !== this.lane) return false;
-                if (Math.hypot(e.x - this.x, e.y - this.y) < 24) { 
-                    if (e.pathIndex > this.pathIndex) return true;
-                    if (e.pathIndex === this.pathIndex) {
-                        let myDist = Math.hypot(tx - this.x, ty - this.y);
-                        let eDist = Math.hypot(tx - e.x, ty - e.y);
-                        if (eDist < myDist - 0.1) return true; 
-                        if (Math.abs(eDist - myDist) <= 0.1) return enemies.indexOf(e) < enemies.indexOf(this); 
+            // 【防死鎖與超車邏輯】：檢查指定車道是否被擋住
+            const isLaneBlocked = (testLane) => {
+                return enemies.some(e => {
+                    if (e === this || e.lane !== testLane) return false;
+                    if (Math.hypot(e.x - this.x, e.y - this.y) < 24) { 
+                        if (e.pathIndex > this.pathIndex) return true;
+                        if (e.pathIndex === this.pathIndex) {
+                            let myDist = Math.hypot(tx - this.x, ty - this.y);
+                            let eDist = Math.hypot(tx - e.x, ty - e.y);
+                            if (eDist < myDist - 0.1) return true; 
+                            if (Math.abs(eDist - myDist) <= 0.1) return enemies.indexOf(e) < enemies.indexOf(this); 
+                        }
+                    }
+                    return false;
+                });
+            };
+
+            // 如果當前車道被擋住，嘗試切換到旁邊的空車道 (超車)
+            if (isLaneBlocked(this.lane)) {
+                let possibleLanes = this.lane === 0 ? [-1, 1] : [0];
+                possibleLanes.sort(() => Math.random() - 0.5); // 隨機打亂，讓超車方向更自然
+                let switched = false;
+                for (let l of possibleLanes) {
+                    if (!isLaneBlocked(l)) {
+                        this.lane = l;
+                        this.laneOffset = this.lane * 12; // 更新視覺偏移
+                        switched = true;
+                        break;
                     }
                 }
-                return false;
-            });
-            if (isBlocked) return false;
+                if (!switched) return false; // 旁邊也都塞車了，乖乖排隊
+            }
 
             const dist = Math.hypot(dx, dy);
             if (dist < this.speed) { this.x = tx; this.y = ty; this.pathIndex++; } 
@@ -628,14 +677,16 @@ class Enemy {
             this.x = pathCoords[this.pathIndex].x * TILE_SIZE + TILE_SIZE / 2;
             this.y = pathCoords[this.pathIndex].y * TILE_SIZE + TILE_SIZE / 2;
             this.maxHp = 50 * level * (this.unitData.hpMult || 1); this.hp = this.maxHp;
-            this.speed = this.unitData.spd * 1.5; 
+            this.speed = this.unitData.moveSpd * 1.5; 
             this.range = 30 + (this.unitData.range * 20); 
             this.damage = 10 * this.unitData.dmg * level; 
-            this.fireRate = Math.max(10, 60 / this.unitData.spd - (level * 2));
-            this.cooldown = 0; this.state = 0; this.frame = 0; this.facingLeft = true; 
+            this.fireRate = Math.max(10, 60 / this.unitData.atkSpd - (level * 2));
+            this.cooldown = 0; 
+            this.state = 0; 
+            this.frame = 0; this.facingLeft = true; 
             
-            // 【雙排系統】：隨機分配左右車道
-            this.lane = Math.random() > 0.5 ? 1 : -1;
+            // 【三線系統】：隨機分配 -1(左), 0(中), 1(右) 車道
+            this.lane = Math.floor(Math.random() * 3) - 1;
             this.laneOffset = this.lane * 12; 
             this.drawOffsetX = 0; this.drawOffsetY = 0;
         }
@@ -648,38 +699,63 @@ class Enemy {
                 const tx = targetPath.x * TILE_SIZE + TILE_SIZE / 2, ty = targetPath.y * TILE_SIZE + TILE_SIZE / 2;
                 if (Math.abs(tx - this.x) > Math.abs(ty - this.y)) { this.drawOffsetX = 0; this.drawOffsetY = this.laneOffset; } 
                 else { this.drawOffsetX = this.laneOffset; this.drawOffsetY = 0; }
+                
+                if (tx < this.x - 1) this.facingLeft = true;
+                else if (tx > this.x + 1) this.facingLeft = false;
             }
 
             if (targetEnemy && Math.hypot((targetEnemy.x + targetEnemy.drawOffsetX) - (this.x + this.drawOffsetX), (targetEnemy.y + targetEnemy.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
                 this.state = 1; 
+                this.facingLeft = targetEnemy.x < this.x;
+                
                 if (this.cooldown <= 0) {
                     targetEnemy.hp -= this.damage; this.cooldown = this.fireRate; this.frame = 0;
                     ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
                     ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
                 }
             } else {
-                if (this.cooldown < this.fireRate / 2) this.state = 0;
                 if (!targetPath) return true;
 
                 const tx = targetPath.x * TILE_SIZE + TILE_SIZE / 2, ty = targetPath.y * TILE_SIZE + TILE_SIZE / 2;
                 const dx = tx - this.x, dy = ty - this.y;
 
-                // 【防死鎖排隊邏輯】
-                let isBlocked = playerUnits.some(p => {
-                    if (p === this || p.lane !== this.lane) return false;
-                    if (Math.hypot(p.x - this.x, p.y - this.y) < 24) { 
-                        if (p.pathIndex < this.pathIndex) return true; 
-                        if (p.pathIndex === this.pathIndex) {
-                            let myDist = Math.hypot(tx - this.x, ty - this.y);
-                            let pDist = Math.hypot(tx - p.x, ty - p.y);
-                            if (pDist < myDist - 0.1) return true;
-                            if (Math.abs(pDist - myDist) <= 0.1) return playerUnits.indexOf(p) < playerUnits.indexOf(this);
+                // 【防死鎖與超車邏輯】：檢查指定車道是否被擋住
+                const isLaneBlocked = (testLane) => {
+                    return playerUnits.some(p => {
+                        if (p === this || p.lane !== testLane) return false;
+                        if (Math.hypot(p.x - this.x, p.y - this.y) < 24) { 
+                            if (p.pathIndex < this.pathIndex) return true; // 玩家的目標是遞減的
+                            if (p.pathIndex === this.pathIndex) {
+                                let myDist = Math.hypot(tx - this.x, ty - this.y);
+                                let pDist = Math.hypot(tx - p.x, ty - p.y);
+                                if (pDist < myDist - 0.1) return true;
+                                if (Math.abs(pDist - myDist) <= 0.1) return playerUnits.indexOf(p) < playerUnits.indexOf(this);
+                            }
+                        }
+                        return false;
+                    });
+                };
+                
+                // 如果當前車道被擋，嘗試超車
+                if (isLaneBlocked(this.lane)) {
+                    let possibleLanes = this.lane === 0 ? [-1, 1] : [0];
+                    possibleLanes.sort(() => Math.random() - 0.5);
+                    let switched = false;
+                    for (let l of possibleLanes) {
+                        if (!isLaneBlocked(l)) {
+                            this.lane = l;
+                            this.laneOffset = this.lane * 12;
+                            switched = true;
+                            break;
                         }
                     }
-                    return false;
-                });
-                if (isBlocked) return false;
+                    if (!switched) {
+                        this.state = 4; // 真的被完全擋住，進入待機排隊
+                        return false;
+                    }
+                }
 
+                this.state = 0; 
                 const dist = Math.hypot(dx, dy);
                 if (dist < this.speed) { this.x = tx; this.y = ty; this.pathIndex--; } 
                 else { this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed; }
@@ -688,22 +764,35 @@ class Enemy {
         }
         
         draw() {
-            if (this.state === 0) this.frame = Math.floor(globalAnimTick / 12) % 5; 
-            else { let attackProgress = 1 - (this.cooldown / this.fireRate); this.frame = Math.min(4, Math.floor(attackProgress * 10)); }
+            if (this.state === 0) {
+                this.frame = Math.floor(globalAnimTick / 10) % 5; 
+            } else if (this.state === 4) {
+                this.frame = Math.floor(globalAnimTick / 15) % 4; 
+            } else if (this.state === 1) {
+                let attackProgress = 1 - (this.cooldown / this.fireRate); 
+                this.frame = Math.min(4, Math.floor(attackProgress * 5)); 
+            }
 
             let cx = this.x + this.drawOffsetX, cy = this.y + this.drawOffsetY;
 
             if (this.unitData.img && this.unitData.img.complete && !this.unitData.img.isFailed && this.unitData.img.naturalWidth > 0) {
-                let frameWidth = this.unitData.img.naturalWidth / 5; let frameHeight = this.unitData.img.naturalHeight / 5;
-                let sx = this.frame * frameWidth; let sy = this.state * frameHeight; let drawSize = TILE_SIZE * 1.5; 
+                let frameWidth = this.unitData.img.naturalWidth / 5; 
+                let frameHeight = this.unitData.img.naturalHeight / 5;
+                
+                let sx = this.frame * frameWidth; 
+                let sy = this.state * frameHeight; 
+                let drawSize = TILE_SIZE * 1.5; 
+                
                 ctx.save(); ctx.translate(cx, cy - 5);
                 if (this.facingLeft) { ctx.scale(-1, 1); }
-                ctx.drawImage(this.unitData.img, sx, sy, frameWidth, frameHeight, -drawSize / 2, -drawSize / 2, drawSize, drawSize); ctx.restore();
+                ctx.drawImage(this.unitData.img, sx, sy, frameWidth, frameHeight, -drawSize / 2, -drawSize / 2, drawSize, drawSize); 
+                ctx.restore();
             } else {
                 ctx.fillStyle = this.unitData.isGeneral ? '#fcf3cf' : 'white'; ctx.fillRect(cx - TILE_SIZE/2 + 2, cy - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
                 if(this.unitData.isGeneral) { ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2; ctx.strokeRect(cx - TILE_SIZE/2 + 2, cy - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4); }
                 ctx.fillStyle = this.unitData.color; ctx.font = '22px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(this.unitData.symbol, cx, cy);
             }
+            
             ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
             ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20, 3);
             ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20 * (this.hp / this.maxHp), 3);
