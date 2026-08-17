@@ -7,12 +7,12 @@
   "theme_color": "#f9f9f9",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "https://raw.githubusercontent.com/yatyat87-creator/-/main//Content/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon-512.png",
+      "src": "https://raw.githubusercontent.com/yatyat87-creator/-/main//Content/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
