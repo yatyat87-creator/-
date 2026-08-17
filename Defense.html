@@ -967,6 +967,75 @@ class Enemy {
         }
     }
 
+    // 【新增】：環境特效類別 (控制蝴蝶、落葉等行為)
+    class AmbientEffect {
+        constructor() {
+            let keys = Object.keys(AMBIENT_TYPES);
+            this.typeKey = keys[Math.floor(Math.random() * keys.length)];
+            this.data = AMBIENT_TYPES[this.typeKey];
+            
+            this.x = Math.random() * 800;
+            this.y = Math.random() * 800;
+            this.alive = true;
+            this.life = Math.random() * 500 + 300; // 存活時間 (影格數)
+            this.vx = 0; this.vy = 0;
+
+            if (this.data.type === 'wind') {
+                // 落葉從左側或上方吹進來
+                this.x = Math.random() < 0.5 ? -20 : Math.random() * 800;
+                this.y = this.x === -20 ? Math.random() * 800 : -20;
+                this.vx = this.data.speed + Math.random();
+                this.vy = this.data.speed * 0.8 + Math.random() * 0.5;
+            } else if (this.data.type === 'wander') {
+                // 蝴蝶隨機亂飛
+                this.vx = (Math.random() - 0.5) * this.data.speed;
+                this.vy = (Math.random() - 0.5) * this.data.speed;
+            }
+        }
+
+        update() {
+            this.life--;
+            if (this.life <= 0 || this.x > 850 || this.y > 850) {
+                this.alive = false; return;
+            }
+
+            if (this.data.type === 'wander' && globalAnimTick % 40 === 0) {
+                // 蝴蝶定期改變飛行方向
+                this.vx = (Math.random() - 0.5) * this.data.speed * 3;
+                this.vy = (Math.random() - 0.5) * this.data.speed * 3;
+            }
+            
+            // 鳥類只有偶爾會移動一下
+            if (this.data.type === 'peck') {
+                if (Math.random() < 0.01) { this.vx = (Math.random()-0.5); this.vy = (Math.random()-0.5); }
+                else { this.vx = 0; this.vy = 0; }
+            }
+
+            this.x += this.vx; this.y += this.vy;
+        }
+
+        draw() {
+            ctx.save(); ctx.translate(this.x, this.y);
+            
+            // 加入動態視覺偏移 (蝴蝶上下拍動、落葉旋轉)
+            if (this.data.type === 'wander') ctx.translate(0, Math.sin(globalAnimTick / 10) * 4);
+            else if (this.data.type === 'wind') { ctx.translate(0, Math.sin(globalAnimTick / 20) * 5); ctx.rotate(globalAnimTick / 30); }
+            else if (this.data.type === 'peck') { if (globalAnimTick % 60 < 10) ctx.translate(0, 2); } // 啄地板動作
+
+            if (this.data.img && this.data.img.complete && !this.data.img.isFailed && this.data.img.naturalWidth > 0) {
+                // 如果您未來加入了精靈圖，這裡會自動切 4 格動畫
+                let fw = this.data.img.naturalWidth / 4; let fh = this.data.img.naturalHeight;
+                let frame = Math.floor(globalAnimTick / 15) % 4;
+                ctx.drawImage(this.data.img, frame * fw, 0, fw, fh, -this.data.size/2, -this.data.size/2, this.data.size, this.data.size);
+            } else {
+                // 佔位符：直接畫 Emoji
+                ctx.font = `${this.data.size}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(this.data.symbol, 0, 0);
+            }
+            ctx.restore();
+        }
+    }
+
     // --- 遊戲主迴圈 ---
 function gameLoop() {
         if (gameOver || gameWon) return;
@@ -1025,15 +1094,26 @@ function gameLoop() {
                     if (TERRAIN_IMGS.mountain && TERRAIN_IMGS.mountain.complete && !TERRAIN_IMGS.mountain.isFailed && TERRAIN_IMGS.mountain.naturalWidth > 0) { 
                         drawAnimatedTerrain(TERRAIN_IMGS.mountain, dx, dy); 
                     } else { ctx.fillStyle = '#7f8c8d'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#95a5a6'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
-                } else { 
-                    if (TERRAIN_IMGS.grass && TERRAIN_IMGS.grass.complete && !TERRAIN_IMGS.grass.isFailed && TERRAIN_IMGS.grass.naturalWidth > 0) { 
-                        drawAnimatedTerrain(TERRAIN_IMGS.grass, dx, dy); 
-                    } else { ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
+                         } else { 
+                    if (TERRAIN_IMGS.grass && TERRAIN_IMGS.grass.complete && !TERRAIN_IMGS.grass.isFailed && TERRAIN_IMGS.grass.naturalWidth > 0) { ctx.drawImage(TERRAIN_IMGS.grass, dx, dy, TILE_SIZE, TILE_SIZE); } 
+                    else { ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
                 }
             }
         }
 
+        // 【新增】：隨機產生與渲染環境特效 (蝴蝶、落葉等)
+        if (Math.random() < 0.03 && ambientEffects.length < 20) { // 畫面最多維持 20 個特效
+            ambientEffects.push(new AmbientEffect());
+        }
+        for (let i = ambientEffects.length - 1; i >= 0; i--) {
+            let effect = ambientEffects[i];
+            effect.update();
+            if (!effect.alive) ambientEffects.splice(i, 1);
+            else effect.draw();
+        }
+
         // 【新增】：城鎮中心攻防與自動回血邏輯
+
         [playerBase, enemyBase].forEach((base, idx) => {
             let isPlayer = idx === 0;
             // 自動回血 (每秒)
