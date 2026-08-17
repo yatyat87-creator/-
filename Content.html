@@ -56,29 +56,42 @@
 
     async function fetchFiles(repo) {
       const ul = document.getElementById(`files-${repo.name}`);
-      const res = await fetch(`https://api.github.com/repos/${githubUser}/${repo.name}/contents/`);
+      // 假設預設分支是 main，改用 trees API 並加上 recursive=1
+      const res = await fetch(`https://api.github.com/repos/${githubUser}/${repo.name}/git/trees/main?recursive=1`);
+      
       if (!res.ok) {
-        ul.innerHTML = "<li>無法取得檔案清單。</li>";
-        return;
+        // 如果 main 分支找不到，可以嘗試 fall back 到 master 分支
+        const resMaster = await fetch(`https://api.github.com/repos/${githubUser}/${repo.name}/git/trees/master?recursive=1`);
+        if (!resMaster.ok) {
+           ul.innerHTML = "<li>無法取得檔案清單（請確認預設分支是否為 main 或 master）。</li>";
+           return;
+        }
+        processTreeData(await resMaster.json(), repo, ul);
+      } else {
+        processTreeData(await res.json(), repo, ul);
       }
-      const files = await res.json();
-      // 選出 .html 檔案
+    }
+
+    function processTreeData(data, repo, ul) {
+      const files = data.tree;
+      // 過濾出 tree 中 blob (檔案) 且以 .html 結尾的項目
       const htmlFiles = files.filter(f =>
-        f.type === "file" && f.name.toLowerCase().endsWith(".html")
+        f.type === "blob" && f.path.toLowerCase().endsWith(".html")
       );
+      
       if (htmlFiles.length === 0) {
         ul.innerHTML = "<li>沒有 HTML 檔案。</li>";
         return;
       }
-      // 產生清單，GitHub Pages 網址格式: https://{username}.github.io/{repo}/{file}
+      
       let list = "";
       for (const f of htmlFiles) {
-        const ghPagesUrl = `https://${githubUser}.github.io/${repo.name}/${f.name}`;
-        list += `<li><a href="${ghPagesUrl}" target="_blank">${f.name}</a></li>`;
+        // f.path 會包含資料夾路徑，例如 "folder/index.html"
+        const ghPagesUrl = `https://${githubUser}.github.io/${repo.name}/${f.path}`;
+        list += `<li><a href="${ghPagesUrl}" target="_blank">${f.path}</a></li>`;
       }
       ul.innerHTML = list;
     }
-
     fetchRepos();
   </script>
 </body>
