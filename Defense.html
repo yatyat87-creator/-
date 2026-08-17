@@ -181,10 +181,19 @@
 
     // --- 地形圖片預載 (預備放 PNG 圖的地方) ---
     const TERRAIN_IMGS = {
-        grass: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/grass.png"),     // 在此填入 草地/沙地 的 PNG 網址
-        mountain: loadSprite(""),  // 在此填入 山地 的 PNG 網址
-        path: loadSprite("")       // 在此填入 泥土路 的 PNG 網址
+        grass: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/grass.png"),     
+        mountain: loadSprite(""),  
+        path: loadSprite("")       
     };
+
+    // 【新增】：環境小動態設定 (未來可填入 imgSrc 替換為您的 AI 精靈圖)
+    const AMBIENT_TYPES = {
+        'butterfly': { symbol: '🦋', size: 18, speed: 0.5, type: 'wander', imgSrc: '' }, // 隨機飛舞的蝴蝶
+        'leaf':      { symbol: '🍂', size: 14, speed: 1.5, type: 'wind',   imgSrc: '' }, // 被風吹過的落葉
+        'bird':      { symbol: '🕊️', size: 20, speed: 1.0, type: 'peck',   imgSrc: '' }  // 在地上啄食的鳥
+    };
+    for (let key in AMBIENT_TYPES) AMBIENT_TYPES[key].img = loadSprite(AMBIENT_TYPES[key].imgSrc);
+    let ambientEffects = []; // 存放畫面上所有的環境物件
 
     // --- 全域變數狀態 ---
     let playerGold = parseInt(localStorage.getItem('tdGameGold_v2')) || 0;
