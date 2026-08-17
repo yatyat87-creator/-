@@ -1,98 +1,55 @@
+---
+layout: null
+---
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Brian Wong作品目錄</title>
+  
+  <!-- PWA 手機 App 設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Brian目錄">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f9f9f9">
+
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f9f9f9; color: #222; margin: 0; padding: 20px; }
     h1 { color: #24292f; }
     .repo { background: #fff; margin-bottom: 24px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); padding: 18px; }
-    .repo h2 { margin-top: 0; font-size: 1.2em; }
-    ul { padding-left: 20px; }
-    a { color: #0969da; text-decoration: none; }
+    .repo h2 { margin-top: 0; font-size: 1.2em; color: #0969da; }
+    ul { padding-left: 20px; line-height: 1.8; }
+    a { color: #0969da; text-decoration: none; word-break: break-all; }
     a:hover { text-decoration: underline; }
-    .loading { color: #666; font-style: italic; }
     @media (max-width: 600px) {
-      .repo { padding: 10px; }
+      .repo { padding: 15px; }
     }
   </style>
 </head>
 <body>
-  <h1>Brian Wong作品目錄</h1>
-  <div id="output">
-    <div class="loading">載入中...</div>
+  <h1>Brian Wong 作品目錄</h1>
+  
+  <div class="repo">
+    <h2>我的網頁作品列表</h2>
+    <ul>
+      <!-- 1. 載入一般的靜態 HTML 檔案 -->
+      {% for file in site.static_files %}
+        {% if file.extname == '.html' %}
+          <li><a href="{{ file.path | relative_url }}" target="_blank">{{ file.path | remove_first: "/" }}</a></li>
+        {% endif %}
+      {% endfor %}
+
+      <!-- 2. 載入可能被 GitHub Jekyll 處理過的 HTML 檔案 -->
+      {% for page in site.html_pages %}
+        {% if page.name != 'content.html' %}
+          <li><a href="{{ page.url | relative_url }}" target="_blank">{{ page.path }}</a></li>
+        {% endif %}
+      {% endfor %}
+    </ul>
   </div>
-  <script>
-    // 請改成你的 GitHub 使用者名稱
-    const githubUser = "yatyat87-creator";
-    const output = document.getElementById("output");
 
-    async function fetchRepos() {
-      const repoRes = await fetch(`https://api.github.com/users/${githubUser}/repos?per_page=100`);
-      if (!repoRes.ok) {
-        output.innerHTML = "無法取得 GitHub 資料，請稍後再試。";
-        return;
-      }
-      const repos = await repoRes.json();
-      if (!repos.length) {
-        output.innerHTML = "目前沒有任何公開 repository。";
-        return;
-      }
-
-      let html = "";
-      for (const repo of repos) {
-        html += `<div class="repo"><h2>${repo.name}</h2>`;
-        html += `<div><a href="${repo.html_url}" target="_blank">查看 GitHub Repository</a></div>`;
-        html += `<ul id="files-${repo.name}"><li class="loading">載入檔案中...</li></ul></div>`;
-      }
-      output.innerHTML = html;
-
-      // 依序載入每個 repo 的 HTML 檔案
-      for (const repo of repos) {
-        fetchFiles(repo);
-      }
-    }
-
-    async function fetchFiles(repo) {
-      const ul = document.getElementById(`files-${repo.name}`);
-      // 假設預設分支是 main，改用 trees API 並加上 recursive=1
-      const res = await fetch(`https://api.github.com/repos/${githubUser}/${repo.name}/git/trees/main?recursive=1`);
-      
-      if (!res.ok) {
-        // 如果 main 分支找不到，可以嘗試 fall back 到 master 分支
-        const resMaster = await fetch(`https://api.github.com/repos/${githubUser}/${repo.name}/git/trees/master?recursive=1`);
-        if (!resMaster.ok) {
-           ul.innerHTML = "<li>無法取得檔案清單（請確認預設分支是否為 main 或 master）。</li>";
-           return;
-        }
-        processTreeData(await resMaster.json(), repo, ul);
-      } else {
-        processTreeData(await res.json(), repo, ul);
-      }
-    }
-
-    function processTreeData(data, repo, ul) {
-      const files = data.tree;
-      // 過濾出 tree 中 blob (檔案) 且以 .html 結尾的項目
-      const htmlFiles = files.filter(f =>
-        f.type === "blob" && f.path.toLowerCase().endsWith(".html")
-      );
-      
-      if (htmlFiles.length === 0) {
-        ul.innerHTML = "<li>沒有 HTML 檔案。</li>";
-        return;
-      }
-      
-      let list = "";
-      for (const f of htmlFiles) {
-        // f.path 會包含資料夾路徑，例如 "folder/index.html"
-        const ghPagesUrl = `https://${githubUser}.github.io/${repo.name}/${f.path}`;
-        list += `<li><a href="${ghPagesUrl}" target="_blank">${f.path}</a></li>`;
-      }
-      ul.innerHTML = list;
-    }
-    fetchRepos();
-  </script>
 </body>
 </html>
