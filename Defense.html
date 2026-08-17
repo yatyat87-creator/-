@@ -968,6 +968,7 @@ class Enemy {
     }
 
     // 【新增】：環境特效類別 (控制蝴蝶、落葉等行為)
+    // 【新增】：環境特效類別 (控制蝴蝶、落葉等行為)
     class AmbientEffect {
         constructor() {
             let keys = Object.keys(AMBIENT_TYPES);
@@ -979,15 +980,16 @@ class Enemy {
             this.alive = true;
             this.life = Math.random() * 500 + 300; // 存活時間 (影格數)
             this.vx = 0; this.vy = 0;
+            
+            // 【新增】：記住角色面向，一開始生出來時隨機決定看左或看右
+            this.facingLeft = Math.random() < 0.5; 
 
             if (this.data.type === 'wind') {
-                // 落葉從左側或上方吹進來
                 this.x = Math.random() < 0.5 ? -20 : Math.random() * 800;
                 this.y = this.x === -20 ? Math.random() * 800 : -20;
                 this.vx = this.data.speed + Math.random();
                 this.vy = this.data.speed * 0.8 + Math.random() * 0.5;
             } else if (this.data.type === 'wander') {
-                // 蝴蝶隨機亂飛
                 this.vx = (Math.random() - 0.5) * this.data.speed;
                 this.vy = (Math.random() - 0.5) * this.data.speed;
             }
@@ -1000,16 +1002,23 @@ class Enemy {
             }
 
             if (this.data.type === 'wander' && globalAnimTick % 40 === 0) {
-                // 蝴蝶定期改變飛行方向
                 this.vx = (Math.random() - 0.5) * this.data.speed * 3;
                 this.vy = (Math.random() - 0.5) * this.data.speed * 3;
             }
             
-            // 鳥類只有偶爾會移動一下
             if (this.data.type === 'peck') {
-                if (Math.random() < 0.01) { this.vx = (Math.random()-0.5); this.vy = (Math.random()-0.5); }
-                else { this.vx = 0; this.vy = 0; }
+                // 【優化】：讓小鳥的跳躍稍作停留，不會每幀歸零
+                if (Math.random() < 0.02) { 
+                    this.vx = (Math.random() - 0.5) * 3; 
+                    this.vy = (Math.random() - 0.5) * 3; 
+                } else if (globalAnimTick % 10 === 0) { 
+                    this.vx = 0; this.vy = 0; 
+                }
             }
+
+            // 【新增】：只有當確實有在移動時，才更新面向記憶
+            if (this.vx < -0.1) this.facingLeft = true;
+            else if (this.vx > 0.1) this.facingLeft = false;
 
             this.x += this.vx; this.y += this.vy;
         }
@@ -1017,23 +1026,20 @@ class Enemy {
         draw() {
             ctx.save(); ctx.translate(this.x, this.y);
             
-            // 加入動態視覺偏移 (蝴蝶上下拍動、落葉旋轉)
             if (this.data.type === 'wander') ctx.translate(0, Math.sin(globalAnimTick / 10) * 4);
             else if (this.data.type === 'wind') { ctx.translate(0, Math.sin(globalAnimTick / 20) * 5); ctx.rotate(globalAnimTick / 30); }
-            else if (this.data.type === 'peck') { if (globalAnimTick % 60 < 10) ctx.translate(0, 2); } // 啄地板動作
+            else if (this.data.type === 'peck') { if (globalAnimTick % 60 < 10) ctx.translate(0, 2); }
 
-            // 【新增】：自動轉向邏輯 (如果正在向左移動，就將整個畫布水平翻轉)
-            if (this.vx < 0 && this.data.type !== 'wind') { 
+            // 【修改】：使用持久記憶的 facingLeft 來決定是否翻轉
+            if (this.facingLeft && this.data.type !== 'wind') { 
                 ctx.scale(-1, 1); 
             }
 
             if (this.data.img && this.data.img.complete && !this.data.img.isFailed && this.data.img.naturalWidth > 0) {
-                // 如果您未來加入了精靈圖，這裡會自動切 4 格動畫
                 let fw = this.data.img.naturalWidth / 4; let fh = this.data.img.naturalHeight;
                 let frame = Math.floor(globalAnimTick / 15) % 4;
                 ctx.drawImage(this.data.img, frame * fw, 0, fw, fh, -this.data.size/2, -this.data.size/2, this.data.size, this.data.size);
             } else {
-                // 佔位符：直接畫 Emoji
                 ctx.font = `${this.data.size}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillText(this.data.symbol, 0, 0);
             }
