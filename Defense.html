@@ -181,7 +181,7 @@
 
     // --- 地形圖片預載 (預備放 PNG 圖的地方) ---
     const TERRAIN_IMGS = {
-        grass: loadSprite(""),     // 在此填入 草地/沙地 的 PNG 網址
+        grass: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/grass.png"),     // 在此填入 草地/沙地 的 PNG 網址
         mountain: loadSprite(""),  // 在此填入 山地 的 PNG 網址
         path: loadSprite("")       // 在此填入 泥土路 的 PNG 網址
     };
@@ -993,19 +993,33 @@ function gameLoop() {
             updateResourcesUI();
         }
 
-        // 畫地圖 (20x20)，並支援 PNG 圖片載入
+        // 畫地圖 (20x20)，並支援 1x4 格動畫精靈圖載入
+        // 【新增】：計算地形專用的動畫幀數 (每 15 個 Tick 換一格，約 0.25 秒一幀)
+        let terrainFrame = Math.floor(globalAnimTick / 15) % 4;
+
+        // 【新增】：建立一個專門負責裁切並畫出「單格地形」的輔助函式
+        const drawAnimatedTerrain = (img, dx, dy) => {
+            let frameWidth = img.naturalWidth / 4; // 寬度切 4 份
+            let frameHeight = img.naturalHeight;   // 高度只有 1 行
+            let sx = terrainFrame * frameWidth;    // 根據當前幀數計算 X 軸裁切點
+            ctx.drawImage(img, sx, 0, frameWidth, frameHeight, dx, dy, TILE_SIZE, TILE_SIZE);
+        };
+
         for (let r = 0; r < 20; r++) {
             for (let c = 0; c < 20; c++) {
                 let dx = c * TILE_SIZE, dy = r * TILE_SIZE;
                 if (isPath(c, r)) { 
-                    if (TERRAIN_IMGS.path && TERRAIN_IMGS.path.complete && !TERRAIN_IMGS.path.isFailed && TERRAIN_IMGS.path.naturalWidth > 0) { ctx.drawImage(TERRAIN_IMGS.path, dx, dy, TILE_SIZE, TILE_SIZE); } 
-                    else { ctx.fillStyle = '#c49f81'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); }
+                    if (TERRAIN_IMGS.path && TERRAIN_IMGS.path.complete && !TERRAIN_IMGS.path.isFailed && TERRAIN_IMGS.path.naturalWidth > 0) { 
+                        drawAnimatedTerrain(TERRAIN_IMGS.path, dx, dy); 
+                    } else { ctx.fillStyle = '#c49f81'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); }
                 } else if (r < 6) {
-                    if (TERRAIN_IMGS.mountain && TERRAIN_IMGS.mountain.complete && !TERRAIN_IMGS.mountain.isFailed && TERRAIN_IMGS.mountain.naturalWidth > 0) { ctx.drawImage(TERRAIN_IMGS.mountain, dx, dy, TILE_SIZE, TILE_SIZE); } 
-                    else { ctx.fillStyle = '#7f8c8d'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#95a5a6'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
+                    if (TERRAIN_IMGS.mountain && TERRAIN_IMGS.mountain.complete && !TERRAIN_IMGS.mountain.isFailed && TERRAIN_IMGS.mountain.naturalWidth > 0) { 
+                        drawAnimatedTerrain(TERRAIN_IMGS.mountain, dx, dy); 
+                    } else { ctx.fillStyle = '#7f8c8d'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#95a5a6'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
                 } else { 
-                    if (TERRAIN_IMGS.grass && TERRAIN_IMGS.grass.complete && !TERRAIN_IMGS.grass.isFailed && TERRAIN_IMGS.grass.naturalWidth > 0) { ctx.drawImage(TERRAIN_IMGS.grass, dx, dy, TILE_SIZE, TILE_SIZE); } 
-                    else { ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
+                    if (TERRAIN_IMGS.grass && TERRAIN_IMGS.grass.complete && !TERRAIN_IMGS.grass.isFailed && TERRAIN_IMGS.grass.naturalWidth > 0) { 
+                        drawAnimatedTerrain(TERRAIN_IMGS.grass, dx, dy); 
+                    } else { ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
                 }
             }
         }
