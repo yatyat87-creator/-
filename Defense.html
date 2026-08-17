@@ -1022,6 +1022,11 @@ class Enemy {
             else if (this.data.type === 'wind') { ctx.translate(0, Math.sin(globalAnimTick / 20) * 5); ctx.rotate(globalAnimTick / 30); }
             else if (this.data.type === 'peck') { if (globalAnimTick % 60 < 10) ctx.translate(0, 2); } // 啄地板動作
 
+            // 【新增】：自動轉向邏輯 (如果正在向左移動，就將整個畫布水平翻轉)
+            if (this.vx < 0 && this.data.type !== 'wind') { 
+                ctx.scale(-1, 1); 
+            }
+
             if (this.data.img && this.data.img.complete && !this.data.img.isFailed && this.data.img.naturalWidth > 0) {
                 // 如果您未來加入了精靈圖，這裡會自動切 4 格動畫
                 let fw = this.data.img.naturalWidth / 4; let fh = this.data.img.naturalHeight;
