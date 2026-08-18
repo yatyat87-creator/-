@@ -1461,7 +1461,7 @@ class Enemy {
             cloudOffsetX = (cloudOffsetX - 0.8) % (cw * scaleSize); cloudOffsetY = (cloudOffsetY - 0.4) % (ch * scaleSize); 
             ctx.save(); 
             // 【效能優化】：手機上移除耗能的 multiply 混色，改用預設模式並把透明度調低到 0.35
-            ctx.globalAlpha = 0.35; 
+            ctx.globalAlpha = 0.55; 
             ctx.globalCompositeOperation = 'source-over'; 
             let pattern = ctx.createPattern(TERRAIN_IMGS.clouds, 'repeat'); ctx.fillStyle = pattern;
             ctx.translate(cloudOffsetX, cloudOffsetY); ctx.scale(scaleSize, scaleSize); 
