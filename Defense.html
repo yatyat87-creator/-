@@ -55,7 +55,14 @@
     </style>
 </head>
 <body>
-
+<!-- 【新增】：結算彈出視窗 UI -->
+        <div id="game-over-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:transparent; z-index:100; flex-direction:column; align-items:center; justify-content:center; color:white;">
+        <div style="background:#2c3e50; padding:30px; border-radius:10px; text-align:center; border:4px solid #f1c40f; box-shadow: 0 0 20px rgba(0,0,0,0.8); min-width: 300px;">
+        <h1 id="game-over-title" style="margin-top:0; font-size: 32px;">結果</h1>
+        <p id="game-over-msg" style="font-size:18px; font-weight: bold; margin-bottom: 20px;">訊息</p>
+        <button onclick="returnToMenu()" style="background:#e74c3c; color:white; border:none; padding:12px 25px; font-size:18px; border-radius:5px; cursor:pointer; font-weight:bold; transition: 0.2s;">返回主選單</button>
+    </div>
+</div>
 <div id="game-wrapper">
     <div id="setup-screen">
         <div class="title">城池守衛戰</div>
@@ -181,17 +188,38 @@
 
     // --- 地形圖片預載 (預備放 PNG 圖的地方) ---
     const TERRAIN_IMGS = {
+        // 【新增】：雲影特效 (待填入無縫雲朵 PNG)
+        clouds: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Cloud.png"), 
         // 【修改】：將草地改成「陣列 (Array)」，可放入多張不同的變體圖片
         grass: [
             loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/grass.png"), // 0: 基礎草地
             loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Grass2.png"), // 1: 雜草地 (待填入)
-            loadSprite("raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Grass(F).png"), // 2: 小花草地 (待填入)
-            loadSprite("raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Grass(S).png")  // 3: 斑駁泥土草地 (待填入)
+            loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Grass(F).png"), // 2: 小花草地 (待填入)
+            loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Grass(S).png")  // 3: 斑駁泥土草地 (待填入)
         ],
-        mountain: loadSprite(""),  
-        path: loadSprite("")       
+        // 【修改】：將山地改成「陣列 (Array)」，支援 4 款不同的變體圖片
+        mountain: [
+            loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/mountain.png"), // 0: 基礎山地
+            loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Scattered Gravel.png"), // 1: 碎石山地 (待填入)
+            loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Scorched Earth.png"), // 2: 裂縫山地 (待填入)
+            loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Fissure.png")  // 3: 焦痕山地 (待填入)
+        ],
+        path: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/path(S).png")       
     };
 
+// 【新增】：雙方城鎮中心的三階段狀態圖片 (0: 健康, 1: 半血起火, 2: 毀滅廢墟)
+    const BASE_IMGS = {
+        player: [
+            loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/City centre 100.png"), // 100% ~ 50% 狀態
+            loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/City centre 50.png"), // 50% ~ 1% 狀態
+            loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/City centre 0.png")  // 0% 狀態
+        ],
+        enemy: [
+            loadSprite(""), // 100% ~ 50% 狀態
+            loadSprite(""), // 50% ~ 1% 狀態
+            loadSprite("")  // 0% 狀態
+        ]
+    };
 
     // 【新增】：環境小動態設定 (未來可填入 imgSrc 替換為您的 AI 精靈圖)
     const AMBIENT_TYPES = {
@@ -233,32 +261,44 @@
     let gameOver = false, gameWon = false;
     let enemies = [], playerUnits = [], towers = [];
     let globalAnimTick = 0;
+    // 【新增】：控制雲影飄動的座標變數
+    let cloudOffsetX = 0, cloudOffsetY = 0;
     // 用於控制兩隻兩隻出兵的排隊系統
     let deployQueue = [];
+// 【新增】：用來記錄並取消遊戲主迴圈
+    let animFrameId = null;
 
-    // 【新增】：初始化地圖時，隨機生成靜態裝飾物
+// 【新增】：初始化地圖時，根據不同「地形 (Biome)」生成對應裝飾物
     function generateDecorations() {
         mapDecorations = [];
-        let keys = Object.keys(DECORATION_TYPES);
         
         for (let r = 0; r < 20; r++) {
             for (let c = 0; c < 20; c++) {
-                // 規則 1：裝飾物絕對不能擋在道路或主堡陣地上
-                if (!isPath(c, r)) {
-                    // 規則 2：15% 的機率在該格子生成裝飾物 (可依喜好調整機率)
-                    if (Math.random() < 0.15) {
-                        let type;
-                        if (r < 6) {
-                            // 敵軍前線 (山地)：只生成石頭或骸骨
-                            let mntKeys = ['rock', 'bones'];
-                            type = mntKeys[Math.floor(Math.random() * mntKeys.length)];
-                        } else {
-                            // 我方後方 (草地)：生成樹木、石頭或蘑菇
-                            let grassKeys = ['tree1', 'tree2', 'rock', 'mushroom'];
-                            type = grassKeys[Math.floor(Math.random() * grassKeys.length)];
-                        }
-                        
-                        // 規則 3：加入微小的 X/Y 隨機偏移，讓它們不要死板地排在格子正中央
+                
+                // 1. 先判斷這格是什麼地形
+                let terrain = 'grass';
+                if (isPath(c, r)) terrain = 'path';
+                else if (r < 6) terrain = 'mountain';
+
+                // 2. 決定是否要長出裝飾物 (15% 機率)
+                if (Math.random() < 0.15) {
+                    let allowedTypes = [];
+                    
+                    // 【嚴格綁定】：不同地形給予不同的物件清單
+                    if (terrain === 'grass') {
+                        // 草地專屬：樹木、蘑菇、小石頭
+                        allowedTypes = ['tree1', 'tree2', 'rock', 'mushroom'];
+                    } else if (terrain === 'mountain') {
+                        // 山地專屬：骸骨、石頭 (如果您不想放石頭，可以改成 ['bones'])
+                        allowedTypes = ['bones', 'rock']; 
+                    } else if (terrain === 'path') {
+                        // 道路：保持淨空，不長任何東西
+                        allowedTypes = [];
+                    }
+
+                    // 3. 如果這個地形有允許的物件，就隨機抽一個種下去
+                    if (allowedTypes.length > 0) {
+                        let type = allowedTypes[Math.floor(Math.random() * allowedTypes.length)];
                         let offsetX = (Math.random() - 0.5) * 15;
                         let offsetY = (Math.random() - 0.5) * 15;
                         
@@ -266,10 +306,8 @@
                             type: type,
                             x: c * TILE_SIZE + TILE_SIZE / 2 + offsetX,
                             y: r * TILE_SIZE + TILE_SIZE / 2 + offsetY,
-                            // 【新增】：給每一個物件一個 0~60 的隨機動畫時間差，讓森林的搖曳有錯落感
                             animOffset: Math.floor(Math.random() * 60) 
                         });
-
                     }
                 }
             }
@@ -318,14 +356,75 @@
         updateLobbyUI();
     }
 
-    function startGame() {
-        document.getElementById('setup-screen').style.display = 'none'; 
-        document.getElementById('play-screen').style.display = 'block';
-        // 【新增】：遊戲開始時先撒下隨機裝飾物
-        generateDecorations(); 
-        loadNextQuestion(); updateResourcesUI(); updateCampsUI(); updateGeneralsUI(); gameLoop();
-    }
+// 【修改】：極致穩定的返回大廳函式
+    window.returnToMenu = function() {
+        // 1. 停止動畫迴圈 (使用 window. 前綴避免變數未宣告的報錯)
+        if (window.animFrameId) {
+            cancelAnimationFrame(window.animFrameId);
+            window.animFrameId = null;
+        }
 
+        // 2. 關閉結算畫面並切換回大廳
+        document.getElementById('game-over-modal').style.display = 'none';
+        document.getElementById('play-screen').style.display = 'none';
+        document.getElementById('setup-screen').style.display = 'block';
+
+        // 3. 徹底清空所有場上物件陣列 (使用 .length = 0 確保記憶體位置被完全清空)
+        enemies.length = 0;
+        playerUnits.length = 0;
+        towers.length = 0;
+        deployQueue.length = 0;
+        ambientEffects.length = 0;
+        if (typeof offenseCamp !== 'undefined') offenseCamp.fill(null);
+
+        // 4. 重置雙方主堡 (血量恢復滿血)
+        playerBase = { x: 17, y: 17, hp: 2000, maxHp: 2000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
+        enemyBase = { x: 2, y: 2, hp: 2000, maxHp: 2000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
+
+        // 5. 重置遊戲狀態與資源
+        gameOver = false;
+        gameWon = false;
+        difficultyLevel = 1;
+        frameCount = 0;
+        spawnTimer = 0;
+        globalAnimTick = 0;
+        isDeleteMode = false;
+        selectedBuilding = null;
+        
+        let btnDelete = document.getElementById('btn-delete');
+        if(btnDelete) {
+            btnDelete.style.background = "#7f8c8d";
+            btnDelete.innerText = "🛠️ 拆除模式: 關閉 (關閉時點擊建築即為升級)";
+        }
+
+        gameWood = 1000;
+        gameMeat = 1000;
+        gameStone = 0;
+        gameGold = 50;
+
+        // 6. 更新大廳畫面
+        updateLobbyUI();
+    };
+
+    // 【修改】：極致穩定的開始遊戲函式
+    window.startGame = function() {
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('play-screen').style.display = 'block';
+        
+        // 確保舊的迴圈絕對被砍掉，不會發生兩倍速 Bug
+        if (window.animFrameId) {
+            cancelAnimationFrame(window.animFrameId);
+        }
+        
+        generateDecorations();
+        loadNextQuestion();
+        updateResourcesUI();
+        updateCampsUI();
+        updateGeneralsUI();
+        
+        // 啟動全新的遊戲迴圈
+        gameLoop();
+    };
     
     // --- 答題與資源邏輯 ---
     let currentAnswer = 0;
@@ -1030,31 +1129,43 @@ class Enemy {
         }
     }
 
-    // 【新增】：環境特效類別 (控制蝴蝶、落葉等行為)
-    // 【新增】：環境特效類別 (控制蝴蝶、落葉等行為)
+    // 【修改】：環境特效類別 (嚴格綁定地形)
     class AmbientEffect {
         constructor() {
             let keys = Object.keys(AMBIENT_TYPES);
             this.typeKey = keys[Math.floor(Math.random() * keys.length)];
             this.data = AMBIENT_TYPES[this.typeKey];
             
-            this.x = Math.random() * 800;
-            this.y = Math.random() * 800;
             this.alive = true;
-            this.life = Math.random() * 500 + 300; // 存活時間 (影格數)
+            this.life = Math.random() * 500 + 300; 
             this.vx = 0; this.vy = 0;
-            
-            // 【新增】：記住角色面向，一開始生出來時隨機決定看左或看右
             this.facingLeft = Math.random() < 0.5; 
 
             if (this.data.type === 'wind') {
+                // 落葉 (Wind)：可以從畫面外任何地方吹進來，吹過所有地形
                 this.x = Math.random() < 0.5 ? -20 : Math.random() * 800;
                 this.y = this.x === -20 ? Math.random() * 800 : -20;
                 this.vx = this.data.speed + Math.random();
                 this.vy = this.data.speed * 0.8 + Math.random() * 0.5;
-            } else if (this.data.type === 'wander') {
-                this.vx = (Math.random() - 0.5) * this.data.speed;
-                this.vy = (Math.random() - 0.5) * this.data.speed;
+            } else {
+                // 蝴蝶 (Wander) 與 小鳥 (Peck)：【強制只在草地上生成】
+                let foundGrass = false;
+                while (!foundGrass) {
+                    let c = Math.floor(Math.random() * 20);
+                    let r = Math.floor(Math.random() * 20);
+                    
+                    // 草地判定條件：不是道路 (isPath為false)，且不是山地 (r >= 6)
+                    if (!isPath(c, r) && r >= 6) {
+                        this.x = c * TILE_SIZE + Math.random() * TILE_SIZE;
+                        this.y = r * TILE_SIZE + Math.random() * TILE_SIZE;
+                        foundGrass = true;
+                    }
+                }
+
+                if (this.data.type === 'wander') {
+                    this.vx = (Math.random() - 0.5) * this.data.speed;
+                    this.vy = (Math.random() - 0.5) * this.data.speed;
+                }
             }
         }
 
@@ -1070,7 +1181,6 @@ class Enemy {
             }
             
             if (this.data.type === 'peck') {
-                // 【優化】：讓小鳥的跳躍稍作停留，不會每幀歸零
                 if (Math.random() < 0.02) { 
                     this.vx = (Math.random() - 0.5) * 3; 
                     this.vy = (Math.random() - 0.5) * 3; 
@@ -1079,7 +1189,6 @@ class Enemy {
                 }
             }
 
-            // 【新增】：只有當確實有在移動時，才更新面向記憶
             if (this.vx < -0.1) this.facingLeft = true;
             else if (this.vx > 0.1) this.facingLeft = false;
 
@@ -1093,7 +1202,6 @@ class Enemy {
             else if (this.data.type === 'wind') { ctx.translate(0, Math.sin(globalAnimTick / 20) * 5); ctx.rotate(globalAnimTick / 30); }
             else if (this.data.type === 'peck') { if (globalAnimTick % 60 < 10) ctx.translate(0, 2); }
 
-            // 【修改】：使用持久記憶的 facingLeft 來決定是否翻轉
             if (this.facingLeft && this.data.type !== 'wind') { 
                 ctx.scale(-1, 1); 
             }
@@ -1110,50 +1218,98 @@ class Enemy {
         }
     }
 
-    // --- 遊戲主迴圈 ---
-function gameLoop() {
-        if (gameOver || gameWon) return;
+// --- 遊戲主迴圈 ---
+    function gameLoop() {
+        // 【移除原本會直接卡死整個迴圈的 return】
+        
         ctx.clearRect(0, 0, 800, 800);
         globalAnimTick++;
 
-        // 【新增】：處理出兵佇列 (每 30 幀 / 0.5秒 出最多 2 隻)
-        if (globalAnimTick % 30 === 0 && deployQueue.length > 0) {
-            let spawnCount = Math.min(2, deployQueue.length);
-            for(let i=0; i<spawnCount; i++) {
-                let u = deployQueue.shift();
-                let newU = new PlayerUnit(u.id, u.level); 
-                newU.pathIndex = u.spawnIndex;
-                newU.x = pathCoords[u.spawnIndex].x * TILE_SIZE + TILE_SIZE / 2; 
-                newU.y = pathCoords[u.spawnIndex].y * TILE_SIZE + TILE_SIZE / 2;
-                playerUnits.push(newU); 
+        // 判斷遊戲是否還在進行中
+        let isPlaying = !gameOver && !gameWon;
+
+        // ============================================
+        // 1. 只有在進行中 (isPlaying) 才會執行的「戰鬥與資源邏輯」
+        // ============================================
+        if (isPlaying) {
+            if (globalAnimTick % 30 === 0 && deployQueue.length > 0) {
+                let spawnCount = Math.min(2, deployQueue.length);
+                for(let i=0; i<spawnCount; i++) {
+                    let u = deployQueue.shift();
+                    let newU = new PlayerUnit(u.id, u.level); 
+                    newU.pathIndex = u.spawnIndex;
+                    newU.x = pathCoords[u.spawnIndex].x * TILE_SIZE + TILE_SIZE / 2; 
+                    newU.y = pathCoords[u.spawnIndex].y * TILE_SIZE + TILE_SIZE / 2;
+                    playerUnits.push(newU); 
+                }
             }
-        }
 
-        // 結算資源 (每秒 60 幀)
+            if (globalAnimTick % 60 === 0) {
+                towers.forEach(t => {
+                    let bData = BUILDINGS[t.id];
+                    if (bData.type === 'resource') {
+                        let amount = bData.resAmount * t.level;
+                        if (bData.resType === 'meat') gameMeat += amount;
+                        if (bData.resType === 'wood') gameWood += amount;
+                        if (bData.resType === 'gold') gameGold += amount;
+                        if (bData.resType === 'stone') gameStone += amount;
+                    }
+                });
+                updateResourcesUI();
+            }
 
-        if (globalAnimTick % 60 === 0) {
-            towers.forEach(t => {
-                let bData = BUILDINGS[t.id];
-                if (bData.type === 'resource') {
-                    let amount = bData.resAmount * t.level;
-                    if (bData.resType === 'meat') gameMeat += amount;
-                    if (bData.resType === 'wood') gameWood += amount;
-                    if (bData.resType === 'gold') gameGold += amount;
-                    if (bData.resType === 'stone') gameStone += amount;
+            frameCount++;
+            if (frameCount % 600 === 0 && difficultyLevel < 15) {
+                difficultyLevel += 0.5;
+                let newLevel = Math.floor(difficultyLevel);
+                document.getElementById('wave-display').innerText = `強度: Lv.${newLevel}`;
+                if (newLevel > enemyBase.level) {
+                    enemyBase.level = newLevel;
+                    enemyBase.maxHp = 2000 + (enemyBase.level - 1) * 1000;
+                    enemyBase.hp = Math.min(enemyBase.maxHp, enemyBase.hp + 1000); 
+                    enemyBase.damage = 20 + (enemyBase.level - 1) * 10;
+                }
+            }
+
+            spawnTimer--;
+            if (spawnTimer <= 0) {
+                let type = 'normal'; let rand = Math.random();
+                if (difficultyLevel >= 2 && rand < 0.3) type = 'fast';
+                if (difficultyLevel >= 3 && rand >= 0.3 && rand < 0.6) type = 'tank';
+                if (difficultyLevel >= 4 && rand >= 0.8) type = 'boss';
+                enemies.push(new Enemy(difficultyLevel, type));
+                spawnTimer = Math.max(150, 360 - difficultyLevel * 15); 
+            }
+
+            [playerBase, enemyBase].forEach((base, idx) => {
+                let isPlayer = idx === 0;
+                if (globalAnimTick % 60 === 0 && base.hp < base.maxHp) {
+                    base.hp = Math.min(base.maxHp, base.hp + base.healRate);
+                }
+                if (base.cooldown > 0) base.cooldown--;
+                else {
+                    let bx = base.x * TILE_SIZE + TILE_SIZE / 2; let by = base.y * TILE_SIZE + TILE_SIZE / 2;
+                    let targetArr = isPlayer ? enemies : playerUnits;
+                    let target = targetArr.find(u => Math.hypot((u.x + u.drawOffsetX) - bx, (u.y + u.drawOffsetY) - by) <= base.range);
+                    if (target) {
+                        target.hp -= base.damage; base.cooldown = base.fireRate;
+                        ctx.strokeStyle = isPlayer ? '#f1c40f' : '#e74c3c'; ctx.lineWidth = 4;
+                        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(target.x + target.drawOffsetX, target.y + target.drawOffsetY); ctx.stroke();
+                    }
                 }
             });
-            updateResourcesUI();
+
+            if (globalAnimTick % 30 === 0) updateGeneralsUI();
         }
 
-        // 畫地圖 (20x20)，並支援 1x4 格動畫精靈圖載入
-        // 【新增】：計算地形專用的動畫幀數 (每 15 個 Tick 換一格，約 0.25 秒一幀)
+        // ============================================
+        // 2. 「不管遊戲結束與否」都要繼續運行的動畫與畫圖邏輯
+        // ============================================
+        
         let terrainFrame = Math.floor(globalAnimTick / 15) % 4;
-
-        // 【新增】：建立一個專門負責裁切並畫出「單格地形」的輔助函式
         const drawAnimatedTerrain = (img, dx, dy) => {
-            let frameWidth = img.naturalWidth / 4; // 寬度切 4 份
-            let frameHeight = img.naturalHeight;   // 高度只有 1 行
-            let sx = terrainFrame * frameWidth;    // 根據當前幀數計算 X 軸裁切點
+            let frameWidth = img.naturalWidth / 4; let frameHeight = img.naturalHeight;
+            let sx = terrainFrame * frameWidth;
             ctx.drawImage(img, sx, 0, frameWidth, frameHeight, dx, dy, TILE_SIZE, TILE_SIZE);
         };
 
@@ -1165,174 +1321,116 @@ function gameLoop() {
                         drawAnimatedTerrain(TERRAIN_IMGS.path, dx, dy); 
                     } else { ctx.fillStyle = '#c49f81'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); }
                 } else if (r < 6) {
-                    if (TERRAIN_IMGS.mountain && TERRAIN_IMGS.mountain.complete && !TERRAIN_IMGS.mountain.isFailed && TERRAIN_IMGS.mountain.naturalWidth > 0) { 
-                        drawAnimatedTerrain(TERRAIN_IMGS.mountain, dx, dy); 
-                    } else { ctx.fillStyle = '#7f8c8d'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#95a5a6'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
-                } else { 
-                    // 【修改】：過濾出陣列中已經成功載入的草地圖片
-                    let validGrassImgs = TERRAIN_IMGS.grass.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
-                    
-                    if (validGrassImgs.length > 0) { 
-                        // 【關鍵】：利用 X/Y 座標計算一個「固定的隨機索引值」，確保同一格永遠顯示同一張變體，不會每幀閃爍！
-                        // 37 跟 17 是質數，用來打亂規律
-                        let tileIndex = (r * 37 + c * 17) % validGrassImgs.length; 
-                        drawAnimatedTerrain(validGrassImgs[tileIndex], dx, dy); 
+                    let validMntImgs = TERRAIN_IMGS.mountain.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
+                    if (validMntImgs.length > 0) { 
+                        let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
+                        let tileIndex = 0; 
+                        if (validMntImgs.length >= 4) {
+                            if (randVal > 0.90) tileIndex = 1; else if (randVal > 0.80) tileIndex = 2; else if (randVal > 0.70) tileIndex = 3; 
+                        } else { tileIndex = Math.floor(randVal * validMntImgs.length); }
+                        drawAnimatedTerrain(validMntImgs[tileIndex], dx, dy); 
                     } else { 
-                        ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); 
-                        ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                        ctx.fillStyle = '#7f8c8d'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#95a5a6'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                    }
+                } else { 
+                    let validGrassImgs = TERRAIN_IMGS.grass.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
+                    if (validGrassImgs.length > 0) { 
+                        let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
+                        let tileIndex = 0; 
+                        if (validGrassImgs.length >= 4) {
+                            if (randVal > 0.90) tileIndex = 1; else if (randVal > 0.80) tileIndex = 2; else if (randVal > 0.70) tileIndex = 3; 
+                        } else { tileIndex = Math.floor(randVal * validGrassImgs.length); }
+                        drawAnimatedTerrain(validGrassImgs[tileIndex], dx, dy); 
+                    } else {
+                        ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
                     }
                 }
-
             }
         }
 
-         // 【新增】：畫上靜態環境裝飾物 (樹木、石頭等)
         mapDecorations.forEach(dec => {
             let dData = DECORATION_TYPES[dec.type];
             if (dData.img && dData.img.complete && !dData.img.isFailed && dData.img.naturalWidth > 0) {
-                // 【修改】：支援 4x1 動畫精靈圖
-                let fw = dData.img.naturalWidth / 4; 
-                let fh = dData.img.naturalHeight;
-                // 將全域時間加上該物件專屬的時間差，除以 20 (控制搖曳速度)，再取餘數 4 決定畫哪一格
+                let fw = dData.img.naturalWidth / 4; let fh = dData.img.naturalHeight;
                 let frame = Math.floor((globalAnimTick + dec.animOffset) / 20) % 4; 
-                
                 ctx.drawImage(dData.img, frame * fw, 0, fw, fh, dec.x - dData.size/2, dec.y - dData.size/2, dData.size, dData.size);
             } else {
                 ctx.font = `${dData.size}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                // 加一點小小的陰影，讓 Emoji 更有立體感
-                ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillText(dData.symbol, dec.x, dec.y + 4);
-                ctx.fillText(dData.symbol, dec.x, dec.y);
+                ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillText(dData.symbol, dec.x, dec.y + 4); ctx.fillText(dData.symbol, dec.x, dec.y);
             }
         });
 
-        // 【新增】：隨機產生與渲染環境特效 (蝴蝶、落葉等)
-
-        if (Math.random() < 0.03 && ambientEffects.length < 20) { // 畫面最多維持 20 個特效
-            ambientEffects.push(new AmbientEffect());
-        }
+        // 動態產生與更新環境特效 (蝴蝶、落葉等繼續運作)
+        if (Math.random() < 0.03 && ambientEffects.length < 20) ambientEffects.push(new AmbientEffect());
         for (let i = ambientEffects.length - 1; i >= 0; i--) {
             let effect = ambientEffects[i];
-            effect.update();
-            if (!effect.alive) ambientEffects.splice(i, 1);
-            else effect.draw();
+            // 讓環境特效不受輸贏影響，繼續飄動
+            effect.update(); 
+            if (!effect.alive) ambientEffects.splice(i, 1); else effect.draw();
         }
 
-        // 【新增】：城鎮中心攻防與自動回血邏輯
+        // ============================================
+        // 3. 處理部隊 (如果是遊戲結束，強制切換到 idle 狀態)
+        // ============================================
 
-        [playerBase, enemyBase].forEach((base, idx) => {
-            let isPlayer = idx === 0;
-            // 自動回血 (每秒)
-            if (globalAnimTick % 60 === 0 && base.hp < base.maxHp) {
-                base.hp = Math.min(base.maxHp, base.hp + base.healRate);
-            }
-            // 主堡防禦塔攻擊
-            if (base.cooldown > 0) base.cooldown--;
-            else {
-                let bx = base.x * TILE_SIZE + TILE_SIZE / 2; let by = base.y * TILE_SIZE + TILE_SIZE / 2;
-                let targetArr = isPlayer ? enemies : playerUnits;
-                let target = targetArr.find(u => Math.hypot((u.x + u.drawOffsetX) - bx, (u.y + u.drawOffsetY) - by) <= base.range);
-                if (target) {
-                    target.hp -= base.damage; base.cooldown = base.fireRate;
-                    ctx.strokeStyle = isPlayer ? '#f1c40f' : '#e74c3c'; ctx.lineWidth = 4;
-                    ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(target.x + target.drawOffsetX, target.y + target.drawOffsetY); ctx.stroke();
-                }
-            }
-        });
-
-// 繪製玩家城鎮中心
-        ctx.fillStyle = '#2980b9'; ctx.fillRect(17 * TILE_SIZE, 17 * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = 'white'; ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('👑', 17 * TILE_SIZE + TILE_SIZE/2, 17 * TILE_SIZE + TILE_SIZE/2 - 5);
-        ctx.fillStyle = 'black'; ctx.font = 'bold 10px Arial'; ctx.fillText('Lv'+playerBase.level, 17 * TILE_SIZE + TILE_SIZE/2, 17 * TILE_SIZE + TILE_SIZE - 5);
-        ctx.fillStyle = 'red'; ctx.fillRect(17 * TILE_SIZE, 17 * TILE_SIZE - 8, TILE_SIZE, 4);
-        // 【修正】：加入 Math.min(1, ...) 確保綠色血條永遠不會畫超出 100% 的寬度
-        ctx.fillStyle = '#2ecc71'; ctx.fillRect(17 * TILE_SIZE, 17 * TILE_SIZE - 8, TILE_SIZE * Math.max(0, Math.min(1, playerBase.hp / playerBase.maxHp)), 4);
-        
-        // 繪製敵方城鎮中心
-        ctx.fillStyle = '#8e44ad'; ctx.fillRect(2 * TILE_SIZE, 2 * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-        ctx.fillStyle = 'white'; ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('👿', 2 * TILE_SIZE + TILE_SIZE/2, 2 * TILE_SIZE + TILE_SIZE/2 - 5);
-        ctx.fillStyle = 'black'; ctx.font = 'bold 10px Arial'; ctx.fillText('Lv'+enemyBase.level, 2 * TILE_SIZE + TILE_SIZE/2, 2 * TILE_SIZE + TILE_SIZE - 5);
-        ctx.fillStyle = 'red'; ctx.fillRect(2 * TILE_SIZE, 2 * TILE_SIZE - 8, TILE_SIZE, 4);
-        // 【修正】：加入 Math.min(1, ...) 確保綠色血條永遠不會畫超出 100% 的寬度
-        ctx.fillStyle = '#2ecc71'; ctx.fillRect(2 * TILE_SIZE, 2 * TILE_SIZE - 8, TILE_SIZE * Math.max(0, Math.min(1, enemyBase.hp / enemyBase.maxHp)), 4);
-
-        // 更新頂部血量 UI
-        document.getElementById('hp-display').innerText = Math.max(0, Math.floor(playerBase.hp));
-        document.getElementById('enemy-hp-display').innerText = Math.max(0, Math.floor(enemyBase.hp));
-
-        // 動態難度產怪
-        frameCount++;
-        if (frameCount % 600 === 0 && difficultyLevel < 15) {
-            difficultyLevel += 0.5;
-            let newLevel = Math.floor(difficultyLevel);
-            document.getElementById('wave-display').innerText = `強度: Lv.${newLevel}`;
-            
-            // 【修正】：只有當「整數等級」真正提升時，才增加血量上限與現有血量
-            if (newLevel > enemyBase.level) {
-                enemyBase.level = newLevel;
-                enemyBase.maxHp = 2000 + (enemyBase.level - 1) * 1000;
-                // 增加 1000 血，但強制確保不會超過 maxHp 的上限
-                enemyBase.hp = Math.min(enemyBase.maxHp, enemyBase.hp + 1000); 
-                enemyBase.damage = 20 + (enemyBase.level - 1) * 10;
-            }
-        }
-
-        spawnTimer--;
-        if (spawnTimer <= 0) {
-            let type = 'normal';
-            let rand = Math.random();
-            if (difficultyLevel >= 2 && rand < 0.3) type = 'fast';
-            if (difficultyLevel >= 3 && rand >= 0.3 && rand < 0.6) type = 'tank';
-            if (difficultyLevel >= 4 && rand >= 0.8) type = 'boss';
-            
-            enemies.push(new Enemy(difficultyLevel, type));
-            spawnTimer = Math.max(150, 360 - difficultyLevel * 15); 
-        }
-
-        if (globalAnimTick % 30 === 0) updateGeneralsUI();
-
-        // 敵人行動
+        // 敵人行動與繪製
         for (let i = enemies.length - 1; i >= 0; i--) {
             let e = enemies[i];
-            let closestPlayer = playerUnits.find(p => Math.hypot((p.x + p.drawOffsetX) - (e.x + e.drawOffsetX), (p.y + p.drawOffsetY) - (e.y + e.drawOffsetY)) <= e.range);
-            
-            e.update(closestPlayer);
-            
-            // 檢查主堡破壞
-            if (playerBase.hp <= 0 && !gameOver) { 
-                gameOver = true; setTimeout(() => alert("💥 我方城池被敵軍攻破了！重新整理網頁再來一次！"), 100); 
+            if (isPlaying) {
+                let closestPlayer = playerUnits.find(p => Math.hypot((p.x + p.drawOffsetX) - (e.x + e.drawOffsetX), (p.y + p.drawOffsetY) - (e.y + e.drawOffsetY)) <= e.range);
+                e.update(closestPlayer);
+                
+                // 【修改】：原本直接 alert 的觸發點，改成顯示新 UI
+                if (playerBase.hp <= 0 && !gameOver) { 
+                    gameOver = true;
+                    document.getElementById('game-over-title').innerText = "💥 戰敗！";
+                    document.getElementById('game-over-title').style.color = "#e74c3c";
+                    document.getElementById('game-over-msg').innerText = "我方城池被敵軍攻破了...";
+                    document.getElementById('game-over-modal').style.display = 'flex';
+                }
+            } else {
+                // 【核心機制】：遊戲結束時，停止行動並強制回到待機(0)動畫
+                e.state = 0; 
+                e.cooldown = 0;
             }
 
-            if (e.hp > 0) e.draw();
-            else enemies.splice(i, 1);
+            if (e.hp > 0) e.draw(); else enemies.splice(i, 1);
         }
 
-        // 我方進攻部隊行動
+        // 我方部隊行動與繪製
         playerUnits.sort((a, b) => a.y - b.y);
         for (let i = playerUnits.length - 1; i >= 0; i--) {
             let pUnit = playerUnits[i];
-            let targetEnemy = enemies.find(e => Math.hypot((e.x + e.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (e.y + e.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY)) <= pUnit.range);
-            
-            pUnit.update(targetEnemy);
-            
-            if (enemyBase.hp <= 0 && !gameWon) {
-                gameWon = true; playerGold += 200; localStorage.setItem('tdGameGold_v2', playerGold);
-                setTimeout(() => alert("🎉 成功推平敵軍主堡！獲得 200 金幣！"), 100);
+            if (isPlaying) {
+                let targetEnemy = enemies.find(e => Math.hypot((e.x + e.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (e.y + e.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY)) <= pUnit.range);
+                pUnit.update(targetEnemy);
+                
+                // 【修改】：原本直接 alert 的觸發點，改成顯示新 UI
+                if (enemyBase.hp <= 0 && !gameWon) {
+                    gameWon = true; playerGold += 200; localStorage.setItem('tdGameGold_v2', playerGold);
+                    document.getElementById('game-over-title').innerText = "🎉 勝利！";
+                    document.getElementById('game-over-title').style.color = "#f1c40f";
+                    document.getElementById('game-over-msg').innerText = "成功推平敵軍主堡！獲得 200 金幣！";
+                    document.getElementById('game-over-modal').style.display = 'flex';
+                }
+            } else {
+                // 【核心機制】：遊戲結束時，停止行動並強制回到待機(0)動畫
+                pUnit.state = 0; 
+                pUnit.cooldown = 0;
             }
 
-            if (pUnit.hp <= 0) playerUnits.splice(i, 1);
-            else pUnit.draw(); 
+            if (pUnit.hp <= 0) playerUnits.splice(i, 1); else pUnit.draw(); 
         }
 
-        // 建築物邏輯與渲染
+        // 防禦塔繪製 (只保留畫圖，拔掉射擊邏輯的迴圈)
         towers.sort((a, b) => a.y - b.y).forEach(tower => {
             const cx = tower.x * TILE_SIZE, cy = tower.y * TILE_SIZE;
             let bData = BUILDINGS[tower.id];
             
-            if (bData.type === 'attack') {
+            if (isPlaying && bData.type === 'attack') {
                 const range = 60 + (bData.range * 30) + (tower.level * 10);
                 const damage = 10 * bData.dmg * tower.level;
                 const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
-                
                 if (tower.cooldown > 0) tower.cooldown--;
                 else {
                     const target = enemies.find(e => Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
@@ -1347,16 +1445,56 @@ function gameLoop() {
             ctx.fillStyle = bData.color; ctx.fillRect(cx + 2, cy + 2, TILE_SIZE - 4, TILE_SIZE - 4);
             ctx.fillStyle = 'white'; ctx.font = '22px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
             ctx.fillText(bData.symbol, cx + TILE_SIZE / 2, cy + TILE_SIZE / 2);
-            ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial';
-            ctx.fillText('Lv'+tower.level, cx + TILE_SIZE/2, cy + TILE_SIZE - 5);
+            ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+tower.level, cx + TILE_SIZE/2, cy + TILE_SIZE - 5);
             
             if (tower.id === 'gate') {
-                ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE, 4);
-                ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx, cy - 8, TILE_SIZE * (tower.hp / tower.maxHp), 4);
+                ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE, 4); ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx, cy - 8, TILE_SIZE * (tower.hp / tower.maxHp), 4);
             }
         });
 
-        if (!gameOver && !gameWon) requestAnimationFrame(gameLoop);
+        // ============================================
+        // 4. 畫雲層與 UI (永遠執行)
+        // ============================================
+        if (TERRAIN_IMGS.clouds && TERRAIN_IMGS.clouds.complete && !TERRAIN_IMGS.clouds.isFailed && TERRAIN_IMGS.clouds.naturalWidth > 0) {
+            let scaleSize = 1.2; let cw = TERRAIN_IMGS.clouds.naturalWidth || 100; let ch = TERRAIN_IMGS.clouds.naturalHeight || 100;
+            cloudOffsetX = (cloudOffsetX - 0.8) % (cw * scaleSize); cloudOffsetY = (cloudOffsetY - 0.4) % (ch * scaleSize); 
+            ctx.save(); ctx.globalAlpha = 0.7; ctx.globalCompositeOperation = 'multiply'; 
+            let pattern = ctx.createPattern(TERRAIN_IMGS.clouds, 'repeat'); ctx.fillStyle = pattern;
+            ctx.translate(cloudOffsetX, cloudOffsetY); ctx.scale(scaleSize, scaleSize); 
+            let startX = -cloudOffsetX / scaleSize; let startY = -cloudOffsetY / scaleSize; let drawW = 800 / scaleSize; let drawH = 800 / scaleSize;
+            ctx.fillRect(startX, startY, drawW, drawH); ctx.restore();
+        }
+
+        const drawBase = (baseObj, imgArray, fallbackColor, symbol, isPlayer) => {
+            let cx = baseObj.x * TILE_SIZE; let cy = baseObj.y * TILE_SIZE; let hpRatio = baseObj.hp / baseObj.maxHp;
+            let stateIndex = hpRatio > 0.5 ? 0 : (hpRatio > 0 ? 1 : 2);
+            let img = imgArray ? imgArray[stateIndex] : null; 
+            let drawSize = TILE_SIZE * 2.8; 
+            let drawX = cx + (TILE_SIZE / 2) - (drawSize / 2); let drawY = cy + (TILE_SIZE / 2) - (drawSize / 2) - 15; 
+
+            if (img && img.complete && !img.isFailed && img.naturalWidth > 0) {
+                let fw = img.naturalWidth / 4; let fh = img.naturalHeight; let frame = Math.floor(globalAnimTick / 15) % 4;
+                ctx.drawImage(img, frame * fw, 0, fw, fh, drawX, drawY, drawSize, drawSize);
+            } else {
+                ctx.fillStyle = fallbackColor; ctx.fillRect(cx, cy, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = 'white'; ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(symbol, cx + TILE_SIZE/2, cy + TILE_SIZE/2 - 5);
+            }
+
+            if (stateIndex !== 2) {
+                let barWidth = TILE_SIZE * 1.5; let barX = cx + (TILE_SIZE / 2) - (barWidth / 2); let barY = drawY - 8; 
+                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText('Lv'+baseObj.level, cx + TILE_SIZE/2, barY - 8);
+                ctx.fillStyle = 'red'; ctx.fillRect(barX, barY, barWidth, 4); ctx.fillStyle = '#2ecc71'; ctx.fillRect(barX, barY, barWidth * Math.max(0, Math.min(1, hpRatio)), 4);
+            }
+        };
+
+        drawBase(playerBase, typeof BASE_IMGS !== 'undefined' ? BASE_IMGS.player : null, '#2980b9', '👑', true);
+        drawBase(enemyBase, typeof BASE_IMGS !== 'undefined' ? BASE_IMGS.enemy : null, '#8e44ad', '👿', false);
+
+        document.getElementById('hp-display').innerText = Math.max(0, Math.floor(playerBase.hp));
+        document.getElementById('enemy-hp-display').innerText = Math.max(0, Math.floor(enemyBase.hp));
+
+        // 【修改】：強制綁定在 window 全域物件上，確保重置時絕對抓得到！
+        window.animFrameId = requestAnimationFrame(gameLoop);
     }
 
     updateLobbyUI();
