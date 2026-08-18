@@ -1460,9 +1460,9 @@ class Enemy {
             let scaleSize = 1.2; let cw = TERRAIN_IMGS.clouds.naturalWidth || 100; let ch = TERRAIN_IMGS.clouds.naturalHeight || 100;
             cloudOffsetX = (cloudOffsetX - 0.8) % (cw * scaleSize); cloudOffsetY = (cloudOffsetY - 0.4) % (ch * scaleSize); 
             ctx.save(); 
-            // 【效能優化】：手機上移除耗能的 multiply 混色，改用預設模式並把透明度調低到 0.35
+            // 【畫面還原】：既然已經限制咗手機解析度，效能夠用，我哋開返靚靚嘅正片疊底陰影！
             ctx.globalAlpha = 0.55; 
-            ctx.globalCompositeOperation = 'source-over'; 
+            ctx.globalCompositeOperation = 'multiply'; 
             let pattern = ctx.createPattern(TERRAIN_IMGS.clouds, 'repeat'); ctx.fillStyle = pattern;
             ctx.translate(cloudOffsetX, cloudOffsetY); ctx.scale(scaleSize, scaleSize); 
             let startX = -cloudOffsetX / scaleSize; let startY = -cloudOffsetY / scaleSize; let drawW = 800 / scaleSize; let drawH = 800 / scaleSize;
