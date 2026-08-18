@@ -195,6 +195,18 @@
     for (let key in AMBIENT_TYPES) AMBIENT_TYPES[key].img = loadSprite(AMBIENT_TYPES[key].imgSrc);
     let ambientEffects = []; // 存放畫面上所有的環境物件
 
+    // 【新增】：靜態環境裝飾物設定 (預留 imgSrc 供日後填入 PNG 網址)
+    const DECORATION_TYPES = {
+        'tree1':    { symbol: '🌳', size: 32, imgSrc: '' },
+        'tree2':    { symbol: '🌲', size: 32, imgSrc: '' },
+        'rock':     { symbol: '🪨', size: 20, imgSrc: '' },
+        'mushroom': { symbol: '🍄', size: 16, imgSrc: '' },
+        'bones':    { symbol: '🦴', size: 18, imgSrc: '' } // 適合放在敵軍山地的骸骨
+    };
+    for (let key in DECORATION_TYPES) DECORATION_TYPES[key].img = loadSprite(DECORATION_TYPES[key].imgSrc);
+    let mapDecorations = []; // 存放畫面上所有靜態裝飾物的陣列
+
+
     // --- 全域變數狀態 ---
     let playerGold = parseInt(localStorage.getItem('tdGameGold_v2')) || 0;
     let unlockedGenerals = JSON.parse(localStorage.getItem('tdGameUnlocked_v2')) || [];
@@ -216,6 +228,47 @@
     let globalAnimTick = 0;
     // 用於控制兩隻兩隻出兵的排隊系統
     let deployQueue = [];
+
+    // 【新增】：初始化地圖時，隨機生成靜態裝飾物
+    function generateDecorations() {
+        mapDecorations = [];
+        let keys = Object.keys(DECORATION_TYPES);
+        
+        for (let r = 0; r < 20; r++) {
+            for (let c = 0; c < 20; c++) {
+                // 規則 1：裝飾物絕對不能擋在道路或主堡陣地上
+                if (!isPath(c, r)) {
+                    // 規則 2：15% 的機率在該格子生成裝飾物 (可依喜好調整機率)
+                    if (Math.random() < 0.15) {
+                        let type;
+                        if (r < 6) {
+                            // 敵軍前線 (山地)：只生成石頭或骸骨
+                            let mntKeys = ['rock', 'bones'];
+                            type = mntKeys[Math.floor(Math.random() * mntKeys.length)];
+                        } else {
+                            // 我方後方 (草地)：生成樹木、石頭或蘑菇
+                            let grassKeys = ['tree1', 'tree2', 'rock', 'mushroom'];
+                            type = grassKeys[Math.floor(Math.random() * grassKeys.length)];
+                        }
+                        
+                        // 規則 3：加入微小的 X/Y 隨機偏移，讓它們不要死板地排在格子正中央
+                        let offsetX = (Math.random() - 0.5) * 15;
+                        let offsetY = (Math.random() - 0.5) * 15;
+                        
+                        mapDecorations.push({
+                            type: type,
+                            x: c * TILE_SIZE + TILE_SIZE / 2 + offsetX,
+                            y: r * TILE_SIZE + TILE_SIZE / 2 + offsetY,
+                            // 【新增】：給每一個物件一個 0~60 的隨機動畫時間差，讓森林的搖曳有錯落感
+                            animOffset: Math.floor(Math.random() * 60) 
+                        });
+
+                    }
+                }
+            }
+        }
+    }
+
 
     // --- 大廳邏輯 ---
     function updateLobbyUI() {
@@ -261,9 +314,12 @@
     function startGame() {
         document.getElementById('setup-screen').style.display = 'none'; 
         document.getElementById('play-screen').style.display = 'block';
+        // 【新增】：遊戲開始時先撒下隨機裝飾物
+        generateDecorations(); 
         loadNextQuestion(); updateResourcesUI(); updateCampsUI(); updateGeneralsUI(); gameLoop();
     }
 
+    
     // --- 答題與資源邏輯 ---
     let currentAnswer = 0;
     function generateQuestion() {
@@ -1105,14 +1161,34 @@ function gameLoop() {
                     if (TERRAIN_IMGS.mountain && TERRAIN_IMGS.mountain.complete && !TERRAIN_IMGS.mountain.isFailed && TERRAIN_IMGS.mountain.naturalWidth > 0) { 
                         drawAnimatedTerrain(TERRAIN_IMGS.mountain, dx, dy); 
                     } else { ctx.fillStyle = '#7f8c8d'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#95a5a6'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
-                         } else { 
+                } else { 
                     if (TERRAIN_IMGS.grass && TERRAIN_IMGS.grass.complete && !TERRAIN_IMGS.grass.isFailed && TERRAIN_IMGS.grass.naturalWidth > 0) { ctx.drawImage(TERRAIN_IMGS.grass, dx, dy, TILE_SIZE, TILE_SIZE); } 
                     else { ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
                 }
             }
         }
 
+         // 【新增】：畫上靜態環境裝飾物 (樹木、石頭等)
+        mapDecorations.forEach(dec => {
+            let dData = DECORATION_TYPES[dec.type];
+            if (dData.img && dData.img.complete && !dData.img.isFailed && dData.img.naturalWidth > 0) {
+                // 【修改】：支援 4x1 動畫精靈圖
+                let fw = dData.img.naturalWidth / 4; 
+                let fh = dData.img.naturalHeight;
+                // 將全域時間加上該物件專屬的時間差，除以 20 (控制搖曳速度)，再取餘數 4 決定畫哪一格
+                let frame = Math.floor((globalAnimTick + dec.animOffset) / 20) % 4; 
+                
+                ctx.drawImage(dData.img, frame * fw, 0, fw, fh, dec.x - dData.size/2, dec.y - dData.size/2, dData.size, dData.size);
+            } else {
+                ctx.font = `${dData.size}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                // 加一點小小的陰影，讓 Emoji 更有立體感
+                ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillText(dData.symbol, dec.x, dec.y + 4);
+                ctx.fillText(dData.symbol, dec.x, dec.y);
+            }
+        });
+
         // 【新增】：隨機產生與渲染環境特效 (蝴蝶、落葉等)
+
         if (Math.random() < 0.03 && ambientEffects.length < 20) { // 畫面最多維持 20 個特效
             ambientEffects.push(new AmbientEffect());
         }
