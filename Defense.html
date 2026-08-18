@@ -680,7 +680,8 @@ function updateCampsUI() {
     // --- Canvas 與地圖建造邏輯 ---
     const canvas = document.getElementById('gameCanvas'); 
     const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1; 
+    // 【效能優化】：限制手機最高只用 1.5 倍渲染，畫質依然清晰，但能大幅減輕 GPU 負擔與發熱！
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5); 
     
     // 【擴大地圖兩倍】：邏輯大小改為 800x800
     canvas.width = 800 * dpr; canvas.height = 800 * dpr; 
@@ -1458,7 +1459,10 @@ class Enemy {
         if (TERRAIN_IMGS.clouds && TERRAIN_IMGS.clouds.complete && !TERRAIN_IMGS.clouds.isFailed && TERRAIN_IMGS.clouds.naturalWidth > 0) {
             let scaleSize = 1.2; let cw = TERRAIN_IMGS.clouds.naturalWidth || 100; let ch = TERRAIN_IMGS.clouds.naturalHeight || 100;
             cloudOffsetX = (cloudOffsetX - 0.8) % (cw * scaleSize); cloudOffsetY = (cloudOffsetY - 0.4) % (ch * scaleSize); 
-            ctx.save(); ctx.globalAlpha = 0.7; ctx.globalCompositeOperation = 'multiply'; 
+            ctx.save(); 
+            // 【效能優化】：手機上移除耗能的 multiply 混色，改用預設模式並把透明度調低到 0.35
+            ctx.globalAlpha = 0.35; 
+            ctx.globalCompositeOperation = 'source-over'; 
             let pattern = ctx.createPattern(TERRAIN_IMGS.clouds, 'repeat'); ctx.fillStyle = pattern;
             ctx.translate(cloudOffsetX, cloudOffsetY); ctx.scale(scaleSize, scaleSize); 
             let startX = -cloudOffsetX / scaleSize; let startY = -cloudOffsetY / scaleSize; let drawW = 800 / scaleSize; let drawH = 800 / scaleSize;
