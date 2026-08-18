@@ -181,10 +181,17 @@
 
     // --- 地形圖片預載 (預備放 PNG 圖的地方) ---
     const TERRAIN_IMGS = {
-        grass: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/grass.png"),     
+        // 【修改】：將草地改成「陣列 (Array)」，可放入多張不同的變體圖片
+        grass: [
+            loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/grass.png"), // 0: 基礎草地
+            loadSprite(""), // 1: 雜草地 (待填入)
+            loadSprite(""), // 2: 小花草地 (待填入)
+            loadSprite("")  // 3: 斑駁泥土草地 (待填入)
+        ],
         mountain: loadSprite(""),  
         path: loadSprite("")       
     };
+
 
     // 【新增】：環境小動態設定 (未來可填入 imgSrc 替換為您的 AI 精靈圖)
     const AMBIENT_TYPES = {
@@ -1162,9 +1169,20 @@ function gameLoop() {
                         drawAnimatedTerrain(TERRAIN_IMGS.mountain, dx, dy); 
                     } else { ctx.fillStyle = '#7f8c8d'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#95a5a6'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
                 } else { 
-                    if (TERRAIN_IMGS.grass && TERRAIN_IMGS.grass.complete && !TERRAIN_IMGS.grass.isFailed && TERRAIN_IMGS.grass.naturalWidth > 0) { ctx.drawImage(TERRAIN_IMGS.grass, dx, dy, TILE_SIZE, TILE_SIZE); } 
-                    else { ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); }
+                    // 【修改】：過濾出陣列中已經成功載入的草地圖片
+                    let validGrassImgs = TERRAIN_IMGS.grass.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
+                    
+                    if (validGrassImgs.length > 0) { 
+                        // 【關鍵】：利用 X/Y 座標計算一個「固定的隨機索引值」，確保同一格永遠顯示同一張變體，不會每幀閃爍！
+                        // 37 跟 17 是質數，用來打亂規律
+                        let tileIndex = (r * 37 + c * 17) % validGrassImgs.length; 
+                        drawAnimatedTerrain(validGrassImgs[tileIndex], dx, dy); 
+                    } else { 
+                        ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                        ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                    }
                 }
+
             }
         }
 
