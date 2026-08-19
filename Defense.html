@@ -870,8 +870,6 @@ class Enemy {
             let targetNode = this.pathIndex < pathCoords.length ? pathCoords[this.pathIndex] : this.ringTarget;
             if (targetNode) {
                 const tx = targetNode.x * TILE_SIZE + TILE_SIZE / 2, ty = targetNode.y * TILE_SIZE + TILE_SIZE / 2;
-                
-                // 【修改】：進入包圍網後，取消排隊車道的偏移，確保準確走到包圍點
                 if (this.pathIndex >= pathCoords.length) {
                     this.drawOffsetX = 0; this.drawOffsetY = 0;
                 } else if (Math.abs(tx - this.x) > Math.abs(ty - this.y)) { 
@@ -879,29 +877,35 @@ class Enemy {
                 } else { 
                     this.drawOffsetX = this.laneOffset; this.drawOffsetY = 0; 
                 }
-                
                 if (tx < this.x - 1) this.facingLeft = true;
                 else if (tx > this.x + 1) this.facingLeft = false;
             }
 
+            // 1. 攻擊城門邏輯
             let gate = towers.find(t => t.id === 'gate' && t.x === (targetNode ? Math.floor(targetNode.x) : -1) && t.y === (targetNode ? Math.floor(targetNode.y) : -1));
             if (gate) {
                 this.state = 1;
-                if (this.cooldown <= 0) { gate.hp -= this.damage; this.cooldown = this.fireRate; this.frame = 0; }
+                if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
+                let attackProgress = 1 - (this.cooldown / this.fireRate);
+                // 【核心修改】：動畫進度達到 60% 時才造成傷害！
+                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
+                    gate.hp -= this.damage; this.hasDealtDamage = true;
+                }
                 if (gate.hp <= 0) towers = towers.filter(t => t !== gate);
                 return false;
             }
             
-            // 【核心修改】：強制部隊走到自己分配的「包圍圈點位」後，才准停下來攻擊主堡
+            // 2. 攻擊主堡邏輯
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((playerBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (playerBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
-            // 如果走到包圍點 (ringDist <= 10)，或是遠程兵已經進入射程範圍，才發動攻擊
             if (ringDist <= 10 || (this.range > 50 && baseDist <= this.range + TILE_SIZE/2)) {
                 this.state = 1;
                 this.facingLeft = (playerBase.x * TILE_SIZE + TILE_SIZE/2) < this.x;
-                if (this.cooldown <= 0) {
-                    playerBase.hp -= this.damage; this.cooldown = this.fireRate; this.frame = 0;
+                if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
+                let attackProgress = 1 - (this.cooldown / this.fireRate);
+                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
+                    playerBase.hp -= this.damage; this.hasDealtDamage = true;
                     ctx.strokeStyle = this.unitData.color; ctx.lineWidth = 2;
                     ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
                     ctx.lineTo(playerBase.x * TILE_SIZE + TILE_SIZE/2, playerBase.y * TILE_SIZE + TILE_SIZE/2); ctx.stroke();
@@ -909,10 +913,13 @@ class Enemy {
                 return false;
             }
 
+            // 3. 攻擊玩家部隊邏輯
             if (targetPlayer && Math.hypot((targetPlayer.x + targetPlayer.drawOffsetX) - (this.x + this.drawOffsetX), (targetPlayer.y + targetPlayer.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
                 this.state = 1; this.facingLeft = targetPlayer.x < this.x;
-                if (this.cooldown <= 0) {
-                    targetPlayer.hp -= this.damage; this.cooldown = this.fireRate; this.frame = 0;
+                if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
+                let attackProgress = 1 - (this.cooldown / this.fireRate);
+                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
+                    targetPlayer.hp -= this.damage; this.hasDealtDamage = true;
                     ctx.strokeStyle = this.unitData.color; ctx.lineWidth = 2;
                     ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(targetPlayer.x + targetPlayer.drawOffsetX, targetPlayer.y + targetPlayer.drawOffsetY); ctx.stroke();
                 }
@@ -924,7 +931,6 @@ class Enemy {
                 const isLaneBlocked = (testLane) => {
                     return enemies.some(e => {
                         if (e === this || e.lane !== testLane) return false;
-                        // 【核心修改】：一旦離開主道路準備包圍主堡，取消互相碰撞防堵，讓大軍能順利散開包抄
                         if (this.pathIndex >= pathCoords.length && e.pathIndex >= pathCoords.length) return false;
 
                         if (Math.hypot(e.x - this.x, e.y - this.y) < 24) { 
@@ -956,6 +962,7 @@ class Enemy {
             }
             return false;
         }
+
         
         draw() {
             if (this.state === 0) this.frame = Math.floor(globalAnimTick / 10) % 5; 
@@ -1017,8 +1024,6 @@ class Enemy {
             let targetNode = this.pathIndex >= 0 ? pathCoords[this.pathIndex] : this.ringTarget;
             if (targetNode) {
                 const tx = targetNode.x * TILE_SIZE + TILE_SIZE / 2, ty = targetNode.y * TILE_SIZE + TILE_SIZE / 2;
-                
-                // 【修改】：進入敵方包圍網後取消偏移
                 if (this.pathIndex < 0) {
                     this.drawOffsetX = 0; this.drawOffsetY = 0;
                 } else if (Math.abs(tx - this.x) > Math.abs(ty - this.y)) { 
@@ -1026,20 +1031,21 @@ class Enemy {
                 } else { 
                     this.drawOffsetX = this.laneOffset; this.drawOffsetY = 0; 
                 }
-                
                 if (tx < this.x - 1) this.facingLeft = true;
                 else if (tx > this.x + 1) this.facingLeft = false;
             }
 
-            // 【核心修改】：強制走到分配的包圍陣地後才開始攻擊
+            // 1. 攻擊敵方主堡邏輯
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((enemyBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (enemyBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
             if (ringDist <= 10 || (this.range > 50 && baseDist <= this.range + TILE_SIZE/2)) {
                 this.state = 1;
                 this.facingLeft = (enemyBase.x * TILE_SIZE + TILE_SIZE/2) < this.x;
-                if (this.cooldown <= 0) {
-                    enemyBase.hp -= this.damage; this.cooldown = this.fireRate; this.frame = 0;
+                if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
+                let attackProgress = 1 - (this.cooldown / this.fireRate);
+                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
+                    enemyBase.hp -= this.damage; this.hasDealtDamage = true;
                     ctx.strokeStyle = this.unitData.color; ctx.lineWidth = 2;
                     ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
                     ctx.lineTo(enemyBase.x * TILE_SIZE + TILE_SIZE/2, enemyBase.y * TILE_SIZE + TILE_SIZE/2); ctx.stroke();
@@ -1047,10 +1053,14 @@ class Enemy {
                 return false;
             }
 
+            // 2. 攻擊敵方部隊邏輯
             if (targetEnemy && Math.hypot((targetEnemy.x + targetEnemy.drawOffsetX) - (this.x + this.drawOffsetX), (targetEnemy.y + targetEnemy.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
                 this.state = 1; this.facingLeft = targetEnemy.x < this.x;
-                if (this.cooldown <= 0) {
-                    targetEnemy.hp -= this.damage; this.cooldown = this.fireRate; this.frame = 0;
+                if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
+                let attackProgress = 1 - (this.cooldown / this.fireRate);
+                // 【核心修改】：動畫進度達到 60% 時才造成傷害！
+                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
+                    targetEnemy.hp -= this.damage; this.hasDealtDamage = true;
                     ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
                     ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
                 }
@@ -1062,7 +1072,6 @@ class Enemy {
                 const isLaneBlocked = (testLane) => {
                     return playerUnits.some(p => {
                         if (p === this || p.lane !== testLane) return false;
-                        // 【核心修改】：進入敵陣準備包抄時，取消我方單位的碰撞判定
                         if (this.pathIndex < 0 && p.pathIndex < 0) return false;
 
                         if (Math.hypot(p.x - this.x, p.y - this.y) < 24) { 
@@ -1094,6 +1103,7 @@ class Enemy {
             }
             return false;
         }
+
         
         draw() {
             if (this.state === 0) this.frame = Math.floor(globalAnimTick / 10) % 5; 
