@@ -1050,12 +1050,24 @@ class Enemy {
                 this.facingLeft = (enemyBase.x * TILE_SIZE + TILE_SIZE/2) < this.x;
                 if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
                 let attackProgress = 1 - (this.cooldown / this.fireRate);
+                // 【修改】：攻擊敵方主堡 (加入絕招判定)
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                    enemyBase.hp -= this.damage; this.hasDealtDamage = true;
-                    ctx.strokeStyle = this.unitData.color; ctx.lineWidth = 2;
+                    // 計算絕招機率 (基礎 1%，每升一級 +2%，上限 40%)
+                    let ultChance = Math.min(0.40, 0.01 + (this.level - 1) * 0.02);
+                    let isUlt = Math.random() < ultChance;
+                    
+                    // 觸發絕招時，造成 2.5 倍傷害！
+                    let finalDamage = isUlt ? this.damage * 2.5 : this.damage;
+                    enemyBase.hp -= finalDamage; 
+                    this.hasDealtDamage = true;
+                    
+                    // 絕招特效：原本的顏色變成耀眼的金色 (#f1c40f)，且光束變粗
+                    ctx.strokeStyle = isUlt ? '#f1c40f' : this.unitData.color; 
+                    ctx.lineWidth = isUlt ? 6 : 2;
                     ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
                     ctx.lineTo(enemyBase.x * TILE_SIZE + TILE_SIZE/2, enemyBase.y * TILE_SIZE + TILE_SIZE/2); ctx.stroke();
                 }
+
                 return false;
             }
 
@@ -1065,11 +1077,26 @@ class Enemy {
                 if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
                 let attackProgress = 1 - (this.cooldown / this.fireRate);
                 // 【核心修改】：動畫進度達到 60% 時才造成傷害！
+                // 【修改】：攻擊敵方部隊 (加入絕招判定)
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                    targetEnemy.hp -= this.damage; this.hasDealtDamage = true;
-                    ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
-                    ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                    // 計算絕招機率
+                    let ultChance = Math.min(0.40, 0.01 + (this.level - 1) * 0.02);
+                    let isUlt = Math.random() < ultChance;
+                    let finalDamage = isUlt ? this.damage * 2.5 : this.damage;
+
+                    targetEnemy.hp -= finalDamage; 
+                    this.hasDealtDamage = true;
+                    
+                    // 絕招特效：金色加粗
+                    ctx.strokeStyle = isUlt ? '#f1c40f' : this.unitData.color; 
+                    // 將領原本光束就比較粗，觸發絕招會更加粗壯
+                    let baseWidth = this.unitData.isGeneral ? 4 : 2;
+                    ctx.lineWidth = isUlt ? baseWidth + 4 : baseWidth;
+                    
+                    ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                    ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
                 }
+
             } else {
                 if (!targetNode) return true;
                 const tx = targetNode.x * TILE_SIZE + TILE_SIZE / 2, ty = targetNode.y * TILE_SIZE + TILE_SIZE / 2;
