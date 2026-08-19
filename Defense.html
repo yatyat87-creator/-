@@ -183,6 +183,15 @@
     const GENERALS = {
         "g1": { id: "g1", name: "關羽", symbol: "關", color: "#c0392b", price: 100, isGeneral: true, dmg: 3, range: 1, moveSpd: 1.2, atkSpd: 1.2, hpMult: 2, drawScale: 1.8, desc: "進攻：高額傷害", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/關羽5x5.png" },
         "g2": { id: "g2", name: "趙雲", symbol: "趙", color: "#2980b9", price: 100, isGeneral: true, dmg: 1.5, range: 1, moveSpd: 2.5, atkSpd: 2.0, hpMult: 1.5, drawScale: 1.8, desc: "進攻：極快衝陣", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/趙雲5x5.png" },
+        "g3": { 
+            id: "g3", name: "如來", symbol: "佛", color: "#f1c40f", price: 0, isGeneral: true, 
+            dmg: 2.5, range: 1.2, moveSpd: 1.0, atkSpd: 1.0, hpMult: 3, drawScale: 1.8, 
+            desc: "進攻：範圍傷害，瀕死化身大佛", 
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/如來5x5.png", 
+            imgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/如來(大佛)5x5.png", // 【新增】：專屬第二型態圖片
+            hasAoE: true,          // 【新增】：開啟範圍攻擊
+            isTransformable: true  // 【新增】：開啟瀕死變身機制
+        },
         "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, moveSpd: 1.5, atkSpd: 1.0, hpMult: 2.5, drawScale: 1.8, desc: "進攻：戰神降臨", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布5x5.png" }
     };
     
@@ -190,7 +199,11 @@
     for (let key in ENEMY_TYPES) ENEMY_TYPES[key].img = loadSprite(ENEMY_TYPES[key].imgSrc);
     
     for (let key in BASIC_UNITS) BASIC_UNITS[key].img = loadSprite(BASIC_UNITS[key].imgSrc);
-    for (let key in GENERALS) GENERALS[key].img = loadSprite(GENERALS[key].imgSrc);
+    for (let key in GENERALS) {
+        GENERALS[key].img = loadSprite(GENERALS[key].imgSrc);
+        // 【新增】：如果武將有第二型態，就載入 img2
+        if (GENERALS[key].imgSrc2) GENERALS[key].img2 = loadSprite(GENERALS[key].imgSrc2);
+    }
 
     // --- 地形圖片預載 (預備放 PNG 圖的地方) ---
     const TERRAIN_IMGS = {
@@ -236,6 +249,12 @@
     for (let key in AMBIENT_TYPES) AMBIENT_TYPES[key].img = loadSprite(AMBIENT_TYPES[key].imgSrc);
     let ambientEffects = []; // 存放畫面上所有的環境物件
 
+    let combatEffects = []; // 【新增】：用來存放畫面上的爆炸特效
+    const EFFECT_IMGS = {
+        aoe_normal: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png"),     // 一般範圍攻擊 (紅圈特效)
+        aoe_transformed: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png") // 變身後範圍攻擊 (金圈特效)
+    };   
+   
     // 【新增】：靜態環境裝飾物設定 (預留 imgSrc 供日後填入 PNG 網址)
     const DECORATION_TYPES = {
         'tree1':    { symbol: '🌳', size: 32, imgSrc: 'https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/IMG_3100.png' },
@@ -936,7 +955,8 @@ class Enemy {
 
                 const isLaneBlocked = (testLane) => {
                     return enemies.some(e => {
-                        if (e === this || e.lane !== testLane) return false;
+                        // 【新增】：如果對方正在退場(死亡)，就不算擋路！
+                        if (e === this || e.lane !== testLane || e.isDying) return false;
                         if (this.pathIndex >= pathCoords.length && e.pathIndex >= pathCoords.length) return false;
 
                         if (Math.hypot(e.x - this.x, e.y - this.y) < 24) { 
@@ -970,40 +990,59 @@ class Enemy {
         }
 
         
-        draw() {
+draw() {
             if (this.state === 0) this.frame = Math.floor(globalAnimTick / 10) % 5; 
             else if (this.state === 4) this.frame = Math.floor(globalAnimTick / 15) % 4; 
-            else if (this.state === 1) { let attackProgress = 1 - (this.cooldown / this.fireRate); this.frame = Math.min(4, Math.floor(attackProgress * 5)); }
+            else if (this.state === 1 || this.state === 2) { 
+                let attackProgress = 1 - (this.cooldown / this.fireRate); 
+                this.frame = Math.min(4, Math.floor(attackProgress * 5)); 
+            } else if (this.state === 3) {
+                // 【新增】：退場動畫 (第四橫行) 播一次
+                let deathProgress = 1 - (this.deathTimer / 45); 
+                this.frame = Math.min(4, Math.floor(deathProgress * 5));
+            }
 
             let cx = this.x + this.drawOffsetX, cy = this.y + this.drawOffsetY;
+
+            ctx.save(); // 將 ctx.save 提早，以便套用特效
+            
+            // 【新增】：曹操傳經典退場特效 (高頻率閃爍 + 慢慢飄散)
+            if (this.isDying) {
+                let deathProgress = 1 - (this.deathTimer / 45);
+                if (this.deathTimer % 6 < 3) ctx.globalAlpha = 0.3; // 閃爍變淡
+                else ctx.globalAlpha = 0.9;
+                cy -= deathProgress * 15; // 升天效果
+            }
 
             if (this.unitData.img && this.unitData.img.complete && !this.unitData.img.isFailed && this.unitData.img.naturalWidth > 0) {
                 let frameWidth = this.unitData.img.naturalWidth / 5; let frameHeight = this.unitData.img.naturalHeight / 5;
                 let sx = this.frame * frameWidth; let sy = this.state * frameHeight; 
                 
-                // 【新增】：計算真實的長寬比，自動調整高度，避免長方形圖片被擠壓變形
                 let drawWidth = TILE_SIZE * (this.unitData.drawScale || 1.5);
                 let aspectRatio = frameHeight / frameWidth;
                 let drawHeight = drawWidth * aspectRatio;
-                
-                // 【新增】：讀取垂直偏移量，預設為 0
                 let yOffset = this.unitData.yOffset || 0; 
                 
-                // 【修改】：將 yOffset 加進 translate 中，並使用新的 drawWidth 和 drawHeight
-                ctx.save(); ctx.translate(cx, cy - 5 + yOffset);
+                ctx.translate(cx, cy - 5 + yOffset);
                 if (this.facingLeft) { ctx.scale(-1, 1); }
                 ctx.drawImage(this.unitData.img, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); 
-                ctx.restore();
             } else {
                 ctx.fillStyle = this.unitData.color; ctx.beginPath(); ctx.arc(cx, cy, 10 * (this.unitData.drawScale || 1), 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = 'white'; ctx.font = '12px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(this.unitData.symbol, cx, cy);
             }
-            ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20, 3);
-            ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20 * (this.hp / this.maxHp), 3);
+            
+            ctx.restore(); // 提早關閉特效設定
+
+            // 【新增】：如果是死亡狀態，就隱藏血條與等級！
+            if (!this.isDying) {
+                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
+                ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20, 3);
+                ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20 * (this.hp / this.maxHp), 3);
+            }
         }
     }
 
-    class PlayerUnit {
+class PlayerUnit {
         constructor(id, level) {
             this.unitData = BASIC_UNITS[id] || GENERALS[id];
             this.id = id; this.level = level;
@@ -1019,13 +1058,46 @@ class Enemy {
             this.lane = Math.floor(Math.random() * 3) - 1;
             this.laneOffset = this.lane * 12; this.drawOffsetX = 0; this.drawOffsetY = 0;
             
-            // 【修改】：隨機鎖定敵方主堡的八格環狀陣地之一，並加入微小偏移
             let ringBase = enemyRing[Math.floor(Math.random() * enemyRing.length)];
             this.ringTarget = { x: ringBase.x + (Math.random() * 0.5 - 0.25), y: ringBase.y + (Math.random() * 0.5 - 0.25) };
+
+            // 【新增】：變身系統專用變數
+            this.isTransformed = false;
+            this.currentImg = this.unitData.img; // 預設使用第一張圖
+            this.currentScale = this.unitData.drawScale || 1.5; // 預設大小
         }
 
-        update(targetEnemy) {
+update(targetEnemy) {
+            // 【修正】：移除 this.hp > 0 的限制。就算被敵人「一擊秒殺」，都會強制觸發變身！
+            if (this.unitData.isTransformable && !this.isTransformed && !this.isTransforming && this.hp <= this.maxHp * 0.1) {
+                this.isTransforming = true;
+                this.transformTimer = 90; 
+                this.state = 0; 
+                this.cooldown = 0;
+                if (this.hp <= 0) this.hp = 1; // 【核心】：名將鎖血機制！強制保留 1 滴血進入變身
+            }
+
+            // 【新增】：變身過程處理 (無敵、不能動)
+            if (this.isTransforming) {
+                this.transformTimer--;
+                
+                if (this.transformTimer === 45) {
+                    this.isTransformed = true;
+                    this.hp = this.maxHp; 
+                    this.currentImg = this.unitData.img2; 
+                    this.currentScale = 3.0; 
+                    this.damage *= 1.5; 
+                }
+                
+                if (this.transformTimer <= 0) {
+                    this.isTransforming = false;
+                }
+                return false; 
+            }
+
             if (this.cooldown > 0) this.cooldown--;
+
+            // ------------------ (請保留您原本打主堡與敵軍的 AoE 程式碼) ------------------
 
             let targetNode = this.pathIndex >= 0 ? pathCoords[this.pathIndex] : this.ringTarget;
             if (targetNode) {
@@ -1046,57 +1118,90 @@ class Enemy {
             let baseDist = Math.hypot((enemyBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (enemyBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
             if (ringDist <= 10 || (this.range > 50 && baseDist <= this.range + TILE_SIZE/2)) {
-                this.state = 1;
-                this.facingLeft = (enemyBase.x * TILE_SIZE + TILE_SIZE/2) < this.x;
-                if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
-                let attackProgress = 1 - (this.cooldown / this.fireRate);
-                // 【修改】：攻擊敵方主堡 (加入絕招判定)
-                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                    // 計算絕招機率 (基礎 1%，每升一級 +2%，上限 40%)
+                if (this.cooldown <= 0) { 
+                    this.cooldown = this.fireRate; this.hasDealtDamage = false; 
                     let ultChance = Math.min(0.40, 0.01 + (this.level - 1) * 0.02);
-                    let isUlt = Math.random() < ultChance;
-                    
-                    // 觸發絕招時，造成 2.5 倍傷害！
-                    let finalDamage = isUlt ? this.damage * 2.5 : this.damage;
+                    this.isUlt = Math.random() < ultChance;
+                }
+                
+                this.state = this.isUlt ? 2 : 1; 
+                this.facingLeft = (enemyBase.x * TILE_SIZE + TILE_SIZE/2) < this.x;
+                
+                let attackProgress = 1 - (this.cooldown / this.fireRate);
+                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
+                    let finalDamage = this.isUlt ? this.damage * 2.5 : this.damage;
                     enemyBase.hp -= finalDamage; 
                     this.hasDealtDamage = true;
                     
-                    // 絕招特效：原本的顏色變成耀眼的金色 (#f1c40f)，且光束變粗
-                    ctx.strokeStyle = isUlt ? '#f1c40f' : this.unitData.color; 
-                    ctx.lineWidth = isUlt ? 6 : 2;
-                    ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                    ctx.lineTo(enemyBase.x * TILE_SIZE + TILE_SIZE/2, enemyBase.y * TILE_SIZE + TILE_SIZE/2); ctx.stroke();
+                    if (this.unitData.hasAoE) {
+                        let aoeRadius = this.isTransformed ? 120 : 60; 
+                        let impactX = enemyBase.x * TILE_SIZE + TILE_SIZE/2;
+                        let impactY = enemyBase.y * TILE_SIZE + TILE_SIZE/2;
+                        
+                        enemies.forEach(e => {
+                            if (Math.hypot(e.x - impactX, e.y - impactY) <= aoeRadius) e.hp -= finalDamage;
+                        });
+                        
+                        // 【修改】：將範圍攻擊的座標記錄下來，交給特效系統畫 4x1 動畫
+                        combatEffects.push({
+                            x: impactX, 
+                            y: impactY, 
+                            radius: aoeRadius, 
+                            timer: 20, // 存活 20 幀 (約 0.33 秒)
+                            isTransformed: this.isTransformed
+                        });
+                    } else {
+                        ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
+                        ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                        ctx.lineTo(enemyBase.x * TILE_SIZE + TILE_SIZE/2, enemyBase.y * TILE_SIZE + TILE_SIZE/2); ctx.stroke();
+                    }
                 }
-
                 return false;
             }
 
             // 2. 攻擊敵方部隊邏輯
             if (targetEnemy && Math.hypot((targetEnemy.x + targetEnemy.drawOffsetX) - (this.x + this.drawOffsetX), (targetEnemy.y + targetEnemy.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
-                this.state = 1; this.facingLeft = targetEnemy.x < this.x;
-                if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
-                let attackProgress = 1 - (this.cooldown / this.fireRate);
-                // 【核心修改】：動畫進度達到 60% 時才造成傷害！
-                // 【修改】：攻擊敵方部隊 (加入絕招判定)
-                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                    // 計算絕招機率
+                if (this.cooldown <= 0) { 
+                    this.cooldown = this.fireRate; this.hasDealtDamage = false; 
                     let ultChance = Math.min(0.40, 0.01 + (this.level - 1) * 0.02);
-                    let isUlt = Math.random() < ultChance;
-                    let finalDamage = isUlt ? this.damage * 2.5 : this.damage;
-
+                    this.isUlt = Math.random() < ultChance;
+                }
+                
+                this.state = this.isUlt ? 2 : 1;
+                this.facingLeft = targetEnemy.x < this.x;
+                
+                let attackProgress = 1 - (this.cooldown / this.fireRate);
+                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
+                    let finalDamage = this.isUlt ? this.damage * 2.5 : this.damage;
                     targetEnemy.hp -= finalDamage; 
                     this.hasDealtDamage = true;
                     
-                    // 絕招特效：金色加粗
-                    ctx.strokeStyle = isUlt ? '#f1c40f' : this.unitData.color; 
-                    // 將領原本光束就比較粗，觸發絕招會更加粗壯
-                    let baseWidth = this.unitData.isGeneral ? 4 : 2;
-                    ctx.lineWidth = isUlt ? baseWidth + 4 : baseWidth;
-                    
-                    ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                    ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                    if (this.unitData.hasAoE) {
+                        let aoeRadius = this.isTransformed ? 120 : 60; 
+                        let impactX = targetEnemy.x + targetEnemy.drawOffsetX;
+                        let impactY = targetEnemy.y + targetEnemy.drawOffsetY;
+                        
+                        enemies.forEach(e => {
+                            // 【修正】：將 e.drawOffsetX 和 e.drawOffsetY 也加入計算，確保真正的完美圓形判定！
+                            if (e !== targetEnemy && Math.hypot((e.x + e.drawOffsetX) - impactX, (e.y + e.drawOffsetY) - impactY) <= aoeRadius) {
+                                e.hp -= finalDamage;
+                            }
+                        });
+                        
+                        // 【修改】：將範圍攻擊的座標記錄下來，交給特效系統畫 4x1 動畫
+                        combatEffects.push({
+                            x: impactX, 
+                            y: impactY, 
+                            radius: aoeRadius, 
+                            timer: 20, // 存活 20 幀 (約 0.33 秒)
+                            isTransformed: this.isTransformed
+                        });
+                    } else {
+                        ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
+                        ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                        ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                    }
                 }
-
             } else {
                 if (!targetNode) return true;
                 const tx = targetNode.x * TILE_SIZE + TILE_SIZE / 2, ty = targetNode.y * TILE_SIZE + TILE_SIZE / 2;
@@ -1106,7 +1211,6 @@ class Enemy {
                     return playerUnits.some(p => {
                         if (p === this || p.lane !== testLane) return false;
                         if (this.pathIndex < 0 && p.pathIndex < 0) return false;
-
                         if (Math.hypot(p.x - this.x, p.y - this.y) < 24) { 
                             if (p.pathIndex < this.pathIndex) return true; 
                             if (p.pathIndex === this.pathIndex) {
@@ -1136,40 +1240,72 @@ class Enemy {
             }
             return false;
         }
-
         
         draw() {
             if (this.state === 0) this.frame = Math.floor(globalAnimTick / 10) % 5; 
             else if (this.state === 4) this.frame = Math.floor(globalAnimTick / 15) % 4; 
-            else if (this.state === 1) { let attackProgress = 1 - (this.cooldown / this.fireRate); this.frame = Math.min(4, Math.floor(attackProgress * 5)); }
+            else if (this.state === 1 || this.state === 2) { 
+                let attackProgress = 1 - (this.cooldown / this.fireRate); 
+                this.frame = Math.min(4, Math.floor(attackProgress * 5)); 
+            } else if (this.state === 3) {
+                let deathProgress = 1 - (this.deathTimer / 45); 
+                this.frame = Math.min(4, Math.floor(deathProgress * 5));
+            }
 
             let cx = this.x + this.drawOffsetX, cy = this.y + this.drawOffsetY;
 
-            if (this.unitData.img && this.unitData.img.complete && !this.unitData.img.isFailed && this.unitData.img.naturalWidth > 0) {
-                let frameWidth = this.unitData.img.naturalWidth / 5; let frameHeight = this.unitData.img.naturalHeight / 5;
+            ctx.save();
+
+            if (this.isDying) {
+                let deathProgress = 1 - (this.deathTimer / 45);
+                if (this.deathTimer % 6 < 3) ctx.globalAlpha = 0.3; 
+                else ctx.globalAlpha = 0.9;
+                cy -= deathProgress * 15; 
+            }
+
+            if (this.currentImg && this.currentImg.complete && !this.currentImg.isFailed && this.currentImg.naturalWidth > 0) {
+                let frameWidth = this.currentImg.naturalWidth / 5; let frameHeight = this.currentImg.naturalHeight / 5;
                 let sx = this.frame * frameWidth; let sy = this.state * frameHeight; 
                 
-                // 【新增】：計算真實的長寬比，自動調整高度，避免長方形圖片被擠壓變形
-                let drawWidth = TILE_SIZE * (this.unitData.drawScale || 1.5);
+                let drawWidth = TILE_SIZE * this.currentScale;
                 let aspectRatio = frameHeight / frameWidth;
                 let drawHeight = drawWidth * aspectRatio;
-                
-                // 【新增】：讀取垂直偏移量，預設為 0
                 let yOffset = this.unitData.yOffset || 0; 
                 
-                // 【修改】：將 yOffset 加進 translate 中，並使用新的 drawWidth 和 drawHeight
-                ctx.save(); ctx.translate(cx, cy - 5 + yOffset);
+                ctx.translate(cx, cy - 5 + yOffset);
                 if (this.facingLeft) { ctx.scale(-1, 1); }
-                ctx.drawImage(this.unitData.img, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); 
-                ctx.restore();
+                
+                // 【核心修正】：使用 CSS 濾鏡 (Filter) 來製作白光剪影，徹底解決正方形問題！
+                if (this.isTransforming) {
+                    let whiteIntensity = 0;
+                    if (this.transformTimer > 45) {
+                        whiteIntensity = 1 - ((this.transformTimer - 45) / 45);
+                    } else {
+                        whiteIntensity = this.transformTimer / 45;
+                    }
+                    // 將亮度推到極致 (最高 50 倍)，人物會完美變成純白剪影，且不影響透明背景
+                    ctx.filter = `brightness(${1 + whiteIntensity * 50})`;
+                } else {
+                    ctx.filter = 'none';
+                }
+
+                ctx.drawImage(this.currentImg, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); 
+                
+                ctx.filter = 'none'; // 畫完後必須重置濾鏡
+                
             } else {
                 ctx.fillStyle = this.unitData.isGeneral ? '#fcf3cf' : 'white'; ctx.fillRect(cx - TILE_SIZE/2 + 2, cy - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
                 if(this.unitData.isGeneral) { ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2; ctx.strokeRect(cx - TILE_SIZE/2 + 2, cy - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4); }
                 ctx.fillStyle = this.unitData.color; ctx.font = '22px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(this.unitData.symbol, cx, cy);
             }
-            ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
-            ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20, 3);
-            ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20 * (this.hp / this.maxHp), 3);
+            
+            ctx.restore();
+
+            if (!this.isDying && !this.isTransforming) {
+                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
+                ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20, 3);
+                ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20 * (this.hp / this.maxHp), 3);
+            }
         }
     }
 
@@ -1321,8 +1457,9 @@ class Enemy {
                 if (difficultyLevel >= 2 && rand < 0.3) type = 'fast';
                 if (difficultyLevel >= 3 && rand >= 0.3 && rand < 0.6) type = 'tank';
                 if (difficultyLevel >= 4 && rand >= 0.8) type = 'boss';
-                enemies.push(new Enemy(difficultyLevel, type));
-                spawnTimer = Math.max(150, 360 - difficultyLevel * 15); 
+                // 【修正】：使用 Math.floor 去除小數點，確保怪物永遠是整數等級
+                enemies.push(new Enemy(Math.floor(difficultyLevel), type));
+                spawnTimer = Math.max(150, 360 - difficultyLevel * 15);
             }
 
             [playerBase, enemyBase].forEach((base, idx) => {
@@ -1417,53 +1554,74 @@ class Enemy {
         // 3. 處理部隊 (如果是遊戲結束，強制切換到 idle 狀態)
         // ============================================
 
-        // 敵人行動與繪製
+// 敵人行動與繪製
         for (let i = enemies.length - 1; i >= 0; i--) {
             let e = enemies[i];
-            if (isPlaying) {
-                let closestPlayer = playerUnits.find(p => Math.hypot((p.x + p.drawOffsetX) - (e.x + e.drawOffsetX), (p.y + p.drawOffsetY) - (e.y + e.drawOffsetY)) <= e.range);
-                e.update(closestPlayer);
-                
-                // 【修改】：原本直接 alert 的觸發點，改成顯示新 UI
-                if (playerBase.hp <= 0 && !gameOver) { 
-                    gameOver = true;
-                    document.getElementById('game-over-title').innerText = "💥 戰敗！";
-                    document.getElementById('game-over-title').style.color = "#e74c3c";
-                    document.getElementById('game-over-msg').innerText = "我方城池被敵軍攻破了...";
-                    document.getElementById('game-over-modal').style.display = 'flex';
-                }
-            } else {
-                // 【核心機制】：遊戲結束時，停止行動並強制回到待機(0)動畫
-                e.state = 0; 
-                e.cooldown = 0;
+            
+            // 【新增】：死亡觸發，切換到第四橫行 (退場) 並開始倒數
+            if (e.hp <= 0 && !e.isDying) {
+                e.isDying = true;
+                e.state = 3; 
+                e.deathTimer = 45; // 特效持續 45 幀 (約 0.75 秒)
             }
 
-            if (e.hp > 0) e.draw(); else enemies.splice(i, 1);
+            if (e.isDying) {
+                e.deathTimer--;
+                e.draw(); // 繼續畫退場動畫
+                if (e.deathTimer <= 0) enemies.splice(i, 1); // 倒數完畢才真正移除
+            } else {
+                if (isPlaying) {
+                    // 【修改】：加入 !p.isTransforming，讓大佛變身期間處於無敵狀態，敵人無法鎖定
+                    let closestPlayer = playerUnits.find(p => !p.isDying && !p.isTransforming && Math.hypot((p.x + p.drawOffsetX) - (e.x + e.drawOffsetX), (p.y + p.drawOffsetY) - (e.y + e.drawOffsetY)) <= e.range);
+                    e.update(closestPlayer);
+                    
+                    if (playerBase.hp <= 0 && !gameOver) { 
+                        gameOver = true;
+                        document.getElementById('game-over-title').innerText = "💥 戰敗！";
+                        document.getElementById('game-over-title').style.color = "#e74c3c";
+                        document.getElementById('game-over-msg').innerText = "我方城池被敵軍攻破了...";
+                        document.getElementById('game-over-modal').style.display = 'flex';
+                    }
+                } else {
+                    e.state = 0; e.cooldown = 0;
+                }
+                e.draw();
+            }
         }
 
         // 我方部隊行動與繪製
         playerUnits.sort((a, b) => a.y - b.y);
         for (let i = playerUnits.length - 1; i >= 0; i--) {
             let pUnit = playerUnits[i];
-            if (isPlaying) {
-                let targetEnemy = enemies.find(e => Math.hypot((e.x + e.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (e.y + e.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY)) <= pUnit.range);
-                pUnit.update(targetEnemy);
-                
-                // 【修改】：原本直接 alert 的觸發點，改成顯示新 UI
-                if (enemyBase.hp <= 0 && !gameWon) {
-                    gameWon = true; playerGold += 200; localStorage.setItem('tdGameGold_v2', playerGold);
-                    document.getElementById('game-over-title').innerText = "🎉 勝利！";
-                    document.getElementById('game-over-title').style.color = "#f1c40f";
-                    document.getElementById('game-over-msg').innerText = "成功推平敵軍主堡！獲得 200 金幣！";
-                    document.getElementById('game-over-modal').style.display = 'flex';
-                }
-            } else {
-                // 【核心機制】：遊戲結束時，停止行動並強制回到待機(0)動畫
-                pUnit.state = 0; 
-                pUnit.cooldown = 0;
+            
+            // 【新增】：死亡觸發
+            if (pUnit.hp <= 0 && !pUnit.isDying) {
+                pUnit.isDying = true;
+                pUnit.state = 3; 
+                pUnit.deathTimer = 45; 
             }
 
-            if (pUnit.hp <= 0) playerUnits.splice(i, 1); else pUnit.draw(); 
+            if (pUnit.isDying) {
+                pUnit.deathTimer--;
+                pUnit.draw();
+                if (pUnit.deathTimer <= 0) playerUnits.splice(i, 1);
+            } else {
+                if (isPlaying) {
+                    let targetEnemy = enemies.find(e => !e.isDying && Math.hypot((e.x + e.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (e.y + e.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY)) <= pUnit.range);
+                    pUnit.update(targetEnemy);
+                    
+                    if (enemyBase.hp <= 0 && !gameWon) {
+                        gameWon = true; playerGold += 200; localStorage.setItem('tdGameGold_v2', playerGold);
+                        document.getElementById('game-over-title').innerText = "🎉 勝利！";
+                        document.getElementById('game-over-title').style.color = "#f1c40f";
+                        document.getElementById('game-over-msg').innerText = "成功推平敵軍主堡！獲得 200 金幣！";
+                        document.getElementById('game-over-modal').style.display = 'flex';
+                    }
+                } else {
+                    pUnit.state = 0; pUnit.cooldown = 0;
+                }
+                pUnit.draw(); 
+            }
         }
 
         // 防禦塔繪製 (只保留畫圖，拔掉射擊邏輯的迴圈)
@@ -1477,7 +1635,7 @@ class Enemy {
                 const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
                 if (tower.cooldown > 0) tower.cooldown--;
                 else {
-                    const target = enemies.find(e => Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
+                    const target = enemies.find(e => !e.isDying && Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
                     if (target) {
                         target.hp -= damage; tower.cooldown = fireRate;
                         ctx.strokeStyle = bData.color; ctx.lineWidth = 3;
@@ -1495,7 +1653,40 @@ class Enemy {
                 ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE, 4); ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx, cy - 8, TILE_SIZE * (tower.hp / tower.maxHp), 4);
             }
         });
-
+        
+        // ============================================
+        // 【新增】：畫戰鬥特效 (AoE 爆炸動畫)
+        // ============================================
+        for (let i = combatEffects.length - 1; i >= 0; i--) {
+            let eff = combatEffects[i];
+            eff.timer--;
+            if (eff.timer <= 0) {
+                combatEffects.splice(i, 1);
+                continue;
+            }
+            
+            let img = eff.isTransformed ? EFFECT_IMGS.aoe_transformed : EFFECT_IMGS.aoe_normal;
+            
+            if (img && img.complete && !img.isFailed && img.naturalWidth > 0) {
+                let fw = img.naturalWidth / 4; let fh = img.naturalHeight;
+                // 計算目前該播哪一格 (20 幀分 4 格)
+                let frame = Math.floor((20 - eff.timer) / 5); 
+                if (frame > 3) frame = 3;
+                
+                let drawSize = eff.radius * 2.5; // 讓圖案稍微大過實際傷害範圍一點
+                ctx.save();
+                ctx.globalCompositeOperation = 'screen'; // 使用 screen 讓爆炸有發光的感覺
+                ctx.drawImage(img, frame * fw, 0, fw, fh, eff.x - drawSize/2, eff.y - drawSize/2, drawSize, drawSize);
+                ctx.restore();
+            } else {
+                // 如果還沒放圖片，暫時退回半透明圓形
+                ctx.beginPath(); ctx.arc(eff.x, eff.y, eff.radius, 0, Math.PI * 2);
+                ctx.fillStyle = eff.isTransformed ? 'rgba(241, 196, 15, 0.3)' : 'rgba(231, 76, 60, 0.3)';
+                ctx.fill();
+            }
+        }
+        
+        // (原本的雲層與 UI 畫圖邏輯...)
         // ============================================
         // 4. 畫雲層與 UI (永遠執行)
         // ============================================
