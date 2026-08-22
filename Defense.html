@@ -654,16 +654,19 @@ function checkAnswer(selected) {
     }
 
 // 【修改】：將將領介面改為純顯示狀態，移除點擊出戰功能
+    // 【終極修復】：將領 UI 狀態智能判定 (加入缺大帳提示)
     function updateGeneralsUI() {
         const genContainer = document.getElementById('generals-camp');
         if(!genContainer) return;
         genContainer.innerHTML = '';
         
+        let tents = towers.filter(t => t.id === 'tent'); // 檢查場上有無大帳
+
         selectedGenerals.forEach(gId => {
             let g = GENERALS[gId];
             let isDeployed = playerUnits.some(p => p.id === gId) || deployQueue.some(u => u.id === gId);
             
-            let statusBox = document.createElement('div'); // 改用 div 而不是 button
+            let statusBox = document.createElement('div');
             statusBox.className = 'slot general';
             
             let statusText = '待命';
@@ -674,10 +677,13 @@ function checkAnswer(selected) {
                 statusText = '戰鬥中';
                 bgColor = '#bdc3c7';
             } else if (g.deathCooldown > 0) {
-                // 顯示冷卻秒數 (60幀 = 1秒)
-                statusText = `冷卻 ${Math.ceil(g.deathCooldown / 60)}s`;
+                statusText = `休整 ${Math.ceil(g.deathCooldown / 60)}s`;
                 bgColor = '#fadbd8';
                 textColor = '#e74c3c';
+            } else if (tents.length === 0) { // 如果無起大帳，直接變灰並提示
+                statusText = '缺大帳';
+                bgColor = '#ecf0f1';
+                textColor = '#7f8c8d';
             }
             
             statusBox.style.cssText = `font-size:11px; width:55px; background:${bgColor}; color:${textColor}; border-color:${g.color}; display:flex; flex-direction:column; justify-content:center; align-items:center; cursor:default; line-height:1.2;`;
@@ -685,6 +691,7 @@ function checkAnswer(selected) {
             genContainer.appendChild(statusBox);
         });
     }
+
 
     // 【新增】：獨立將領出戰邏輯
     window.deployGeneral = function(gId) {
@@ -1565,67 +1572,62 @@ update(targetEnemy) {
 
 // --- 遊戲主迴圈 ---
     function gameLoop() {
-        // 【移除原本會直接卡死整個迴圈的 return】
-        
         ctx.clearRect(0, 0, 800, 800);
         globalAnimTick++;
-
-        // 判斷遊戲是否還在進行中
         let isPlaying = !gameOver && !gameWon;
 
         // ============================================
-        // 1. 只有在進行中 (isPlaying) 才會執行的「戰鬥與資源邏輯」
+        // 1. 戰鬥與資源邏輯 (只有遊戲進行中執行)
         // ============================================
         if (isPlaying) {
-            // 【核心修復】：將武將大腦獨立出來，並修正冷卻時間計算
+            // 【核心修復：武將自動大腦與出兵隊列】
             if (globalAnimTick % 30 === 0) {
                 let tents = towers.filter(t => t.id === 'tent');
                 
-                  selectedGenerals.forEach(gId => {
+                selectedGenerals.forEach(gId => {
                     let g = GENERALS[gId];
+                    if (!g) return; // 防呆機制
                     
-                    // 【核心修復】：雙重保險！防止 undefined 導致判斷失效
                     g.deathCooldown = g.deathCooldown || 0; 
+                    if (g.deathCooldown > 0) g.deathCooldown -= 30; 
                     
-                    if (g.deathCooldown > 0) g.deathCooldown -= 30; // 每半秒扣除 30 幀冷卻
-                    
+                    // 必須有大帳 + 未出戰 + 無冷卻，大腦才會開始運作！
                     if (tents.length > 0 && !g.isDeployed && g.deathCooldown <= 0) {
                         let shouldDeploy = false;
                         
-                        // (下面保留原本的 if (gId === 'g1') ... 等條件判斷)
-                        
-                        if (gId === 'g1') { // 關羽：敵軍威脅任何大小建築物或我方主堡
+                        if (gId === 'g1') { // 關羽：有敵人威脅任何大小建築或主堡
                             shouldDeploy = enemies.some(e => {
                                 let nearTower = towers.some(t => {
                                     let s = BUILDINGS[t.id].size || 1;
                                     let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
                                     let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
-                                    return Math.hypot(e.x - centerX, e.y - centerY) < 180;
+                                    return Math.hypot(e.x - centerX, e.y - centerY) < 180; // 絕對防禦半徑
                                 });
                                 let nearBase = Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250;
                                 return nearTower || nearBase;
                             });
-                        } else if (gId === 'g2') { // 趙雲：場上有4隻以上騎兵
+                        } else if (gId === 'g2') { // 趙雲：4名騎兵(b6)在場
                             shouldDeploy = (playerUnits.filter(p => p.id === 'b6' && !p.isDying).length >= 4);
-                        } else if (gId === 'g3') { // 如來：主堡血量低於 50%
+                        } else if (gId === 'g3') { // 如來：主堡低於 50% 血
                             shouldDeploy = (playerBase.hp < playerBase.maxHp * 0.5);
-                        } else if (gId === 'g4') { // 呂布：場上出現屍王
+                        } else if (gId === 'g4') { // 呂布：場上出現屍王(boss)
                             shouldDeploy = enemies.some(e => e.id === 'boss' && !e.isDying);
                         }
 
+                        // 一旦滿足條件，即刻加入出兵隊列！
                         if (shouldDeploy) {
                             g.isDeployed = true;
-                            let spawnIdx = getNearestPathIndex(tents[0].x, tents[0].y); // 從大帳最近的道路出發
+                            let spawnIdx = getNearestPathIndex(tents[0].x, tents[0].y); 
                             deployQueue.push({ id: gId, level: tents[0].level, spawnIndex: spawnIdx });
                             
                             let feedback = document.getElementById('feedback');
-                            feedback.innerText = `🔥 條件達成！傳奇將領【${g.name}】自動出陣！`;
+                            feedback.innerText = `🔥 條件達成！傳奇將領【${g.name}】出陣！`;
                             feedback.style.color = "#e74c3c";
                         }
                     }
                 });
 
-                // 一般排隊出兵與將領降臨邏輯 (從隊列中釋放到場上)
+                // 一般排隊士兵與將領，由這裡正式放落場！
                 if (deployQueue.length > 0) {
                     let spawnCount = Math.min(2, deployQueue.length);
                     for(let i=0; i<spawnCount; i++) {
@@ -1639,7 +1641,7 @@ update(targetEnemy) {
                 }
             }
 
-
+            // 資源生產
             if (globalAnimTick % 60 === 0) {
                 towers.forEach(t => {
                     let bData = BUILDINGS[t.id];
@@ -1654,6 +1656,7 @@ update(targetEnemy) {
                 updateResourcesUI();
             }
 
+            // 難度與生怪
             frameCount++;
             if (frameCount % 600 === 0 && difficultyLevel < 15) {
                 difficultyLevel += 0.5;
@@ -1673,11 +1676,11 @@ update(targetEnemy) {
                 if (difficultyLevel >= 2 && rand < 0.3) type = 'fast';
                 if (difficultyLevel >= 3 && rand >= 0.3 && rand < 0.6) type = 'tank';
                 if (difficultyLevel >= 4 && rand >= 0.8) type = 'boss';
-                // 【修正】：使用 Math.floor 去除小數點，確保怪物永遠是整數等級
                 enemies.push(new Enemy(Math.floor(difficultyLevel), type));
                 spawnTimer = Math.max(150, 360 - difficultyLevel * 15);
             }
 
+            // 雙方主堡互射與回血
             [playerBase, enemyBase].forEach((base, idx) => {
                 let isPlayer = idx === 0;
                 if (globalAnimTick % 60 === 0 && base.hp < base.maxHp) {
@@ -1698,6 +1701,7 @@ update(targetEnemy) {
 
             if (globalAnimTick % 30 === 0) updateGeneralsUI();
         }
+
 
         // ============================================
         // 2. 「不管遊戲結束與否」都要繼續運行的動畫與畫圖邏輯
