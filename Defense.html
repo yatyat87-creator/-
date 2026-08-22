@@ -459,16 +459,7 @@
         updateLobbyUI();
     };
 
-    // 【修改】：極致穩定的開始遊戲函式
-    window.startGame = function() {
-        document.getElementById('setup-screen').style.display = 'none';
-        document.getElementById('play-screen').style.display = 'block';
-        
-        // 確保舊的迴圈絕對被砍掉，不會發生兩倍速 Bug
-        if (window.animFrameId) {
-            cancelAnimationFrame(window.animFrameId);
-        }
-            // 【修改】：極致穩定的開始遊戲函式
+// 【修改】：極致穩定的開始遊戲函式
     window.startGame = function() {
         document.getElementById('setup-screen').style.display = 'none';
         document.getElementById('play-screen').style.display = 'block';
@@ -478,15 +469,12 @@
             cancelAnimationFrame(window.animFrameId);
         }
         
-        // 【核心修復】：每次開局前，強制重置所有武將為「未出戰」與「零冷卻」狀態！
+        // 每次開局前，強制重置所有武將為「未出戰」與「零冷卻」狀態！
         for (let key in GENERALS) {
             GENERALS[key].isDeployed = false;
             GENERALS[key].deathCooldown = 0;
         }
         
-        generateDecorations();
-        loadNextQuestion();
-
         generateDecorations();
         loadNextQuestion();
         updateResourcesUI();
