@@ -58,6 +58,18 @@
         .option-btn { background: #2980b9; color: white; border: none; padding: 12px; font-size: 20px; font-weight: bold; border-radius: 5px; cursor: pointer; }
         .option-btn:hover { background: #3498db; }
         #feedback { margin-top: 10px; font-weight: bold; height: 20px; }
+        /* 【新增】：UI 專用 5 幀行走動畫 */
+        .sprite-walk {
+            animation: spriteWalkAnim 0.8s infinite;
+        }
+        @keyframes spriteWalkAnim {
+            0%, 19.9% { background-position: 0% 0; }
+            20%, 39.9% { background-position: 25% 0; }
+            40%, 59.9% { background-position: 50% 0; }
+            60%, 79.9% { background-position: 75% 0; }
+            80%, 99.9% { background-position: 100% 0; }
+            100% { background-position: 0% 0; }
+        }
     </style>
 </head>
 <body>
@@ -154,14 +166,14 @@
 
 // --- 建築物與兵種資料庫 ---
     const BUILDINGS = {
-        "farm": { id: "farm", name: "農田", symbol: "🌾", color: "#f1c40f", type: "resource", resType: "meat", resAmount: 10, costType: "gold", cost: 50 },
-        "lumber": { id: "lumber", name: "伐木廠", symbol: "🪓", color: "#e67e22", type: "resource", resType: "wood", resAmount: 10, costType: "gold", cost: 50 },
-        "market": { id: "market", name: "市場", symbol: "⚖️", color: "#f39c12", type: "buff", costType: "gold", cost: 50 },
-        "quarry": { id: "quarry", name: "石礦場", symbol: "⛏️", color: "#7f8c8d", type: "resource", resType: "stone", resAmount: 10, costType: "gold", cost: 50 },
-        "barracks": { id: "barracks", name: "軍營", symbol: "⛺", color: "#d35400", type: "military", costType: "wood", cost: 100 },
-        "tower": { id: "tower", name: "箭塔", symbol: "🏹", color: "#bdc3c7", type: "attack", dmg: 1.5, range: 2.5, spd: 1.2, costType: "wood", cost: 100 },
-        "gate": { id: "gate", name: "城門", symbol: "⛩️", color: "#2c3e50", type: "wall", costType: "stone", cost: 100, hp: 1000 },
-        "tent": { id: "tent", name: "大帳", symbol: "🎪", color: "#8e44ad", type: "military", costType: "wood", cost: 200 } // 【新增】：大帳
+        "farm": { id: "farm", name: "農田", symbol: "🌾", color: "#f1c40f", type: "resource", resType: "meat", resAmount: 10, costType: "gold", cost: 50, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Farm.png" },
+        "lumber": { id: "lumber", name: "伐木廠", symbol: "🪓", color: "#e67e22", type: "resource", resType: "wood", resAmount: 10, costType: "gold", cost: 50, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/伐木廠.png" },
+        "market": { id: "market", name: "市場", symbol: "⚖️", color: "#f39c12", type: "buff", costType: "gold", cost: 50, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/市場.png" },
+        "quarry": { id: "quarry", name: "石礦場", symbol: "⛏️", color: "#7f8c8d", type: "resource", resType: "stone", resAmount: 10, costType: "gold", cost: 50, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/石礦場.png" },
+        "barracks": { id: "barracks", name: "軍營", symbol: "⛺", color: "#d35400", type: "military", costType: "wood", cost: 100, size: 2, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/軍營.png" },
+        "tower": { id: "tower", name: "箭塔", symbol: "🏹", color: "#bdc3c7", type: "attack", dmg: 1.5, range: 2.5, spd: 1.2, costType: "wood", cost: 100, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/箭塔.png" }, // 箭塔 4x2 (行0:等待, 行1:攻擊)
+        "gate": { id: "gate", name: "城門", symbol: "⛩️", color: "#2c3e50", type: "wall", costType: "stone", cost: 100, hp: 1000, imgSrc: "城門4x4網址.png" }, // 城門 4x4 (4方向, 4開關幀)
+        "tent": { id: "tent", name: "大帳", symbol: "🎪", color: "#8e44ad", type: "military", costType: "wood", cost: 200, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/大帳.png" }
     };
 
 // 【修改】：敵方也全面採用我方的參數架構 (攻速、走速、射程、大小設定與精靈圖)
@@ -199,6 +211,10 @@
     for (let key in ENEMY_TYPES) ENEMY_TYPES[key].img = loadSprite(ENEMY_TYPES[key].imgSrc);
     
     for (let key in BASIC_UNITS) BASIC_UNITS[key].img = loadSprite(BASIC_UNITS[key].imgSrc);
+    // 載入建築物精靈圖
+    for (let key in BUILDINGS) {
+        if (BUILDINGS[key].imgSrc) BUILDINGS[key].img = loadSprite(BUILDINGS[key].imgSrc);
+    }
     for (let key in GENERALS) {
         GENERALS[key].img = loadSprite(GENERALS[key].imgSrc);
         // 【新增】：如果武將有第二型態，就載入 img2
@@ -343,12 +359,18 @@
     // --- 大廳邏輯 ---
     function updateLobbyUI() {
         document.getElementById('gold-count').innerText = playerGold;
+        
+        // 1. 更新基本兵種 UI
         const basicGrid = document.getElementById('basic-grid'); basicGrid.innerHTML = '';
         for (let key in BASIC_UNITS) { 
             let b = BASIC_UNITS[key]; 
-            basicGrid.innerHTML += `<div class="char-card basic"><div class="char-symbol" style="color:${b.color}">${b.symbol}</div><div style="font-size:14px; font-weight:bold;">${b.name}</div></div>`; 
+            // 【核心修改】：利用 CSS background 技巧，從 5x5 精靈圖中裁出第 1 格
+        // 【修改】：加入 sprite-walk 類別
+        let spriteHtml = `<div class="sprite-walk" style="width: 45px; height: 45px; margin: 0 auto 5px auto; background-image: url('${b.imgSrc}'); background-size: 500% 500%; image-rendering: pixelated;"></div>`;
+            basicGrid.innerHTML += `<div class="char-card basic">${spriteHtml}<div style="font-size:14px; font-weight:bold;">${b.name}</div></div>`; 
         }
 
+        // 2. 更新將領 UI
         const genGrid = document.getElementById('general-grid'); genGrid.innerHTML = '';
         for (let key in GENERALS) {
             let g = GENERALS[key]; 
@@ -356,7 +378,13 @@
             let isSelected = selectedGenerals.includes(key);
             let card = document.createElement('div'); 
             card.className = `char-card ${isUnlocked ? 'unlocked' : 'locked'} ${isSelected ? 'selected' : ''}`;
-            card.innerHTML = `<div class="char-symbol" style="color:${g.color}">${g.symbol}</div><div style="font-size:14px; font-weight:bold;">${g.name}</div><div class="char-desc">${g.desc}</div>${isUnlocked ? '<div class="char-price" style="color:green">已解鎖</div>' : `<div class="char-price">💰 ${g.price}解鎖</div>`}`;
+            
+            // 【核心修改】：將領圖片。如果未解鎖，加入 grayscale(100%) 變成黑白
+            let filter = isUnlocked ? 'none' : 'grayscale(100%)';
+            // 【修改】：加入 sprite-walk 類別
+            let spriteHtml = `<div class="sprite-walk" style="width: 55px; height: 55px; margin: 0 auto 5px auto; background-image: url('${g.imgSrc}'); background-size: 500% 500%; image-rendering: pixelated; filter: ${filter};"></div>`;
+            
+            card.innerHTML = `${spriteHtml}<div style="font-size:14px; font-weight:bold;">${g.name}</div><div class="char-desc">${g.desc}</div>${isUnlocked ? '<div class="char-price" style="color:green">已解鎖</div>' : `<div class="char-price">💰 ${g.price}解鎖</div>`}`;
             card.onclick = () => handleGeneralClick(key, g, isUnlocked); 
             genGrid.appendChild(card);
         }
@@ -529,35 +557,60 @@ function checkAnswer(selected) {
         }
     }
 
-function buySoldier() {
+// 【修改】：一鍵徵兵邏輯 (按一下自動計算肉量並填滿兵營空位)
+    window.buySoldier = function() {
         const feedback = document.getElementById('feedback');
-        // 【新增】：必須先有軍營才能產兵
+        
+        // 1. 檢查是否有軍營
         if (!towers.some(t => t.id === 'barracks')) { 
             feedback.innerText = "⚠️ 必須先建造【軍營】才能生產士兵！"; 
             feedback.style.color = "#e74c3c";
             return; 
         }
-        if (gameMeat < 50) { 
+
+        // 2. 找出兵營 (offenseCamp) 裡面所有的空位 (null)
+        let emptyIndices = [];
+        for (let i = 0; i < offenseCamp.length; i++) {
+            if (offenseCamp[i] === null) emptyIndices.push(i);
+        }
+
+        if (emptyIndices.length === 0) { 
+            feedback.innerText = "⚠️ 兵營已滿！請先全軍出擊！"; 
+            feedback.style.color = "#e74c3c";
+            return;
+        }
+
+        // 3. 計算目前的肉量最多可以買幾隻兵 (每隻 50 肉)
+        let affordableCount = Math.floor(gameMeat / 50);
+        
+        if (affordableCount <= 0) { 
             feedback.innerText = "⚠️ 食物(肉)不足 50！請多建農田。"; 
             feedback.style.color = "#e74c3c";
             return; 
         }
-        let emptyIndex = offenseCamp.findIndex(s => s === null);
-        if (emptyIndex !== -1) {
-            gameMeat -= 50; updateResourcesUI();
-            // 【修改】：兵營只會招募基本兵種，將領不再混入
-            let pool = Object.keys(BASIC_UNITS); 
-            offenseCamp[emptyIndex] = { id: pool[Math.floor(Math.random() * pool.length)], level: 1 };
-            feedback.innerText = `✔️ 花費 50 肉招募部隊！`; 
-            feedback.style.color = "#2ecc71";
-            updateCampsUI();
-        } else { 
-            feedback.innerText = "⚠️ 兵營已滿！請先全軍出擊！"; 
-            feedback.style.color = "#e74c3c";
-        }
-    }
 
-function updateCampsUI() {
+        // 4. 實際招募數量 = 「空位數量」與「買得起數量」的最小值
+        let recruitCount = Math.min(emptyIndices.length, affordableCount);
+
+        // 5. 一次過扣除總消耗資源
+        gameMeat -= (50 * recruitCount); 
+        updateResourcesUI();
+
+        // 6. 批次將隨機士兵加入剛剛找到的兵營空位中
+        let pool = Object.keys(BASIC_UNITS); 
+        for (let i = 0; i < recruitCount; i++) {
+            let targetIndex = emptyIndices[i];
+            let randomUnitId = pool[Math.floor(Math.random() * pool.length)];
+            offenseCamp[targetIndex] = { id: randomUnitId, level: 1 };
+        }
+
+        // 7. 更新介面與提示訊息
+        feedback.innerText = `✔️ 花費 ${50 * recruitCount} 肉，一鍵招募了 ${recruitCount} 支部隊！`; 
+        feedback.style.color = "#2ecc71";
+        updateCampsUI();
+    };
+
+    function updateCampsUI() {
         const offSlots = document.querySelectorAll('#offense-camp .slot');
         offSlots.forEach((s, i) => {
             s.innerHTML = ''; s.className = 'slot';
@@ -565,8 +618,17 @@ function updateCampsUI() {
                 let u = BASIC_UNITS[offenseCamp[i].id] || GENERALS[offenseCamp[i].id];
                 if (u) {
                     if(u.isGeneral) s.classList.add('general'); 
-                    s.innerText = u.symbol; s.style.color = u.color;
-                    // 如果部隊處於被選取狀態，加入紅色發光特效
+                    
+                    // 【修改】：加入 sprite-walk，讓兵營裡的預備軍也會原地踏步
+                    let imgDiv = document.createElement('div');
+                    imgDiv.className = 'sprite-walk'; 
+                    imgDiv.style.width = '35px';
+                    imgDiv.style.height = '35px';
+                    imgDiv.style.backgroundImage = `url('${u.imgSrc}')`;
+                    imgDiv.style.backgroundSize = '500% 500%';
+                    imgDiv.style.imageRendering = 'pixelated';
+                    s.appendChild(imgDiv);
+
                     if (offenseCamp[i].selected) s.classList.add('selected');
                 }
             }
@@ -736,7 +798,14 @@ function updateCampsUI() {
                enemyRing.some(p => p.x === gx && p.y === gy) || 
                playerRing.some(p => p.x === gx && p.y === gy); 
     }
-    function getTowerAt(gx, gy) { return towers.find(t => t.x === gx && t.y === gy); }
+    // 【修改】：讓系統知道 2x2 建築佔用多格，點擊範圍內任何一格都能正確選中或判定障礙
+    function getTowerAt(gx, gy) { 
+        return towers.find(t => {
+            let s = BUILDINGS[t.id].size || 1;
+            // 檢查點擊的坐標 (gx, gy) 是否落在建築的 (x 到 x+s, y 到 y+s) 範圍內
+            return gx >= t.x && gx < t.x + s && gy >= t.y && gy < t.y + s;
+        }); 
+    }
 
     // 【核心點擊建造邏輯】
     canvas.addEventListener('click', (e) => {
@@ -796,56 +865,66 @@ function updateCampsUI() {
             return;
         }
 
-        // 3. 建造模式
+// 3. 建造模式
         if (selectedBuilding) {
             let bData = BUILDINGS[selectedBuilding];
+            let bSize = bData.size || 1;
 
-            // 【新增】：敵軍前線 6 行 (Y軸 0~5) 屬於危險交戰區，禁止任何建築
+            // 1. 檢查地圖邊界與敵方交戰區
+            if (gx + bSize > 20 || gy + bSize > 20) {
+                feedback.innerText = "⚠️ 建築範圍超出地圖邊界！"; feedback.style.color = "#e74c3c"; return;
+            }
             if (gy < 6) {
-                feedback.innerText = "⚠️ 敵軍前線山地 (前 6 行) 無法進行建築！"; 
-                feedback.style.color = "#e74c3c"; return;
+                feedback.innerText = "⚠️ 敵軍前線山地 (前 6 行) 無法進行建築！"; feedback.style.color = "#e74c3c"; return;
             }
 
-            // 【城門建造限制】：最多 3 個，且不能在另一個城門 2 格範圍內
+            // 2. 特殊建築數量與距離限制
             if (bData.id === 'gate') {
                 let existingGates = towers.filter(t => t.id === 'gate');
-                if (existingGates.length >= 3) {
-                    feedback.innerText = "⚠️ 整個地圖最多只能建造 3 座城門！"; 
-                    feedback.style.color = "#e74c3c"; return;
-                }
+                if (existingGates.length >= 3) { feedback.innerText = "⚠️ 整個地圖最多只能建造 3 座城門！"; feedback.style.color = "#e74c3c"; return; }
                 let tooClose = existingGates.some(g => Math.abs(g.x - gx) <= 2 && Math.abs(g.y - gy) <= 2);
-                if (tooClose) {
-                    feedback.innerText = "⚠️ 城門不能蓋在另一座城門的 2 格範圍內！"; 
-                    feedback.style.color = "#e74c3c"; return;
-                }
+                if (tooClose) { feedback.innerText = "⚠️ 城門不能蓋在另一座城門的 2 格範圍內！"; feedback.style.color = "#e74c3c"; return; }
+                let inRing = enemyRing.some(p => p.x === gx && p.y === gy) || playerRing.some(p => p.x === gx && p.y === gy);
+                if (inRing) { feedback.innerText = "⚠️ 城門不能蓋在主堡陣地上！"; feedback.style.color = "#e74c3c"; return; }
             }
-            
-            // 【軍營數量限制】
             if (bData.id === 'barracks' && towers.some(t => t.id === 'barracks')) {
-                feedback.innerText = "⚠️ 軍營只可以起一個！"; 
-                feedback.style.color = "#e74c3c"; return;
+                feedback.innerText = "⚠️ 軍營只可以起一個！"; feedback.style.color = "#e74c3c"; return;
             }
 
-            // 道路與空地判定
-            if (bData.id === 'gate') { 
-                // 【新增】：禁止在主堡周圍的八格環狀陣地上蓋城門
-                let inRing = enemyRing.some(p => p.x === gx && p.y === gy) || playerRing.some(p => p.x === gx && p.y === gy);
-                if (inRing) {
-                    feedback.innerText = "⚠️ 城門不能蓋在主堡周圍的陣地上，會阻礙大軍包抄！"; 
-                    feedback.style.color = "#e74c3c"; return;
+            // 3. 【核心修正】全面檢查 1x1 或 2x2 的佔地範圍內，是否有道路或已建建築
+            let overlapPath = false;
+            let overlapBuilding = false;
+            for (let dx = 0; dx < bSize; dx++) {
+                for (let dy = 0; dy < bSize; dy++) {
+                    if (isPath(gx + dx, gy + dy)) overlapPath = true;
+                    if (getTowerAt(gx + dx, gy + dy)) overlapBuilding = true;
+                    // 防呆：不能蓋在雙方主堡上面
+                    if ((gx + dx === 17 && gy + dy === 17) || (gx + dx === 2 && gy + dy === 2)) overlapBuilding = true;
                 }
+            }
+
+            if (bData.id === 'gate') { 
                 if (!isPath(gx, gy)) { feedback.innerText = "⚠️ 城門必須蓋在一般道路上！"; feedback.style.color = "#e74c3c"; return; } 
             } else { 
-                if (isPath(gx, gy)) { feedback.innerText = "⚠️ 建築不能蓋在道路上！"; feedback.style.color = "#e74c3c"; return; } 
+                if (overlapPath) { feedback.innerText = "⚠️ 建築的任何一角都不能蓋在道路上！"; feedback.style.color = "#e74c3c"; return; } 
             }
-            if (existingTower) { feedback.innerText = "⚠️ 這裡已經有建築了！"; feedback.style.color = "#e74c3c"; return; }
-            
-            // 領地範圍判定 (城鎮中心或現有建築 3 格內)
+            if (overlapBuilding) { feedback.innerText = "⚠️ 這裡空間不足，已經有建築或主堡了！"; feedback.style.color = "#e74c3c"; return; }
+
+            // 4. 領地範圍判定 (城鎮中心或現有建築 3 格內)
             let tc = pathCoords[pathCoords.length - 1]; 
-            let inRange = (Math.abs(tc.x - gx) <= 3 && Math.abs(tc.y - gy) <= 3) || towers.some(t => Math.abs(t.x - gx) <= 3 && Math.abs(t.y - gy) <= 3);
+            let inRange = false;
+            for (let dx = 0; dx < bSize; dx++) {
+                for (let dy = 0; dy < bSize; dy++) {
+                    let cx = gx + dx, cy = gy + dy;
+                    if ((Math.abs(tc.x - cx) <= 3 && Math.abs(tc.y - cy) <= 3) || towers.some(t => Math.abs(t.x - cx) <= 3 && Math.abs(t.y - cy) <= 3)) {
+                        inRange = true; break;
+                    }
+                }
+                if (inRange) break;
+            }
             if (!inRange) { feedback.innerText = "⚠️ 只能在我方建築或城鎮中心方圓 3 格內領地建造！"; feedback.style.color = "#e74c3c"; return; }
 
-            // 扣除資源
+            // 5. 扣除資源 (這部分保留您原本的代碼)
             if (bData.costType === 'gold' && gameGold >= bData.cost) {
                 gameGold -= bData.cost;
             } else if (bData.costType === 'wood' && gameWood >= bData.cost) {
@@ -859,7 +938,11 @@ function updateCampsUI() {
             }
             
             updateResourcesUI(); 
-            towers.push({ x: gx, y: gy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0 });
+            // 【特別注意】：新增 dir, state, frame 等參數，避免 2x2 建築出錯
+            towers.push({ 
+                x: gx, y: gy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0,
+                state: 0, frame: 0, dir: 0 
+            });
             feedback.innerText = `🏗️ 成功建造 ${bData.name}！`; 
             feedback.style.color = "#2ecc71";
             selectBuilding(selectedBuilding); 
@@ -955,10 +1038,10 @@ class Enemy {
 
                 const isLaneBlocked = (testLane) => {
                     return enemies.some(e => {
-                        // 【新增】：如果對方正在退場(死亡)，就不算擋路！
-                        if (e === this || e.lane !== testLane || e.isDying) return false;
+                        // 【核心修正】：同樣無視遠程隊友
+                        if (e === this || e.lane !== testLane || e.isDying || e.range > this.range + 10) return false;
+                        
                         if (this.pathIndex >= pathCoords.length && e.pathIndex >= pathCoords.length) return false;
-
                         if (Math.hypot(e.x - this.x, e.y - this.y) < 24) { 
                             if (e.pathIndex > this.pathIndex) return true;
                             if (e.pathIndex === this.pathIndex) {
@@ -1209,7 +1292,10 @@ update(targetEnemy) {
 
                 const isLaneBlocked = (testLane) => {
                     return playerUnits.some(p => {
-                        if (p === this || p.lane !== testLane) return false;
+                        // 【核心修正】：加入 p.range > this.range + 10 
+                        // 意思係：如果前面個隊友射程遠過我（遠程部隊），我就無視佢，直接穿過佢上前線圍城！
+                        if (p === this || p.lane !== testLane || p.isDying || p.range > this.range + 10) return false;
+                        
                         if (this.pathIndex < 0 && p.pathIndex < 0) return false;
                         if (Math.hypot(p.x - this.x, p.y - this.y) < 24) { 
                             if (p.pathIndex < this.pathIndex) return true; 
@@ -1625,32 +1711,111 @@ update(targetEnemy) {
         }
 
         // 防禦塔繪製 (只保留畫圖，拔掉射擊邏輯的迴圈)
+// 防禦塔與建築繪製
+// 防禦塔與建築繪製
         towers.sort((a, b) => a.y - b.y).forEach(tower => {
             const cx = tower.x * TILE_SIZE, cy = tower.y * TILE_SIZE;
             let bData = BUILDINGS[tower.id];
             
+// 1. 箭塔攻擊邏輯與狀態判定 (必須先執行邏輯，再畫圖)
             if (isPlaying && bData.type === 'attack') {
                 const range = 60 + (bData.range * 30) + (tower.level * 10);
                 const damage = 10 * bData.dmg * tower.level;
                 const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
-                if (tower.cooldown > 0) tower.cooldown--;
-                else {
+                
+                if (tower.cooldown > 0) {
+                    tower.cooldown--;
+                    tower.state = (tower.cooldown > fireRate - 15) ? 1 : 0; 
+                } else {
                     const target = enemies.find(e => !e.isDying && Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
                     if (target) {
-                        target.hp -= damage; tower.cooldown = fireRate;
+                        target.hp -= damage; 
+                        tower.cooldown = fireRate;
+                        tower.state = 1; 
+                        
+                        // 【核心新增】：判斷目標喺箭塔嘅左邊定右邊
+                        tower.facingLeft = target.x < cx + TILE_SIZE / 2;
+                        
                         ctx.strokeStyle = bData.color; ctx.lineWidth = 3;
                         ctx.beginPath(); ctx.moveTo(cx + TILE_SIZE / 2, cy + TILE_SIZE / 2); ctx.lineTo(target.x, target.y); ctx.stroke();
+                    } else {
+                        tower.state = 0; 
                     }
                 }
             }
 
-            ctx.fillStyle = bData.color; ctx.fillRect(cx + 2, cy + 2, TILE_SIZE - 4, TILE_SIZE - 4);
-            ctx.fillStyle = 'white'; ctx.font = '22px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(bData.symbol, cx + TILE_SIZE / 2, cy + TILE_SIZE / 2);
-            ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+tower.level, cx + TILE_SIZE/2, cy + TILE_SIZE - 5);
+            // 2. 城門自動開關邏輯
+            if (tower.id === 'gate' && isPlaying) {
+                let allyNear = playerUnits.some(p => !p.isDying && Math.hypot(p.x - (cx + TILE_SIZE/2), p.y - (cy + TILE_SIZE/2)) < 60);
+                if (globalAnimTick % 5 === 0) { 
+                    if (allyNear) {
+                        tower.frame = Math.min(3, tower.frame + 1); 
+                    } else {
+                        tower.frame = Math.max(0, tower.frame - 1); 
+                    }
+                }
+            }
+
+             // 3. 畫出建築精靈圖 (加入翻轉魔法)
+            let sizeMult = bData.size || 1; 
+
+            if (bData.img && bData.img.complete && !bData.img.isFailed && bData.img.naturalWidth > 0) {
+                let cols = 4, rows = 1;
+                let sx = 0, sy = 0;
+
+                if (tower.id === 'gate') {
+                    cols = 4; rows = 4;
+                    sx = tower.frame * (bData.img.naturalWidth / cols);
+                    sy = tower.dir * (bData.img.naturalHeight / rows);
+                } else if (tower.id === 'tower') {
+                    cols = 4; rows = 2;
+                    sx = (Math.floor(globalAnimTick / 15) % cols) * (bData.img.naturalWidth / cols);
+                    sy = tower.state * (bData.img.naturalHeight / rows);
+                } else {
+                    sx = (Math.floor(globalAnimTick / 15) % cols) * (bData.img.naturalWidth / cols);
+                }
+
+                let fw = bData.img.naturalWidth / cols; 
+                let fh = bData.img.naturalHeight / rows;
+                
+                let drawScale = 1.3; 
+                let drawWidth = TILE_SIZE * drawScale * sizeMult;
+                let aspectRatio = fh / fw;
+                let drawHeight = drawWidth * aspectRatio;
+                
+                // 【核心新增】：使用 ctx.save() 準備翻轉畫布
+                ctx.save();
+                
+                // 找出建築物嘅正中心點
+                let centerX = cx + (TILE_SIZE * sizeMult) / 2;
+                let centerY = cy + TILE_SIZE * sizeMult - drawHeight / 2 - 5;
+                
+                // 將畫筆移動到建築中心
+                ctx.translate(centerX, centerY);
+                
+                // 如果係箭塔，而且敵人喺左邊，就將成個畫布水平反轉！
+                if (tower.id === 'tower' && tower.facingLeft) {
+                    ctx.scale(-1, 1);
+                }
+                
+                // 因為已經 translate 咗去中心，畫圖座標要改成 -drawWidth/2 同 -drawHeight/2
+                ctx.drawImage(bData.img, sx, sy, fw, fh, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+                
+                ctx.restore(); // 畫完即刻還原畫布設定，以免影響下一棟建築
+                
+            } else {
+                // 如果圖片未載入，色塊也會跟著變大 (支援 2x2 色塊)
+                ctx.fillStyle = bData.color; ctx.fillRect(cx + 2, cy + 2, (TILE_SIZE * sizeMult) - 4, (TILE_SIZE * sizeMult) - 4);
+                ctx.fillStyle = 'white'; ctx.font = '22px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText(bData.symbol, cx + (TILE_SIZE * sizeMult) / 2, cy + (TILE_SIZE * sizeMult) / 2);
+            }
+
+            // 4. 畫等級與城門血條 (文字與血條位置跟隨 2x2 調整)
+            ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+tower.level, cx + (TILE_SIZE * sizeMult)/2, cy + (TILE_SIZE * sizeMult) - 5);
             
             if (tower.id === 'gate') {
-                ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE, 4); ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx, cy - 8, TILE_SIZE * (tower.hp / tower.maxHp), 4);
+                ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE, 4); 
+                ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx, cy - 8, TILE_SIZE * (tower.hp / tower.maxHp), 4);
             }
         });
         
