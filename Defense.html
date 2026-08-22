@@ -1559,63 +1559,62 @@ update(targetEnemy) {
         // 1. 只有在進行中 (isPlaying) 才會執行的「戰鬥與資源邏輯」
         // ============================================
         if (isPlaying) {
-            if (globalAnimTick % 30 === 0 && deployQueue.length > 0) {
-                // ============================================
-            // 【新增】：傳奇武將自動出擊與冷卻邏輯
-            // ============================================
-            let tents = towers.filter(t => t.id === 'tent');
-            
-            selectedGenerals.forEach(gId => {
-                let g = GENERALS[gId];
-                if (g.deathCooldown > 0) g.deathCooldown--;
+            // 【核心修復】：將武將大腦獨立出來，並修正冷卻時間計算
+            if (globalAnimTick % 30 === 0) {
+                let tents = towers.filter(t => t.id === 'tent');
                 
-                // 只有建了「大帳」，且英雄不在場上、無冷卻時，才判定出擊
-                if (tents.length > 0 && !g.isDeployed && g.deathCooldown <= 0) {
-                    let shouldDeploy = false;
+                selectedGenerals.forEach(gId => {
+                    let g = GENERALS[gId];
+                    if (g.deathCooldown > 0) g.deathCooldown -= 30; // 每半秒扣除 30 幀冷卻
                     
-                    if (gId === 'g1') { // 關羽：敵軍威脅任何大小建築物或我方主堡
-                        shouldDeploy = enemies.some(e => {
-                            let nearTower = towers.some(t => {
-                                let s = BUILDINGS[t.id].size || 1;
-                                // 準確計算 1x1 或 2x2 建築物的真正中心點
-                                let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
-                                let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
-                                return Math.hypot(e.x - centerX, e.y - centerY) < 180; // 加大警戒半徑到 180
-                            });
-                            let nearBase = Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250;
-                            return nearTower || nearBase;
-                        });
-                    } else if (gId === 'g2') { // 趙雲：場上有4隻以上騎兵(b6)
-                        let cavCount = playerUnits.filter(p => p.id === 'b6' && !p.isDying).length;
-                        shouldDeploy = (cavCount >= 4);
-                    } else if (gId === 'g3') { // 如來：主堡血量低於 50%
-                        shouldDeploy = (playerBase.hp < playerBase.maxHp * 0.5);
-                    } else if (gId === 'g4') { // 呂布：場上出現屍王(boss)
-                        shouldDeploy = enemies.some(e => e.id === 'boss' && !e.isDying);
-                    }
-
-                    if (shouldDeploy) {
-                        g.isDeployed = true;
-                        let spawnIdx = getNearestPathIndex(tents[0].x, tents[0].y); // 從大帳最近的道路出發
-                        deployQueue.push({ id: gId, level: tents[0].level, spawnIndex: spawnIdx });
+                    if (tents.length > 0 && !g.isDeployed && g.deathCooldown <= 0) {
+                        let shouldDeploy = false;
                         
-                        let feedback = document.getElementById('feedback');
-                        feedback.innerText = `🔥 條件達成！傳奇將領【${g.name}】自動出陣！`;
-                        feedback.style.color = "#e74c3c";
+                        if (gId === 'g1') { // 關羽：敵軍威脅任何大小建築物或我方主堡
+                            shouldDeploy = enemies.some(e => {
+                                let nearTower = towers.some(t => {
+                                    let s = BUILDINGS[t.id].size || 1;
+                                    let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
+                                    let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
+                                    return Math.hypot(e.x - centerX, e.y - centerY) < 180;
+                                });
+                                let nearBase = Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250;
+                                return nearTower || nearBase;
+                            });
+                        } else if (gId === 'g2') { // 趙雲：場上有4隻以上騎兵
+                            shouldDeploy = (playerUnits.filter(p => p.id === 'b6' && !p.isDying).length >= 4);
+                        } else if (gId === 'g3') { // 如來：主堡血量低於 50%
+                            shouldDeploy = (playerBase.hp < playerBase.maxHp * 0.5);
+                        } else if (gId === 'g4') { // 呂布：場上出現屍王
+                            shouldDeploy = enemies.some(e => e.id === 'boss' && !e.isDying);
+                        }
+
+                        if (shouldDeploy) {
+                            g.isDeployed = true;
+                            let spawnIdx = getNearestPathIndex(tents[0].x, tents[0].y); // 從大帳最近的道路出發
+                            deployQueue.push({ id: gId, level: tents[0].level, spawnIndex: spawnIdx });
+                            
+                            let feedback = document.getElementById('feedback');
+                            feedback.innerText = `🔥 條件達成！傳奇將領【${g.name}】自動出陣！`;
+                            feedback.style.color = "#e74c3c";
+                        }
+                    }
+                });
+
+                // 一般排隊出兵與將領降臨邏輯 (從隊列中釋放到場上)
+                if (deployQueue.length > 0) {
+                    let spawnCount = Math.min(2, deployQueue.length);
+                    for(let i=0; i<spawnCount; i++) {
+                        let u = deployQueue.shift();
+                        let newU = new PlayerUnit(u.id, u.level); 
+                        newU.pathIndex = u.spawnIndex;
+                        newU.x = pathCoords[u.spawnIndex].x * TILE_SIZE + TILE_SIZE / 2; 
+                        newU.y = pathCoords[u.spawnIndex].y * TILE_SIZE + TILE_SIZE / 2;
+                        playerUnits.push(newU); 
                     }
                 }
-            });
-                let spawnCount = Math.min(2, deployQueue.length);
-                for(let i=0; i<spawnCount; i++) {
-                    let u = deployQueue.shift();
-                    let newU = new PlayerUnit(u.id, u.level); 
-                    newU.pathIndex = u.spawnIndex;
-                    newU.x = pathCoords[u.spawnIndex].x * TILE_SIZE + TILE_SIZE / 2; 
-                    newU.y = pathCoords[u.spawnIndex].y * TILE_SIZE + TILE_SIZE / 2;
-                    playerUnits.push(newU); 
-                }
-
             }
+
 
             if (globalAnimTick % 60 === 0) {
                 towers.forEach(t => {
