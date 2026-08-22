@@ -92,19 +92,21 @@
         <button id="btn-start-game" class="btn-start" onclick="startGame()">發兵出戰！</button>
     </div>
 
-    <div id="play-screen">
-        <div id="header">
-            <span style="color: #8e44ad;">👿 敵軍: <span id="enemy-hp-display">1000</span></span>
-            <span id="wave-display" style="color: #2980b9; margin: 0 10px;">強度: Lv.1</span>
-            <span style="color: #e74c3c;">❤️ 我方: <span id="hp-display">1000</span></span>
-        </div>
-        
-        <!-- 局內資源顯示 (加入石頭) -->
-        <div style="display:flex; justify-content:space-around; background:#ecf0f1; padding:8px; border-radius:8px; border:2px dashed #bdc3c7; font-weight:bold; margin-bottom:5px;">
-            <span style="color:#f39c12;">💰 <span id="game-gold">50</span></span>
-            <span style="color:#e67e22;">🪵 <span id="game-wood">1000</span></span>
-            <span style="color:#c0392b;">🍖 <span id="game-meat">1000</span></span>
-            <span style="color:#7f8c8d;">🪨 <span id="game-stone">0</span></span>
+<div id="play-screen">
+        <!-- 【核心修改】：用 sticky-top-bar 包住血量與資源區塊 -->
+        <div id="sticky-top-bar">
+            <div id="header">
+                <span style="color: #8e44ad;">👿 敵軍: <span id="enemy-hp-display">1000</span></span>
+                <span id="wave-display" style="color: #2980b9; margin: 0 10px;">強度: Lv.1</span>
+                <span style="color: #e74c3c;">❤️ 我方: <span id="hp-display">1000</span></span>
+            </div>
+            
+            <div style="display:flex; justify-content:space-around; background:#ecf0f1; padding:8px; border-radius:8px; border:2px dashed #bdc3c7; font-weight:bold; margin-bottom:0;">
+                <span style="color:#f39c12;">💰 <span id="game-gold">50</span></span>
+                <span style="color:#e67e22;">🪵 <span id="game-wood">1000</span></span>
+                <span style="color:#c0392b;">🍖 <span id="game-meat">1000</span></span>
+                <span style="color:#7f8c8d;">🪨 <span id="game-stone">0</span></span>
+            </div>
         </div>
 
         <canvas id="gameCanvas" width="800" height="800"></canvas>
@@ -181,7 +183,9 @@
         'normal': { id: 'normal', name: "喪屍", symbol: "屍", color: '#555', dmg: 1.0, range: 0.5, moveSpd: 0.8, atkSpd: 1.0, hpMult: 1, drawScale: 1.3, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/normal(Z)5x5.png" },
         'fast':   { id: 'fast', name: "快屍", symbol: "快", color: '#f39c12', dmg: 0.8, range: 0.5, moveSpd: 1.6, atkSpd: 1.5, hpMult: 0.5, drawScale: 1.3, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/fast(Z)5X5.png" },
         'tank':   { id: 'tank', name: "巨屍", symbol: "巨", color: '#2c3e50', dmg: 2.0, range: 0.5, moveSpd: 0.5, atkSpd: 0.6, hpMult: 2.5, drawScale: 1.8, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/tank(Z)5x5.png" },
-        'boss':   { id: 'boss', name: "屍王", symbol: "王", color: '#c0392b', dmg: 4.0, range: 1.0, moveSpd: 0.7, atkSpd: 0.8, hpMult: 6.0, drawScale: 2.2, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/King(Z)5x5.png" }
+'boss':   { id: 'boss', name: "屍王", symbol: "王", color: '#c0392b', dmg: 4.0, range: 1.0, moveSpd: 0.7, atkSpd: 0.8, hpMult: 6.0, drawScale: 2.2, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/King(Z)5x5.png" },
+        // 【新增】：終極隱藏 Boss - 黑天龍 (極慢、極硬、極高傷)
+        'black_dragon': { id: 'black_dragon', name: "天", symbol: "龍", color: '#000000', dmg: 15.0, range: 1.5, moveSpd: 0.25, atkSpd: 0.5, hpMult: 60.0, drawScale: 3.5, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/黑龍.png" }
     };
 
     // 【新增 drawScale】：1.5 是預設大小，將領與騎兵可以設大一點
@@ -308,7 +312,10 @@
     let deployQueue = [];
 // 【新增】：用來記錄並取消遊戲主迴圈
     let animFrameId = null;
-
+    // 【新增】：鎖幀專用變數
+    let lastFrameTime = 0;
+    const targetFPS = 60;
+    const frameInterval = 1000 / targetFPS;
 // 【新增】：初始化地圖時，根據不同「地形 (Biome)」生成對應裝飾物
     function generateDecorations() {
         mapDecorations = [];
@@ -464,12 +471,10 @@
         document.getElementById('setup-screen').style.display = 'none';
         document.getElementById('play-screen').style.display = 'block';
         
-        // 確保舊的迴圈絕對被砍掉，不會發生兩倍速 Bug
         if (window.animFrameId) {
             cancelAnimationFrame(window.animFrameId);
         }
         
-        // 每次開局前，強制重置所有武將為「未出戰」與「零冷卻」狀態！
         for (let key in GENERALS) {
             GENERALS[key].isDeployed = false;
             GENERALS[key].deathCooldown = 0;
@@ -481,8 +486,11 @@
         updateCampsUI();
         updateGeneralsUI();
         
+        // 【核心新增】：開局前重置計時器
+        lastFrameTime = performance.now(); 
+        
         // 啟動全新的遊戲迴圈
-        gameLoop();
+        window.animFrameId = requestAnimationFrame(gameLoop); // 改由這裡初次啟動
     };
     
     // --- 答題與資源邏輯 ---
@@ -1006,9 +1014,50 @@ class Enemy {
             // 【修改】：隨機鎖定玩家主堡的八格環狀陣地之一，並加入微小偏移防止士兵完全重疊
             let ringBase = playerRing[Math.floor(Math.random() * playerRing.length)];
             this.ringTarget = { x: ringBase.x + (Math.random() * 0.5 - 0.25), y: ringBase.y + (Math.random() * 0.5 - 0.25) };
+            // 【新增】：黑天龍專屬技能冷卻 (預設進場 3 秒後發動第一次)
+            this.ultCooldown = 180;
         }
 
         update(targetPlayer) {
+            // ============================================
+            // 【新增】：黑天龍專屬神技 - 無色界神力
+            // ============================================
+            if (this.id === 'black_dragon' && !this.isDying) {
+                if (this.ultCooldown > 0) this.ultCooldown--;
+                if (this.ultCooldown <= 0) {
+                    this.ultCooldown = 600; // 每 10 秒發動一次
+                    this.state = 2; // 強攻擊動畫
+                    
+                    let aoeRadius = 250; // 超大範圍
+                    let impactX = this.x + this.drawOffsetX;
+                    let impactY = this.y + this.drawOffsetY;
+                    
+                    // 1. 剝奪範圍內玩家部隊生命
+                    playerUnits.forEach(p => {
+                        if (!p.isDying && !p.isTransforming && Math.hypot((p.x+p.drawOffsetX) - impactX, (p.y+p.drawOffsetY) - impactY) <= aoeRadius) {
+                            p.hp -= this.damage * 4; // 承受 4 倍毀滅性傷害
+                        }
+                    });
+                    
+                    // 2. 摧毀範圍內防禦建築
+                    towers.forEach(t => {
+                        let s = BUILDINGS[t.id].size || 1;
+                        let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
+                        let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
+                        if (Math.hypot(centerX - impactX, centerY - impactY) <= aoeRadius) t.hp -= this.damage * 4;
+                    });
+                    
+                    // 3. 直接重創主堡
+                    if (Math.hypot((playerBase.x*TILE_SIZE+TILE_SIZE/2) - impactX, (playerBase.y*TILE_SIZE+TILE_SIZE/2) - impactY) <= aoeRadius) {
+                        playerBase.hp -= this.damage * 4;
+                    }
+
+                    // 4. 觸發長達 2 秒 (120幀) 的全螢幕黑白特效
+                    combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 120, isBlackDragon: true });
+                }
+            }
+            
+            // ... (下方保留原本的 cooldown 邏輯和尋路攻擊邏輯)
             if (this.cooldown > 0) this.cooldown--;
 
             let targetNode = this.pathIndex < pathCoords.length ? pathCoords[this.pathIndex] : this.ringTarget;
@@ -1152,11 +1201,12 @@ draw() {
             
             ctx.restore(); // 提早關閉特效設定
 
-            // 【新增】：如果是死亡狀態，就隱藏血條與等級！
+            // 【修改】：根據角色體型 (drawScale) 動態推高血條，防止遮面
             if (!this.isDying) {
+                let hpOffset = (this.unitData.drawScale || 1.5) * 15; 
                 ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
-                ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20, 3);
-                ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20 * (this.hp / this.maxHp), 3);
+                ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20, 3);
+                ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20 * (this.hp / this.maxHp), 3);
             }
         }
     }
@@ -1461,10 +1511,12 @@ update(targetEnemy) {
             
             ctx.restore();
 
+            // 【修改】：根據角色體型 (currentScale) 動態推高血條，防止遮面
             if (!this.isDying && !this.isTransforming) {
+                let hpOffset = this.currentScale * 15; 
                 ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
-                ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20, 3);
-                ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - TILE_SIZE/2 - 10, 20 * (this.hp / this.maxHp), 3);
+                ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20, 3);
+                ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20 * (this.hp / this.maxHp), 3);
             }
         }
     }
@@ -1558,38 +1610,44 @@ update(targetEnemy) {
         }
     }
 
-// --- 遊戲主迴圈 ---
-    function gameLoop() {
+// --- 遊戲主迴圈 (終極鎖幀與深度排序版) ---
+    function gameLoop(timestamp) {
+        // 1. 鎖定 60 FPS，防止高刷新率手機變成 2 倍速
+        window.animFrameId = requestAnimationFrame(gameLoop);
+        if (!timestamp) timestamp = performance.now();
+        let deltaTime = timestamp - lastFrameTime;
+        if (deltaTime < frameInterval) return;
+        lastFrameTime = timestamp - (deltaTime % frameInterval);
+
         ctx.clearRect(0, 0, 800, 800);
         globalAnimTick++;
         let isPlaying = !gameOver && !gameWon;
 
         // ============================================
-        // 1. 戰鬥與資源邏輯 (只有遊戲進行中執行)
+        // 1. 戰鬥與資源大腦邏輯 (只有遊戲進行中執行)
         // ============================================
         if (isPlaying) {
-            // 【核心修復：武將自動大腦與出兵隊列】
+            // 【武將自動大腦與出兵隊列】
             if (globalAnimTick % 30 === 0) {
                 let tents = towers.filter(t => t.id === 'tent');
                 
                 selectedGenerals.forEach(gId => {
                     let g = GENERALS[gId];
-                    if (!g) return; // 防呆機制
+                    if (!g) return; 
                     
                     g.deathCooldown = g.deathCooldown || 0; 
                     if (g.deathCooldown > 0) g.deathCooldown -= 30; 
                     
-                    // 必須有大帳 + 未出戰 + 無冷卻，大腦才會開始運作！
                     if (tents.length > 0 && !g.isDeployed && g.deathCooldown <= 0) {
                         let shouldDeploy = false;
                         
-                        if (gId === 'g1') { // 關羽：有敵人威脅任何大小建築或主堡
+                        if (gId === 'g1') { // 關羽：精準保護所有大小建築物與主堡
                             shouldDeploy = enemies.some(e => {
                                 let nearTower = towers.some(t => {
                                     let s = BUILDINGS[t.id].size || 1;
                                     let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
                                     let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
-                                    return Math.hypot(e.x - centerX, e.y - centerY) < 180; // 絕對防禦半徑
+                                    return Math.hypot(e.x - centerX, e.y - centerY) < 180;
                                 });
                                 let nearBase = Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250;
                                 return nearTower || nearBase;
@@ -1598,11 +1656,10 @@ update(targetEnemy) {
                             shouldDeploy = (playerUnits.filter(p => p.id === 'b6' && !p.isDying).length >= 4);
                         } else if (gId === 'g3') { // 如來：主堡低於 50% 血
                             shouldDeploy = (playerBase.hp < playerBase.maxHp * 0.5);
-                        } else if (gId === 'g4') { // 呂布：場上出現屍王(boss)
-                            shouldDeploy = enemies.some(e => e.id === 'boss' && !e.isDying);
+                        } else if (gId === 'g4') { // 呂布：場上出現屍王或天
+                            shouldDeploy = enemies.some(e => (e.id === 'boss' || e.id === 'black_dragon') && !e.isDying);
                         }
 
-                        // 一旦滿足條件，即刻加入出兵隊列！
                         if (shouldDeploy) {
                             g.isDeployed = true;
                             let spawnIdx = getNearestPathIndex(tents[0].x, tents[0].y); 
@@ -1615,7 +1672,7 @@ update(targetEnemy) {
                     }
                 });
 
-                // 一般排隊士兵與將領，由這裡正式放落場！
+                // 一般部隊排隊出陣
                 if (deployQueue.length > 0) {
                     let spawnCount = Math.min(2, deployQueue.length);
                     for(let i=0; i<spawnCount; i++) {
@@ -1644,17 +1701,25 @@ update(targetEnemy) {
                 updateResourcesUI();
             }
 
-            // 難度與生怪
+            // 難度與生怪 (包含 Level 8 黑天龍降臨)
             frameCount++;
             if (frameCount % 600 === 0 && difficultyLevel < 15) {
                 difficultyLevel += 0.5;
                 let newLevel = Math.floor(difficultyLevel);
                 document.getElementById('wave-display').innerText = `強度: Lv.${newLevel}`;
+                
                 if (newLevel > enemyBase.level) {
                     enemyBase.level = newLevel;
                     enemyBase.maxHp = 2000 + (enemyBase.level - 1) * 1000;
                     enemyBase.hp = Math.min(enemyBase.maxHp, enemyBase.hp + 1000); 
                     enemyBase.damage = 20 + (enemyBase.level - 1) * 10;
+                }
+
+                if (difficultyLevel === 8.0) {
+                    enemies.push(new Enemy(newLevel, 'black_dragon'));
+                    let feedback = document.getElementById('feedback');
+                    feedback.innerText = `⚠️ 警告：遠古神明【天】已降臨！無色界神力即將吞噬戰場！`;
+                    feedback.style.color = "#9b59b6";
                 }
             }
 
@@ -1668,7 +1733,7 @@ update(targetEnemy) {
                 spawnTimer = Math.max(150, 360 - difficultyLevel * 15);
             }
 
-            // 雙方主堡互射與回血
+            // 主堡互射與回血
             [playerBase, enemyBase].forEach((base, idx) => {
                 let isPlayer = idx === 0;
                 if (globalAnimTick % 60 === 0 && base.hp < base.maxHp) {
@@ -1681,6 +1746,7 @@ update(targetEnemy) {
                     let target = targetArr.find(u => Math.hypot((u.x + u.drawOffsetX) - bx, (u.y + u.drawOffsetY) - by) <= base.range);
                     if (target) {
                         target.hp -= base.damage; base.cooldown = base.fireRate;
+                        // 畫主堡雷射
                         ctx.strokeStyle = isPlayer ? '#f1c40f' : '#e74c3c'; ctx.lineWidth = 4;
                         ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(target.x + target.drawOffsetX, target.y + target.drawOffsetY); ctx.stroke();
                     }
@@ -1690,11 +1756,9 @@ update(targetEnemy) {
             if (globalAnimTick % 30 === 0) updateGeneralsUI();
         }
 
-
         // ============================================
-        // 2. 「不管遊戲結束與否」都要繼續運行的動畫與畫圖邏輯
+        // 2. 畫地形與環境裝飾 (永遠執行)
         // ============================================
-        
         let terrainFrame = Math.floor(globalAnimTick / 15) % 4;
         const drawAnimatedTerrain = (img, dx, dy) => {
             let frameWidth = img.naturalWidth / 4; let frameHeight = img.naturalHeight;
@@ -1749,40 +1813,28 @@ update(targetEnemy) {
             }
         });
 
-        // 動態產生與更新環境特效 (蝴蝶、落葉等繼續運作)
         if (Math.random() < 0.03 && ambientEffects.length < 20) ambientEffects.push(new AmbientEffect());
         for (let i = ambientEffects.length - 1; i >= 0; i--) {
             let effect = ambientEffects[i];
-            // 讓環境特效不受輸贏影響，繼續飄動
             effect.update(); 
             if (!effect.alive) ambientEffects.splice(i, 1); else effect.draw();
         }
 
         // ============================================
-        // 3. 處理部隊 (如果是遊戲結束，強制切換到 idle 狀態)
+        // 3. 處理部隊與建築大腦 (不在此畫圖)
         // ============================================
-
-// 敵人行動與繪製
+        
+        // 敵軍更新
         for (let i = enemies.length - 1; i >= 0; i--) {
             let e = enemies[i];
-            
-            // 【新增】：死亡觸發，切換到第四橫行 (退場) 並開始倒數
-            if (e.hp <= 0 && !e.isDying) {
-                e.isDying = true;
-                e.state = 3; 
-                e.deathTimer = 45; // 特效持續 45 幀 (約 0.75 秒)
-            }
-
+            if (e.hp <= 0 && !e.isDying) { e.isDying = true; e.state = 3; e.deathTimer = 45; }
             if (e.isDying) {
                 e.deathTimer--;
-                e.draw(); // 繼續畫退場動畫
-                if (e.deathTimer <= 0) enemies.splice(i, 1); // 倒數完畢才真正移除
+                if (e.deathTimer <= 0) enemies.splice(i, 1);
             } else {
                 if (isPlaying) {
-                    // 【修改】：加入 !p.isTransforming，讓大佛變身期間處於無敵狀態，敵人無法鎖定
                     let closestPlayer = playerUnits.find(p => !p.isDying && !p.isTransforming && Math.hypot((p.x + p.drawOffsetX) - (e.x + e.drawOffsetX), (p.y + p.drawOffsetY) - (e.y + e.drawOffsetY)) <= e.range);
                     e.update(closestPlayer);
-                    
                     if (playerBase.hp <= 0 && !gameOver) { 
                         gameOver = true;
                         document.getElementById('game-over-title').innerText = "💥 戰敗！";
@@ -1790,61 +1842,45 @@ update(targetEnemy) {
                         document.getElementById('game-over-msg').innerText = "我方城池被敵軍攻破了...";
                         document.getElementById('game-over-modal').style.display = 'flex';
                     }
-                } else {
-                    e.state = 0; e.cooldown = 0;
-                }
-                e.draw();
+                } else { e.state = 0; e.cooldown = 0; }
             }
         }
 
-        // 我方部隊行動與繪製
-        playerUnits.sort((a, b) => a.y - b.y);
+        // 我軍更新 (包含關羽精準護駕撤退)
         for (let i = playerUnits.length - 1; i >= 0; i--) {
-let pUnit = playerUnits[i];
-            
-            // 【新增】：關羽(g1)撤退邏輯 (場上無建築物被威脅時)
+            let pUnit = playerUnits[i];
             if (pUnit.id === 'g1' && !pUnit.isDying) {
-                let buildingInDanger = enemies.some(e => towers.some(t => Math.hypot(e.x - (t.x*TILE_SIZE+TILE_SIZE/2), e.y - (t.y*TILE_SIZE+TILE_SIZE/2)) < 150));
+                let buildingInDanger = enemies.some(e => {
+                    let nearTower = towers.some(t => {
+                        let s = BUILDINGS[t.id].size || 1;
+                        let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
+                        let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
+                        return Math.hypot(e.x - centerX, e.y - centerY) < 180;
+                    });
+                    let nearBase = Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250;
+                    return nearTower || nearBase;
+                });
+                
                 if (!buildingInDanger) {
                     pUnit.retreatTimer = (pUnit.retreatTimer || 0) + 1;
-                    if (pUnit.retreatTimer > 180) { // 3秒後自動撤退
-                        pUnit.isDying = true;
-                        pUnit.state = 3; // 播放退場動畫
-                        pUnit.deathTimer = 45;
-                        pUnit.isRetreating = true; // 標記為安全撤退
-                    }
+                    if (pUnit.retreatTimer > 180) { pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; pUnit.isRetreating = true; }
                 } else { pUnit.retreatTimer = 0; }
             }
-
-            // 戰死或撤退觸發
-            if (pUnit.hp <= 0 && !pUnit.isDying) {
-                pUnit.isDying = true;
-                pUnit.state = 3; 
-                pUnit.deathTimer = 45; 
-            }
-
+            if (pUnit.hp <= 0 && !pUnit.isDying) { pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; }
             if (pUnit.isDying) {
                 pUnit.deathTimer--;
-                pUnit.draw();
                 if (pUnit.deathTimer <= 0) {
-                    // 【核心】：武將退場冷卻結算
                     if (pUnit.unitData.isGeneral) {
                         GENERALS[pUnit.id].isDeployed = false;
-                        if (!pUnit.isRetreating) {
-                            GENERALS[pUnit.id].deathCooldown = 600; // 戰敗：10秒冷卻 (60fps * 10s)
-                            document.getElementById('feedback').innerText = `☠️ 【${pUnit.unitData.name}】重傷敗退，需休整 10 秒！`;
-                        } else {
-                            GENERALS[pUnit.id].deathCooldown = 0; // 撤退：無須冷卻
-                        }
+                        if (!pUnit.isRetreating) { GENERALS[pUnit.id].deathCooldown = 600; document.getElementById('feedback').innerText = `☠️ 【${pUnit.unitData.name}】重傷敗退，需休整 10 秒！`; }
+                        else { GENERALS[pUnit.id].deathCooldown = 0; }
                     }
                     playerUnits.splice(i, 1);
                 }
             } else {
-                // (保留原本的 update 邏輯)
                 if (isPlaying) {
                     let targetEnemy = enemies.find(e => !e.isDying && Math.hypot((e.x + e.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (e.y + e.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY)) <= pUnit.range);
                     pUnit.update(targetEnemy);
-                    
                     if (enemyBase.hp <= 0 && !gameWon) {
                         gameWon = true; playerGold += 200; localStorage.setItem('tdGameGold_v2', playerGold);
                         document.getElementById('game-over-title').innerText = "🎉 勝利！";
@@ -1852,163 +1888,158 @@ let pUnit = playerUnits[i];
                         document.getElementById('game-over-msg').innerText = "成功推平敵軍主堡！獲得 200 金幣！";
                         document.getElementById('game-over-modal').style.display = 'flex';
                     }
-                } else {
-                    pUnit.state = 0; pUnit.cooldown = 0;
-                }
-                pUnit.draw(); 
+                } else { pUnit.state = 0; pUnit.cooldown = 0; }
             }
         }
 
-        // 防禦塔繪製 (只保留畫圖，拔掉射擊邏輯的迴圈)
-// 防禦塔與建築繪製
-// 防禦塔與建築繪製
-        towers.sort((a, b) => a.y - b.y).forEach(tower => {
+        // 防禦塔與城門更新
+        towers.forEach(tower => {
             const cx = tower.x * TILE_SIZE, cy = tower.y * TILE_SIZE;
             let bData = BUILDINGS[tower.id];
-            
-// 1. 箭塔攻擊邏輯與狀態判定 (必須先執行邏輯，再畫圖)
             if (isPlaying && bData.type === 'attack') {
                 const range = 60 + (bData.range * 30) + (tower.level * 10);
                 const damage = 10 * bData.dmg * tower.level;
                 const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
-                
                 if (tower.cooldown > 0) {
-                    tower.cooldown--;
-                    tower.state = (tower.cooldown > fireRate - 15) ? 1 : 0; 
+                    tower.cooldown--; tower.state = (tower.cooldown > fireRate - 15) ? 1 : 0; 
                 } else {
                     const target = enemies.find(e => !e.isDying && Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
                     if (target) {
-                        target.hp -= damage; 
-                        tower.cooldown = fireRate;
-                        tower.state = 1; 
-                        
-                        // 【核心新增】：判斷目標喺箭塔嘅左邊定右邊
-                        tower.facingLeft = target.x < cx + TILE_SIZE / 2;
-                        
+                        target.hp -= damage; tower.cooldown = fireRate; tower.state = 1; tower.facingLeft = target.x < cx + TILE_SIZE / 2;
+                        // 畫箭塔攻擊線條
                         ctx.strokeStyle = bData.color; ctx.lineWidth = 3;
                         ctx.beginPath(); ctx.moveTo(cx + TILE_SIZE / 2, cy + TILE_SIZE / 2); ctx.lineTo(target.x, target.y); ctx.stroke();
-                    } else {
-                        tower.state = 0; 
-                    }
+                    } else { tower.state = 0; }
                 }
             }
-
-            // 2. 城門自動開關邏輯
             if (tower.id === 'gate' && isPlaying) {
-                let allyNear = playerUnits.some(p => !p.isDying && Math.hypot(p.x - (cx + TILE_SIZE/2), p.y - (cy + TILE_SIZE/2)) < 60);
-                if (globalAnimTick % 5 === 0) { 
-                    if (allyNear) {
-                        tower.frame = Math.min(3, tower.frame + 1); 
-                    } else {
-                        tower.frame = Math.max(0, tower.frame - 1); 
-                    }
-                }
-            }
-
-             // 3. 畫出建築精靈圖 (加入翻轉魔法)
-            let sizeMult = bData.size || 1; 
-
-            if (bData.img && bData.img.complete && !bData.img.isFailed && bData.img.naturalWidth > 0) {
-                let cols = 4, rows = 1;
-                let sx = 0, sy = 0;
-
-                if (tower.id === 'gate') {
-                    cols = 4; rows = 4;
-                    sx = tower.frame * (bData.img.naturalWidth / cols);
-                    sy = tower.dir * (bData.img.naturalHeight / rows);
-                } else if (tower.id === 'tower') {
-                    cols = 4; rows = 2;
-                    sx = (Math.floor(globalAnimTick / 15) % cols) * (bData.img.naturalWidth / cols);
-                    sy = tower.state * (bData.img.naturalHeight / rows);
-                } else {
-                    sx = (Math.floor(globalAnimTick / 15) % cols) * (bData.img.naturalWidth / cols);
-                }
-
-                let fw = bData.img.naturalWidth / cols; 
-                let fh = bData.img.naturalHeight / rows;
-                
-                let drawScale = 1.3; 
-                let drawWidth = TILE_SIZE * drawScale * sizeMult;
-                let aspectRatio = fh / fw;
-                let drawHeight = drawWidth * aspectRatio;
-                
-                // 【核心新增】：使用 ctx.save() 準備翻轉畫布
-                ctx.save();
-                
-                // 找出建築物嘅正中心點
-                let centerX = cx + (TILE_SIZE * sizeMult) / 2;
-                let centerY = cy + TILE_SIZE * sizeMult - drawHeight / 2 - 5;
-                
-                // 將畫筆移動到建築中心
-                ctx.translate(centerX, centerY);
-                
-                // 如果係箭塔，而且敵人喺左邊，就將成個畫布水平反轉！
-                if (tower.id === 'tower' && tower.facingLeft) {
-                    ctx.scale(-1, 1);
-                }
-                
-                // 因為已經 translate 咗去中心，畫圖座標要改成 -drawWidth/2 同 -drawHeight/2
-                ctx.drawImage(bData.img, sx, sy, fw, fh, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-                
-                ctx.restore(); // 畫完即刻還原畫布設定，以免影響下一棟建築
-                
-            } else {
-                // 如果圖片未載入，色塊也會跟著變大 (支援 2x2 色塊)
-                ctx.fillStyle = bData.color; ctx.fillRect(cx + 2, cy + 2, (TILE_SIZE * sizeMult) - 4, (TILE_SIZE * sizeMult) - 4);
-                ctx.fillStyle = 'white'; ctx.font = '22px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-                ctx.fillText(bData.symbol, cx + (TILE_SIZE * sizeMult) / 2, cy + (TILE_SIZE * sizeMult) / 2);
-            }
-
-            // 4. 畫等級與城門血條 (文字與血條位置跟隨 2x2 調整)
-            ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+tower.level, cx + (TILE_SIZE * sizeMult)/2, cy + (TILE_SIZE * sizeMult) - 5);
-            
-            if (tower.id === 'gate') {
-                ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE, 4); 
-                ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx, cy - 8, TILE_SIZE * (tower.hp / tower.maxHp), 4);
+                let sizeMult = bData.size || 1;
+                let centerX = cx + (TILE_SIZE * sizeMult)/2;
+                let centerY = cy + (TILE_SIZE * sizeMult)/2;
+                let allyNear = playerUnits.some(p => !p.isDying && Math.hypot(p.x - centerX, p.y - centerY) < 60);
+                if (globalAnimTick % 5 === 0) { tower.frame = allyNear ? Math.min(3, tower.frame + 1) : Math.max(0, tower.frame - 1); }
             }
         });
+
+        // ============================================
+        // 4. 【核心 Z-Index】：所有物件深度排序並畫出
+        // ============================================
+        let renderList = [];
+        
+        enemies.forEach(e => renderList.push({ y: e.y + e.drawOffsetY, draw: () => e.draw() }));
+        playerUnits.forEach(p => renderList.push({ y: p.y + p.drawOffsetY, draw: () => p.draw() }));
+        
+        const drawBase = (baseObj, imgArray, fallbackColor, symbol, isPlayer) => {
+            let cx = baseObj.x * TILE_SIZE; let cy = baseObj.y * TILE_SIZE; let hpRatio = baseObj.hp / baseObj.maxHp;
+            let stateIndex = hpRatio > 0.5 ? 0 : (hpRatio > 0 ? 1 : 2);
+            let img = imgArray ? imgArray[stateIndex] : null; 
+            let drawSize = TILE_SIZE * 2.8; 
+            let drawX = cx + (TILE_SIZE / 2) - (drawSize / 2); let drawY = cy + (TILE_SIZE / 2) - (drawSize / 2) - 15; 
+            if (img && img.complete && !img.isFailed && img.naturalWidth > 0) {
+                let fw = img.naturalWidth / 4; let fh = img.naturalHeight; let frame = Math.floor(globalAnimTick / 15) % 4;
+                ctx.drawImage(img, frame * fw, 0, fw, fh, drawX, drawY, drawSize, drawSize);
+            } else {
+                ctx.fillStyle = fallbackColor; ctx.fillRect(cx, cy, TILE_SIZE, TILE_SIZE);
+                ctx.fillStyle = 'white'; ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(symbol, cx + TILE_SIZE/2, cy + TILE_SIZE/2 - 5);
+            }
+            if (stateIndex !== 2) {
+                let barWidth = TILE_SIZE * 1.5; let barX = cx + (TILE_SIZE / 2) - (barWidth / 2); let barY = drawY - 8; 
+                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText('Lv'+baseObj.level, cx + TILE_SIZE/2, barY - 8);
+                ctx.fillStyle = 'red'; ctx.fillRect(barX, barY, barWidth, 4); ctx.fillStyle = '#2ecc71'; ctx.fillRect(barX, barY, barWidth * Math.max(0, Math.min(1, hpRatio)), 4);
+            }
+        };
+
+        renderList.push({ y: (playerBase.y + 2) * TILE_SIZE, draw: () => drawBase(playerBase, typeof BASE_IMGS !== 'undefined' ? BASE_IMGS.player : null, '#2980b9', '👑', true) });
+        renderList.push({ y: (enemyBase.y + 2) * TILE_SIZE, draw: () => drawBase(enemyBase, typeof BASE_IMGS !== 'undefined' ? BASE_IMGS.enemy : null, '#8e44ad', '👿', false) });
+
+        towers.forEach(tower => {
+            let bData = BUILDINGS[tower.id];
+            let sizeMult = bData.size || 1;
+            let drawY = (tower.y + sizeMult) * TILE_SIZE; 
+            
+            renderList.push({ y: drawY, draw: () => {
+                const cx = tower.x * TILE_SIZE, cy = tower.y * TILE_SIZE;
+                if (bData.img && bData.img.complete && !bData.img.isFailed && bData.img.naturalWidth > 0) {
+                    let cols = 4, rows = 1, sx = 0, sy = 0;
+                    if (tower.id === 'gate') { cols = 4; rows = 4; sx = tower.frame * (bData.img.naturalWidth / cols); sy = tower.dir * (bData.img.naturalHeight / rows); } 
+                    else if (tower.id === 'tower') { cols = 4; rows = 2; sx = (Math.floor(globalAnimTick / 15) % cols) * (bData.img.naturalWidth / cols); sy = tower.state * (bData.img.naturalHeight / rows); } 
+                    else { sx = (Math.floor(globalAnimTick / 15) % cols) * (bData.img.naturalWidth / cols); }
+
+                    let fw = bData.img.naturalWidth / cols, fh = bData.img.naturalHeight / rows;
+                    let drawScale = 1.3, drawWidth = TILE_SIZE * drawScale * sizeMult, aspectRatio = fh / fw, drawHeight = drawWidth * aspectRatio;
+                    
+                    ctx.save();
+                    let centerX = cx + (TILE_SIZE * sizeMult) / 2, centerY = cy + TILE_SIZE * sizeMult - drawHeight / 2 - 5;
+                    ctx.translate(centerX, centerY);
+                    if (tower.id === 'tower' && tower.facingLeft) ctx.scale(-1, 1);
+                    ctx.drawImage(bData.img, sx, sy, fw, fh, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+                    ctx.restore();
+                } else {
+                    ctx.fillStyle = bData.color; ctx.fillRect(cx + 2, cy + 2, (TILE_SIZE * sizeMult) - 4, (TILE_SIZE * sizeMult) - 4);
+                    ctx.fillStyle = 'white'; ctx.font = '22px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(bData.symbol, cx + (TILE_SIZE * sizeMult) / 2, cy + (TILE_SIZE * sizeMult) / 2);
+                }
+                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+tower.level, cx + (TILE_SIZE * sizeMult)/2, cy + (TILE_SIZE * sizeMult) - 5);
+                if (tower.id === 'gate') {
+                    ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE, 4); 
+                    ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx, cy - 8, TILE_SIZE * (tower.hp / tower.maxHp), 4);
+                }
+            }});
+        });
+
+        // 執行深度排序畫圖
+        renderList.sort((a, b) => a.y - b.y).forEach(item => item.draw());
         
         // ============================================
-        // 【新增】：畫戰鬥特效 (AoE 爆炸動畫)
+        // 5. 畫戰鬥特效 (無色界神力 / AoE 爆炸)
         // ============================================
         for (let i = combatEffects.length - 1; i >= 0; i--) {
             let eff = combatEffects[i];
             eff.timer--;
-            if (eff.timer <= 0) {
-                combatEffects.splice(i, 1);
-                continue;
+            if (eff.timer <= 0) { combatEffects.splice(i, 1); continue; }
+            
+            // 黑天龍無色界神力 (移除白邊)
+            if (eff.isBlackDragon) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(eff.x, eff.y, eff.radius, 0, Math.PI * 2);
+                
+                ctx.fillStyle = 'black';
+                ctx.globalCompositeOperation = 'saturation';
+                ctx.fill();
+                
+                ctx.globalCompositeOperation = 'source-over';
+                let alpha = eff.timer > 60 ? 0.6 : (eff.timer / 60) * 0.6;
+                ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+                ctx.fill();
+                
+                ctx.restore();
+                continue; 
             }
             
+            // 一般 AoE 爆炸
             let img = eff.isTransformed ? EFFECT_IMGS.aoe_transformed : EFFECT_IMGS.aoe_normal;
-            
             if (img && img.complete && !img.isFailed && img.naturalWidth > 0) {
                 let fw = img.naturalWidth / 4; let fh = img.naturalHeight;
-                // 計算目前該播哪一格 (20 幀分 4 格)
-                let frame = Math.floor((20 - eff.timer) / 5); 
-                if (frame > 3) frame = 3;
-                
-                let drawSize = eff.radius * 2.5; // 讓圖案稍微大過實際傷害範圍一點
+                let frame = Math.floor((20 - eff.timer) / 5); if (frame > 3) frame = 3;
+                let drawSize = eff.radius * 2.5; 
                 ctx.save();
-                ctx.globalCompositeOperation = 'screen'; // 使用 screen 讓爆炸有發光的感覺
+                ctx.globalCompositeOperation = 'screen'; 
                 ctx.drawImage(img, frame * fw, 0, fw, fh, eff.x - drawSize/2, eff.y - drawSize/2, drawSize, drawSize);
                 ctx.restore();
             } else {
-                // 如果還沒放圖片，暫時退回半透明圓形
                 ctx.beginPath(); ctx.arc(eff.x, eff.y, eff.radius, 0, Math.PI * 2);
                 ctx.fillStyle = eff.isTransformed ? 'rgba(241, 196, 15, 0.3)' : 'rgba(231, 76, 60, 0.3)';
                 ctx.fill();
             }
         }
         
-        // (原本的雲層與 UI 畫圖邏輯...)
         // ============================================
-        // 4. 畫雲層與 UI (永遠執行)
+        // 6. 雲層覆蓋
         // ============================================
         if (TERRAIN_IMGS.clouds && TERRAIN_IMGS.clouds.complete && !TERRAIN_IMGS.clouds.isFailed && TERRAIN_IMGS.clouds.naturalWidth > 0) {
             let scaleSize = 1.2; let cw = TERRAIN_IMGS.clouds.naturalWidth || 100; let ch = TERRAIN_IMGS.clouds.naturalHeight || 100;
             cloudOffsetX = (cloudOffsetX - 0.8) % (cw * scaleSize); cloudOffsetY = (cloudOffsetY - 0.4) % (ch * scaleSize); 
             ctx.save(); 
-            // 【畫面還原】：既然已經限制咗手機解析度，效能夠用，我哋開返靚靚嘅正片疊底陰影！
             ctx.globalAlpha = 0.55; 
             ctx.globalCompositeOperation = 'multiply'; 
             let pattern = ctx.createPattern(TERRAIN_IMGS.clouds, 'repeat'); ctx.fillStyle = pattern;
@@ -2017,36 +2048,9 @@ let pUnit = playerUnits[i];
             ctx.fillRect(startX, startY, drawW, drawH); ctx.restore();
         }
 
-        const drawBase = (baseObj, imgArray, fallbackColor, symbol, isPlayer) => {
-            let cx = baseObj.x * TILE_SIZE; let cy = baseObj.y * TILE_SIZE; let hpRatio = baseObj.hp / baseObj.maxHp;
-            let stateIndex = hpRatio > 0.5 ? 0 : (hpRatio > 0 ? 1 : 2);
-            let img = imgArray ? imgArray[stateIndex] : null; 
-            let drawSize = TILE_SIZE * 2.8; 
-            let drawX = cx + (TILE_SIZE / 2) - (drawSize / 2); let drawY = cy + (TILE_SIZE / 2) - (drawSize / 2) - 15; 
-
-            if (img && img.complete && !img.isFailed && img.naturalWidth > 0) {
-                let fw = img.naturalWidth / 4; let fh = img.naturalHeight; let frame = Math.floor(globalAnimTick / 15) % 4;
-                ctx.drawImage(img, frame * fw, 0, fw, fh, drawX, drawY, drawSize, drawSize);
-            } else {
-                ctx.fillStyle = fallbackColor; ctx.fillRect(cx, cy, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = 'white'; ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(symbol, cx + TILE_SIZE/2, cy + TILE_SIZE/2 - 5);
-            }
-
-            if (stateIndex !== 2) {
-                let barWidth = TILE_SIZE * 1.5; let barX = cx + (TILE_SIZE / 2) - (barWidth / 2); let barY = drawY - 8; 
-                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText('Lv'+baseObj.level, cx + TILE_SIZE/2, barY - 8);
-                ctx.fillStyle = 'red'; ctx.fillRect(barX, barY, barWidth, 4); ctx.fillStyle = '#2ecc71'; ctx.fillRect(barX, barY, barWidth * Math.max(0, Math.min(1, hpRatio)), 4);
-            }
-        };
-
-        drawBase(playerBase, typeof BASE_IMGS !== 'undefined' ? BASE_IMGS.player : null, '#2980b9', '👑', true);
-        drawBase(enemyBase, typeof BASE_IMGS !== 'undefined' ? BASE_IMGS.enemy : null, '#8e44ad', '👿', false);
-
+        // 7. 更新血量 UI
         document.getElementById('hp-display').innerText = Math.max(0, Math.floor(playerBase.hp));
         document.getElementById('enemy-hp-display').innerText = Math.max(0, Math.floor(enemyBase.hp));
-
-        // 【修改】：強制綁定在 window 全域物件上，確保重置時絕對抓得到！
-        window.animFrameId = requestAnimationFrame(gameLoop);
     }
 
     updateLobbyUI();
