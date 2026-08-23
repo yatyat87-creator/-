@@ -204,35 +204,36 @@
 
 // 【修改】：敵方也全面採用我方的參數架構 (攻速、走速、射程、大小設定與精靈圖)
     const ENEMY_TYPES = {
-        'normal': { id: 'normal', name: "喪屍", symbol: "屍", color: '#555', dmg: 1.0, range: 0.5, moveSpd: 0.8, atkSpd: 1.0, hpMult: 1, drawScale: 1.3, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/normal(Z)5x5.png" },
-        'fast':   { id: 'fast', name: "快屍", symbol: "快", color: '#f39c12', dmg: 0.8, range: 0.5, moveSpd: 1.6, atkSpd: 1.5, hpMult: 0.5, drawScale: 1.3, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/fast(Z)5X5.png" },
-        'tank':   { id: 'tank', name: "巨屍", symbol: "巨", color: '#2c3e50', dmg: 2.0, range: 0.5, moveSpd: 0.5, atkSpd: 0.6, hpMult: 2.5, drawScale: 1.8, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/tank(Z)5x5.png" },
-'boss':   { id: 'boss', name: "屍王", symbol: "王", color: '#c0392b', dmg: 4.0, range: 1.0, moveSpd: 0.7, atkSpd: 0.8, hpMult: 6.0, drawScale: 2.2, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/King(Z)5x5.png" },
+        'normal': { id: 'normal', name: "喪屍", symbol: "屍", color: '#555', dmg: 1.0, range: 0.5, moveSpd: 0.8, atkSpd: 1.0, hpMult: 1, drawScale: 1.3, ultChance: 0.05, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/normal(Z)5x5.png" },
+        'fast':   { id: 'fast', name: "快屍", symbol: "快", color: '#f39c12', dmg: 0.8, range: 0.5, moveSpd: 1.6, atkSpd: 1.5, hpMult: 0.5, drawScale: 1.3, ultChance: 0.05, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/fast(Z)5X5.png" },
+        'tank':   { id: 'tank', name: "巨屍", symbol: "巨", color: '#2c3e50', dmg: 2.0, range: 0.5, moveSpd: 0.5, atkSpd: 0.6, hpMult: 2.5, drawScale: 1.8, ultChance: 0.05, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/tank(Z)5x5.png" },
+        'boss':   { id: 'boss', name: "屍王", symbol: "王", color: '#c0392b', dmg: 4.0, range: 1.0, moveSpd: 0.7, atkSpd: 0.8, hpMult: 6.0, drawScale: 2.2, ultChance: 0.15, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/King(Z)5x5.png" },
         // 【新增】：終極隱藏 Boss - 黑天龍 (極慢、極硬、極高傷)
-        'black_dragon': { id: 'black_dragon', name: "天", symbol: "龍", color: '#000000', dmg: 15.0, range: 1.5, moveSpd: 0.25, atkSpd: 0.5, hpMult: 60.0, drawScale: 2.2, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/黑龍.png" }
+        'black_dragon': { id: 'black_dragon', name: "天", symbol: "龍", color: '#000000', dmg: 15.0, range: 1.5, moveSpd: 0.25, atkSpd: 0.5, hpMult: 60.0, drawScale: 2.2, ultChance: 0.35, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/黑龍.png" }
     };
 
     // 【新增 drawScale】：1.5 是預設大小，將領與騎兵可以設大一點
     const BASIC_UNITS = {
-        "b4": { id: "b4", name: "刀兵", symbol: "刀", color: "#c0392b", dmg: 1.2, range: 0.5, moveSpd: 0.8, atkSpd: 1.0, hpMult: 1, drawScale: 1.3, yOffset: 0, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/刀兵5x5.png" },
-        "b5": { id: "b5", name: "盾兵", symbol: "盾", color: "#f39c12", dmg: 0.5, range: 0.5, moveSpd: 0.5, atkSpd: 0.8, hpMult: 3, drawScale: 1.3, yOffset: 0, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/盾兵5x5.png" },
-        "b6": { id: "b6", name: "騎兵", symbol: "騎", color: "#d35400", dmg: 1.5, range: 0.5, moveSpd: 2.0, atkSpd: 1.2, hpMult: 1.2, drawScale: 1.8, yOffset: 0, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/騎兵5x5.png" },
-        "b7": { id: "b7", name: "弓兵", symbol: "弓", color: "#27ae60", dmg: 0.8, range: 2.5, moveSpd: 0.8, atkSpd: 1.5, hpMult: 0.8, drawScale: 1.3, yOffset: 0, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/弓兵5x5.png" } 
+        "b4": { id: "b4", name: "刀兵", symbol: "刀", color: "#c0392b", dmg: 1.2, range: 0.5, moveSpd: 0.8, atkSpd: 1.0, hpMult: 1, drawScale: 1.3, yOffset: 0, ultChance: 0.05, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/刀兵5x5.png" },
+        "b5": { id: "b5", name: "盾兵", symbol: "盾", color: "#f39c12", dmg: 0.5, range: 0.5, moveSpd: 0.5, atkSpd: 0.8, hpMult: 3, drawScale: 1.3, yOffset: 0, ultChance: 0.05, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/盾兵5x5.png" },
+        "b6": { id: "b6", name: "騎兵", symbol: "騎", color: "#d35400", dmg: 1.5, range: 0.5, moveSpd: 2.0, atkSpd: 1.2, hpMult: 1.2, drawScale: 1.8, yOffset: 0, ultChance: 0.05, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/騎兵5x5.png" },
+        "b7": { id: "b7", name: "弓兵", symbol: "弓", color: "#27ae60", dmg: 0.8, range: 2.5, moveSpd: 0.8, atkSpd: 1.5, hpMult: 0.8, drawScale: 1.3, yOffset: 0, ultChance: 0.05, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/弓兵5x5.png" } 
     };
 
     const GENERALS = {
-        "g1": { id: "g1", name: "關羽", symbol: "關", color: "#c0392b", price: 100, isGeneral: true, dmg: 3, range: 1, moveSpd: 1.2, atkSpd: 1.2, hpMult: 2, drawScale: 1.8, desc: "進攻：高額傷害", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/關羽5x5.png" },
-        "g2": { id: "g2", name: "趙雲", symbol: "趙", color: "#2980b9", price: 100, isGeneral: true, dmg: 1.5, range: 1, moveSpd: 2.5, atkSpd: 2.0, hpMult: 1.5, drawScale: 1.8, desc: "進攻：極快衝陣", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/趙雲5x5.png" },
+        "g1": { id: "g1", name: "關羽", symbol: "關", color: "#c0392b", price: 100, isGeneral: true, dmg: 3, range: 1, moveSpd: 1.2, atkSpd: 1.2, hpMult: 2, drawScale: 1.8, ultChance: 0.20, desc: "進攻：高額傷害", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/關羽5x5.png" },
+        "g2": { id: "g2", name: "趙雲", symbol: "趙", color: "#2980b9", price: 100, isGeneral: true, dmg: 1.5, range: 1, moveSpd: 2.5, atkSpd: 2.0, hpMult: 1.5, drawScale: 1.8, ultChance: 0.20, desc: "進攻：極快衝陣", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/趙雲5x5.png" },
         "g3": { 
             id: "g3", name: "如來", symbol: "佛", color: "#f1c40f", price: 0, isGeneral: true, 
             dmg: 2.5, range: 1.2, moveSpd: 1.0, atkSpd: 1.0, hpMult: 3, drawScale: 1.8, 
             desc: "進攻：範圍傷害，瀕死化身大佛", 
+            ultChance: 0.20,
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/如來5x5.png", 
             imgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/如來(大佛)5x5.png", // 【新增】：專屬第二型態圖片
             hasAoE: true,          // 【新增】：開啟範圍攻擊
             isTransformable: true  // 【新增】：開啟瀕死變身機制
         },
-        "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, moveSpd: 1.5, atkSpd: 1.0, hpMult: 2.5, drawScale: 1.8, desc: "進攻：戰神降臨", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布5x5.png" }
+        "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, moveSpd: 1.5, atkSpd: 1.0, hpMult: 2.5, drawScale: 1.8, desc: "進攻：戰神降臨", ultChance: 0.30, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布5x5.png" }
     };
     
     // 【新增】：讓敵軍也載入精靈圖
@@ -503,7 +504,10 @@
             GENERALS[key].isDeployed = false;
             GENERALS[key].deathCooldown = 0;
         }
-        
+     
+        // 【新增】：重置黑天龍復活計時器
+        window.blackDragonRespawnTimer = -1;        
+
         generateDecorations();
         loadNextQuestion();
         updateResourcesUI();
@@ -1042,46 +1046,27 @@ class Enemy {
             this.ultCooldown = 180;
         }
 
-        update(targetPlayer) {
-            // ============================================
-            // 【新增】：黑天龍專屬神技 - 無色界神力
-            // ============================================
-            if (this.id === 'black_dragon' && !this.isDying) {
-                if (this.ultCooldown > 0) this.ultCooldown--;
-                if (this.ultCooldown <= 0) {
-                    this.ultCooldown = 600; // 每 10 秒發動一次
-                    this.state = 2; // 強攻擊動畫
-                    
-                    let aoeRadius = 250; // 超大範圍
-                    let impactX = this.x + this.drawOffsetX;
-                    let impactY = this.y + this.drawOffsetY;
-                    
-                    // 1. 剝奪範圍內玩家部隊生命
-                    playerUnits.forEach(p => {
-                        if (!p.isDying && !p.isTransforming && Math.hypot((p.x+p.drawOffsetX) - impactX, (p.y+p.drawOffsetY) - impactY) <= aoeRadius) {
-                            p.hp -= this.damage * 4; // 承受 4 倍毀滅性傷害
-                        }
-                    });
-                    
-                    // 2. 摧毀範圍內防禦建築
-                    towers.forEach(t => {
-                        let s = BUILDINGS[t.id].size || 1;
-                        let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
-                        let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
-                        if (Math.hypot(centerX - impactX, centerY - impactY) <= aoeRadius) t.hp -= this.damage * 4;
-                    });
-                    
-                    // 3. 直接重創主堡
-                    if (Math.hypot((playerBase.x*TILE_SIZE+TILE_SIZE/2) - impactX, (playerBase.y*TILE_SIZE+TILE_SIZE/2) - impactY) <= aoeRadius) {
-                        playerBase.hp -= this.damage * 4;
-                    }
-
-                    // 4. 觸發長達 2 秒 (120幀) 的全螢幕黑白特效
-                    combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 120, isBlackDragon: true });
-                }
-            }
+// 【新增】：黑天龍獨立大絕函數
+        triggerBlackDragonAoE() {
+            let aoeRadius = 250;
+            let impactX = this.x + this.drawOffsetX;
+            let impactY = this.y + this.drawOffsetY;
             
-            // ... (下方保留原本的 cooldown 邏輯和尋路攻擊邏輯)
+            playerUnits.forEach(p => {
+                if (!p.isDying && !p.isTransforming && Math.hypot((p.x+p.drawOffsetX) - impactX, (p.y+p.drawOffsetY) - impactY) <= aoeRadius) p.hp -= this.damage * 4;
+            });
+            towers.forEach(t => {
+                let s = BUILDINGS[t.id].size || 1;
+                let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
+                let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
+                if (Math.hypot(centerX - impactX, centerY - impactY) <= aoeRadius) t.hp -= this.damage * 4;
+            });
+            if (Math.hypot((playerBase.x*TILE_SIZE+TILE_SIZE/2) - impactX, (playerBase.y*TILE_SIZE+TILE_SIZE/2) - impactY) <= aoeRadius) playerBase.hp -= this.damage * 4;
+
+            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 120, isBlackDragon: true });
+        }
+
+        update(targetPlayer) {
             if (this.cooldown > 0) this.cooldown--;
 
             let targetNode = this.pathIndex < pathCoords.length ? pathCoords[this.pathIndex] : this.ringTarget;
@@ -1101,12 +1086,17 @@ class Enemy {
             // 1. 攻擊城門邏輯
             let gate = towers.find(t => t.id === 'gate' && t.x === (targetNode ? Math.floor(targetNode.x) : -1) && t.y === (targetNode ? Math.floor(targetNode.y) : -1));
             if (gate) {
-                this.state = 1;
-                if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
+                if (this.cooldown <= 0) { 
+                    this.cooldown = this.fireRate; this.hasDealtDamage = false; 
+                    let baseChance = this.unitData.ultChance || 0.05;
+                    this.isUlt = Math.random() < Math.min(0.50, baseChance + (this.level - 1) * 0.015);
+                }
+                this.state = this.isUlt ? 2 : 1;
                 let attackProgress = 1 - (this.cooldown / this.fireRate);
-                // 【核心修改】：動畫進度達到 60% 時才造成傷害！
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                    gate.hp -= this.damage; this.hasDealtDamage = true;
+                    this.hasDealtDamage = true;
+                    if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
+                    else { gate.hp -= this.isUlt ? this.damage * 2.0 : this.damage; }
                 }
                 if (gate.hp <= 0) towers = towers.filter(t => t !== gate);
                 return false;
@@ -1117,28 +1107,48 @@ class Enemy {
             let baseDist = Math.hypot((playerBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (playerBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
             if (ringDist <= 10 || (this.range > 50 && baseDist <= this.range + TILE_SIZE/2)) {
-                this.state = 1;
+                if (this.cooldown <= 0) { 
+                    this.cooldown = this.fireRate; this.hasDealtDamage = false; 
+                    let baseChance = this.unitData.ultChance || 0.05;
+                    this.isUlt = Math.random() < Math.min(0.50, baseChance + (this.level - 1) * 0.015);
+                }
+                this.state = this.isUlt ? 2 : 1;
                 this.facingLeft = (playerBase.x * TILE_SIZE + TILE_SIZE/2) < this.x;
-                if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
+                
                 let attackProgress = 1 - (this.cooldown / this.fireRate);
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                    playerBase.hp -= this.damage; this.hasDealtDamage = true;
-                    ctx.strokeStyle = this.unitData.color; ctx.lineWidth = 2;
-                    ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                    ctx.lineTo(playerBase.x * TILE_SIZE + TILE_SIZE/2, playerBase.y * TILE_SIZE + TILE_SIZE/2); ctx.stroke();
+                    this.hasDealtDamage = true;
+                    if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
+                    else {
+                        playerBase.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
+                        ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
+                        ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                        ctx.lineTo(playerBase.x * TILE_SIZE + TILE_SIZE/2, playerBase.y * TILE_SIZE + TILE_SIZE/2); ctx.stroke();
+                    }
                 }
                 return false;
             }
 
             // 3. 攻擊玩家部隊邏輯
             if (targetPlayer && Math.hypot((targetPlayer.x + targetPlayer.drawOffsetX) - (this.x + this.drawOffsetX), (targetPlayer.y + targetPlayer.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
-                this.state = 1; this.facingLeft = targetPlayer.x < this.x;
-                if (this.cooldown <= 0) { this.cooldown = this.fireRate; this.hasDealtDamage = false; }
+                if (this.cooldown <= 0) { 
+                    this.cooldown = this.fireRate; this.hasDealtDamage = false; 
+                    let baseChance = this.unitData.ultChance || 0.05;
+                    this.isUlt = Math.random() < Math.min(0.50, baseChance + (this.level - 1) * 0.015);
+                }
+                this.state = this.isUlt ? 2 : 1; 
+                this.facingLeft = targetPlayer.x < this.x;
+                
                 let attackProgress = 1 - (this.cooldown / this.fireRate);
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                    targetPlayer.hp -= this.damage; this.hasDealtDamage = true;
-                    ctx.strokeStyle = this.unitData.color; ctx.lineWidth = 2;
-                    ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(targetPlayer.x + targetPlayer.drawOffsetX, targetPlayer.y + targetPlayer.drawOffsetY); ctx.stroke();
+                    this.hasDealtDamage = true;
+                    if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
+                    else {
+                        targetPlayer.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
+                        ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
+                        ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                        ctx.lineTo(targetPlayer.x + targetPlayer.drawOffsetX, targetPlayer.y + targetPlayer.drawOffsetY); ctx.stroke();
+                    }
                 }
             } else {
                 if (!targetNode) return true;
@@ -1147,15 +1157,12 @@ class Enemy {
 
                 const isLaneBlocked = (testLane) => {
                     return enemies.some(e => {
-                        // 【核心修正】：同樣無視遠程隊友
                         if (e === this || e.lane !== testLane || e.isDying || e.range > this.range + 10) return false;
-                        
                         if (this.pathIndex >= pathCoords.length && e.pathIndex >= pathCoords.length) return false;
                         if (Math.hypot(e.x - this.x, e.y - this.y) < 24) { 
                             if (e.pathIndex > this.pathIndex) return true;
                             if (e.pathIndex === this.pathIndex) {
-                                let myDist = Math.hypot(tx - this.x, ty - this.y);
-                                let eDist = Math.hypot(tx - e.x, ty - e.y);
+                                let myDist = Math.hypot(tx - this.x, ty - this.y); let eDist = Math.hypot(tx - e.x, ty - e.y);
                                 if (eDist < myDist - 0.1) return true; 
                                 if (Math.abs(eDist - myDist) <= 0.1) return enemies.indexOf(e) < enemies.indexOf(this); 
                             }
@@ -1168,9 +1175,7 @@ class Enemy {
                     let possibleLanes = this.lane === 0 ? [-1, 1] : [0];
                     possibleLanes.sort(() => Math.random() - 0.5);
                     let switched = false;
-                    for (let l of possibleLanes) {
-                        if (!isLaneBlocked(l)) { this.lane = l; this.laneOffset = this.lane * 12; switched = true; break; }
-                    }
+                    for (let l of possibleLanes) { if (!isLaneBlocked(l)) { this.lane = l; this.laneOffset = this.lane * 12; switched = true; break; } }
                     if (!switched) { this.state = 4; return false; }
                 }
 
@@ -1359,7 +1364,8 @@ update(targetEnemy) {
             if (ringDist <= 10 || (this.range > 50 && baseDist <= this.range + TILE_SIZE/2)) {
                 if (this.cooldown <= 0) { 
                     this.cooldown = this.fireRate; this.hasDealtDamage = false; 
-                    let ultChance = Math.min(0.40, 0.01 + (this.level - 1) * 0.02);
+                    let baseChance = this.unitData.ultChance || 0.05;
+                    let ultChance = Math.min(0.60, baseChance + (this.level - 1) * 0.02);
                     this.isUlt = Math.random() < ultChance;
                 }
                 this.state = this.isUlt ? 2 : 1; 
@@ -1394,7 +1400,8 @@ update(targetEnemy) {
             if (targetEnemy && Math.hypot((targetEnemy.x + targetEnemy.drawOffsetX) - (this.x + this.drawOffsetX), (targetEnemy.y + targetEnemy.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
                 if (this.cooldown <= 0) { 
                     this.cooldown = this.fireRate; this.hasDealtDamage = false; 
-                    let ultChance = Math.min(0.40, 0.01 + (this.level - 1) * 0.02);
+                    let baseChance = this.unitData.ultChance || 0.05;
+                    let ultChance = Math.min(0.60, baseChance + (this.level - 1) * 0.02);
                     this.isUlt = Math.random() < ultChance;
                 }
                 this.state = this.isUlt ? 2 : 1;
@@ -1764,6 +1771,21 @@ update(targetEnemy) {
                 enemies.push(new Enemy(Math.floor(difficultyLevel), type));
                 spawnTimer = Math.max(150, 360 - difficultyLevel * 15);
             }
+            // 【新增】：黑天龍復活機制
+            if (window.blackDragonRespawnTimer > 0) {
+                window.blackDragonRespawnTimer--;
+                if (window.blackDragonRespawnTimer === 0) {
+                    // 根據目前難度生成復活的黑天龍
+                    enemies.push(new Enemy(Math.floor(difficultyLevel), 'black_dragon'));
+                    
+                    let feedback = document.getElementById('feedback');
+                    feedback.innerText = `⚠️ 警告：遠古神明【天】已復活！無色界神力再次籠罩戰場！`;
+                    feedback.style.color = "#9b59b6";
+                    
+                    // 重置計時器，等佢下次死再觸發
+                    window.blackDragonRespawnTimer = -1;
+                }
+            }
 
             // 主堡互射與回血
             [playerBase, enemyBase].forEach((base, idx) => {
@@ -1859,7 +1881,19 @@ update(targetEnemy) {
         // 敵軍更新
         for (let i = enemies.length - 1; i >= 0; i--) {
             let e = enemies[i];
-            if (e.hp <= 0 && !e.isDying) { e.isDying = true; e.state = 3; e.deathTimer = 45; }
+            if (e.hp <= 0 && !e.isDying) { 
+                e.isDying = true; 
+                e.state = 3; 
+                e.deathTimer = 45; 
+                
+                // 【新增】：如果死嘅係黑天龍，啟動 40 秒復活倒數
+                if (e.id === 'black_dragon') {
+                    window.blackDragonRespawnTimer = 40 * 60; // 40 秒 x 60 幀
+                    let feedback = document.getElementById('feedback');
+                    feedback.innerText = `✨ 遠古神明【天】暫時敗退，將於 40 秒後再次降臨！`;
+                    feedback.style.color = "#9b59b6";
+                }
+            }
             if (e.isDying) {
                 e.deathTimer--;
                 if (e.deathTimer <= 0) enemies.splice(i, 1);
