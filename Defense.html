@@ -209,7 +209,7 @@
         'tank':   { id: 'tank', name: "巨屍", symbol: "巨", color: '#2c3e50', dmg: 2.0, range: 0.5, moveSpd: 0.5, atkSpd: 0.6, hpMult: 2.5, drawScale: 1.8, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/tank(Z)5x5.png" },
 'boss':   { id: 'boss', name: "屍王", symbol: "王", color: '#c0392b', dmg: 4.0, range: 1.0, moveSpd: 0.7, atkSpd: 0.8, hpMult: 6.0, drawScale: 2.2, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/King(Z)5x5.png" },
         // 【新增】：終極隱藏 Boss - 黑天龍 (極慢、極硬、極高傷)
-        'black_dragon': { id: 'black_dragon', name: "天", symbol: "龍", color: '#000000', dmg: 15.0, range: 1.5, moveSpd: 0.25, atkSpd: 0.5, hpMult: 60.0, drawScale: 3.5, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/黑龍.png" }
+        'black_dragon': { id: 'black_dragon', name: "天", symbol: "龍", color: '#000000', dmg: 15.0, range: 1.5, moveSpd: 0.25, atkSpd: 0.5, hpMult: 60.0, drawScale: 2.2, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/黑龍.png" }
     };
 
     // 【新增 drawScale】：1.5 是預設大小，將領與騎兵可以設大一點
@@ -1685,8 +1685,9 @@ update(targetEnemy) {
                             });
                         } else if (gId === 'g2') { // 趙雲：4名騎兵(b6)在場
                             shouldDeploy = (playerUnits.filter(p => p.id === 'b6' && !p.isDying).length >= 4);
-                        } else if (gId === 'g3') { // 如來：主堡低於 50% 血
-                            shouldDeploy = (playerBase.hp < playerBase.maxHp * 0.5);
+                        } else if (gId === 'g3') { // 如來：主堡低於 50% 血，【且】有敵軍靠近主堡 300 像素內
+                            let enemiesNearBase = enemies.some(e => Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 300);
+                            shouldDeploy = (playerBase.hp < playerBase.maxHp * 0.5) && enemiesNearBase;
                         } else if (gId === 'g4') { // 呂布：場上出現屍王或天
                             shouldDeploy = enemies.some(e => (e.id === 'boss' || e.id === 'black_dragon') && !e.isDying);
                         }
