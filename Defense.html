@@ -23,6 +23,19 @@
             /* 【核心修正】：強制頂部最少留白 35px，並自動避開手機瀏海 (Safe Area) */
             padding-top: max(35px, env(safe-area-inset-top)); 
         }
+        
+        /* 【新增】：讓頂部狀態列永遠吸附在畫面上方 */
+        #sticky-top-bar {
+            position: sticky;
+            top: env(safe-area-inset-top, 0px);
+            z-index: 999;
+            background-color: #f4e8d3; 
+            padding: 10px 0; 
+            margin-bottom: 5px;
+            border-bottom: 2px dashed #d35400;
+        }
+
+        
         /* 擴大外框以容納兩倍大的地圖 */
         #game-wrapper { max-width: 850px; width: 100%; background: #f4e8d3; border: 4px solid #d35400; border-radius: 15px; padding: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); color: #333; }
         
@@ -106,17 +119,14 @@
 <div id="play-screen">
         <!-- 【核心修改】：用 sticky-top-bar 包住血量與資源區塊 -->
         /* 【新增】：讓頂部狀態列永遠吸附在畫面上方 */
-        #sticky-top-bar {
-            position: sticky;
-            /* 【核心修正】：吸附時自動避開頂部狀態列 */
-            top: env(safe-area-inset-top, 0px);
-            z-index: 999; /* 設到最大，確保不被掩蓋 */
-            background-color: #f4e8d3; 
-            padding: 10px 0; /* 增加上下留白讓畫面更清晰 */
-            margin-bottom: 5px;
-            border-bottom: 2px dashed #d35400;
-        }
-
+    <div id="play-screen">
+        <!-- 【核心修改】：用 sticky-top-bar 包住血量與資源區塊 -->
+        <div id="sticky-top-bar">
+            <div id="header">
+                <span style="color: #8e44ad;">👿 敵軍: <span id="enemy-hp-display">1000</span></span>
+                <span id="wave-display" style="color: #2980b9; margin: 0 10px;">強度: Lv.1</span>
+                <span style="color: #e74c3c;">❤️ 我方: <span id="hp-display">1000</span></span>
+            </div>
             
             <div style="display:flex; justify-content:space-around; background:#ecf0f1; padding:8px; border-radius:8px; border:2px dashed #bdc3c7; font-weight:bold; margin-bottom:0;">
                 <span style="color:#f39c12;">💰 <span id="game-gold">50</span></span>
