@@ -136,6 +136,8 @@
         <canvas id="gameCanvas" width="800" height="800"></canvas>
         
         <div id="camps-container">
+            <!-- 【新增】：加回拆除模式按鈕 -->
+            <button id="btn-delete" onclick="toggleDeleteMode()" style="margin-bottom: 8px;">🛠️ 拆除模式: 關閉</button>
             <div class="camp-row">
                 <span class="camp-label">🏗️ 建築</span>
                 <div id="build-menu" class="camp-slots">
@@ -962,6 +964,10 @@ function checkAnswer(selected) {
             if (bData.id === 'barracks' && towers.some(t => t.id === 'barracks')) {
                 feedback.innerText = "⚠️ 軍營只可以起一個！"; feedback.style.color = "#e74c3c"; return;
             }
+            // 【新增】：限制大帳也只能建造一個
+            if (bData.id === 'tent' && towers.some(t => t.id === 'tent')) {
+                feedback.innerText = "⚠️ 大帳只可以起一個！"; feedback.style.color = "#e74c3c"; return;
+            }
 
             // 3. 【核心修正】全面檢查 1x1 或 2x2 的佔地範圍內，是否有道路或已建建築
             let overlapPath = false;
@@ -1017,7 +1023,6 @@ function checkAnswer(selected) {
             });
             feedback.innerText = `🏗️ 成功建造 ${bData.name}！`; 
             feedback.style.color = "#2ecc71";
-            selectBuilding(selectedBuilding); 
         }
     });
 
@@ -1293,16 +1298,16 @@ update(targetEnemy) {
             if (this.cooldown > 0) this.cooldown--;
 
             // ============================================
-            // 2. 決定行軍目標 (tx, ty) 與 防守者智能大腦
+            // 2. 決定行軍目標與防守者「正統尋路大腦」
             // ============================================
             let isDefender = (this.id === 'g1' || this.id === 'g3');
             let tx = this.x, ty = this.y; 
             let hasValidTarget = false;
-            
+            let targetNode = null; 
+
             if (isDefender) {
                 let threat = null;
-                    if (this.id === 'g1') {
-                    // 關羽：精準尋找威脅任何大小建築物或主堡的敵人
+                if (this.id === 'g1') {
                     threat = enemies.find(e => !e.isDying && (
                         towers.some(t => {
                             let s = BUILDINGS[t.id].size || 1;
@@ -1313,46 +1318,49 @@ update(targetEnemy) {
                         Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250
                     ));
                 } else if (this.id === 'g3') {
-                    // 如來：尋找靠近主堡的敵人
                     threat = enemies.find(e => !e.isDying && Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 300);
                 }
 
                 if (threat) {
-                    tx = threat.x; ty = threat.y;
-                    this.retreatTimer = 0; 
-                    hasValidTarget = true;
-                    this.drawOffsetX = 0; this.drawOffsetY = 0;
-                } else {
-                    tx = this.x; ty = this.y; 
-                    this.retreatTimer = (this.retreatTimer || 0) + 1;
-                    if (this.retreatTimer > 120) { // 2秒後自動安全撤退
-                        this.isDying = true;
-                        this.state = 3; 
-                        this.deathTimer = 45;
-                        this.isRetreating = true; // 安全撤退，不觸發冷卻
-                    }
-                    hasValidTarget = false;
-                }
-                if (tx < this.x - 1) this.facingLeft = true;
-                else if (tx > this.x + 1) this.facingLeft = false;
-
-            } else {
-                // 進攻型部隊 (按路徑推進)
-                let targetNode = this.pathIndex >= 0 ? pathCoords[this.pathIndex] : this.ringTarget;
-                if (targetNode) {
-                    tx = targetNode.x * TILE_SIZE + TILE_SIZE / 2;
-                    ty = targetNode.y * TILE_SIZE + TILE_SIZE / 2;
-                    hasValidTarget = true;
-                    if (this.pathIndex < 0) {
+                    this.retreatTimer = 0; hasValidTarget = true;
+                    let thIdx = threat.pathIndex >= 0 ? threat.pathIndex : pathCoords.length - 1;
+                    
+                    // 如果距離敵人路徑超過 1 格，乖乖順住條路行過去！
+                    if (this.pathIndex >= 0 && this.pathIndex < pathCoords.length && Math.abs(this.pathIndex - thIdx) > 1) {
+                        targetNode = pathCoords[this.pathIndex];
+                    } else {
+                        tx = threat.x; ty = threat.y; // 夠近先直接衝埋去
                         this.drawOffsetX = 0; this.drawOffsetY = 0;
-                    } else if (Math.abs(tx - this.x) > Math.abs(ty - this.y)) { 
-                        this.drawOffsetX = 0; this.drawOffsetY = this.laneOffset; 
-                    } else { 
-                        this.drawOffsetX = this.laneOffset; this.drawOffsetY = 0; 
                     }
-                    if (tx < this.x - 1) this.facingLeft = true;
-                    else if (tx > this.x + 1) this.facingLeft = false;
+                } else {
+                    let tents = towers.filter(t => t.id === 'tent');
+                    if (tents.length > 0) {
+                        let tentIdx = getNearestPathIndex(tents[0].x, tents[0].y);
+                        if (this.pathIndex !== tentIdx) {
+                            hasValidTarget = true; targetNode = pathCoords[this.pathIndex]; 
+                        } else {
+                            tx = this.x; ty = this.y; this.retreatTimer = (this.retreatTimer || 0) + 1;
+                            if (this.retreatTimer > 120) { this.isDying = true; this.state = 3; this.deathTimer = 45; this.isRetreating = true; }
+                        }
+                    } else {
+                        this.isDying = true; this.state = 3; this.deathTimer = 45; this.isRetreating = true;
+                    }
                 }
+            } else {
+                targetNode = this.pathIndex >= 0 ? pathCoords[this.pathIndex] : this.ringTarget;
+                hasValidTarget = true;
+            }
+
+            if (targetNode) {
+                tx = targetNode.x * TILE_SIZE + TILE_SIZE / 2;
+                ty = targetNode.y * TILE_SIZE + TILE_SIZE / 2;
+                if (this.pathIndex < 0) { this.drawOffsetX = 0; this.drawOffsetY = 0; } 
+                else if (Math.abs(tx - this.x) > Math.abs(ty - this.y)) { this.drawOffsetX = 0; this.drawOffsetY = this.laneOffset; } 
+                else { this.drawOffsetX = this.laneOffset; this.drawOffsetY = 0; }
+                
+                if (tx < this.x - 1) this.facingLeft = true; else if (tx > this.x + 1) this.facingLeft = false;
+            } else if (isDefender && hasValidTarget) {
+                if (tx < this.x - 1) this.facingLeft = true; else if (tx > this.x + 1) this.facingLeft = false;
             }
 
             // ============================================
@@ -1431,26 +1439,21 @@ update(targetEnemy) {
                 }
             } else {
                 // ============================================
-                // 5. 尋路與移動邏輯 (包含防守者修正)
+                // 5. 執行移動與路線修正
                 // ============================================
-                if (!hasValidTarget) {
-                    this.state = 0; // 防守者無事可做，原地待命
-                    return true; 
-                }
+                if (!hasValidTarget) { this.state = 0; return true; }
                 
                 const dx = tx - this.x, dy = ty - this.y;
                 const dist = Math.hypot(dx, dy);
 
                 const isLaneBlocked = (testLane) => {
                     return playerUnits.some(p => {
-                        // 遠程部隊防塞車判定
                         if (p === this || p.lane !== testLane || p.isDying || p.range > this.range + 10) return false;
                         if (this.pathIndex < 0 && p.pathIndex < 0) return false;
                         if (Math.hypot(p.x - this.x, p.y - this.y) < 24) { 
                             if (p.pathIndex < this.pathIndex) return true; 
                             if (p.pathIndex === this.pathIndex) {
-                                let myDist = Math.hypot(tx - this.x, ty - this.y);
-                                let pDist = Math.hypot(tx - p.x, ty - p.y);
+                                let myDist = Math.hypot(tx - this.x, ty - this.y), pDist = Math.hypot(tx - p.x, ty - p.y);
                                 if (pDist < myDist - 0.1) return true;
                                 if (Math.abs(pDist - myDist) <= 0.1) return playerUnits.indexOf(p) < playerUnits.indexOf(this);
                             }
@@ -1463,17 +1466,32 @@ update(targetEnemy) {
                     let possibleLanes = this.lane === 0 ? [-1, 1] : [0];
                     possibleLanes.sort(() => Math.random() - 0.5);
                     let switched = false;
-                    for (let l of possibleLanes) {
-                        if (!isLaneBlocked(l)) { this.lane = l; this.laneOffset = this.lane * 12; switched = true; break; }
-                    }
+                    for (let l of possibleLanes) { if (!isLaneBlocked(l)) { this.lane = l; this.laneOffset = this.lane * 12; switched = true; break; } }
                     if (!switched) { this.state = 4; return false; }
                 }
 
                 this.state = 0; 
                 if (dist < this.speed) { 
                     this.x = tx; this.y = ty; 
-                    // 只有進攻部隊才需要繼續按路徑走
-                    if(!isDefender && this.pathIndex >= 0) this.pathIndex--; 
+                    if (targetNode) {
+                        if (!isDefender && this.pathIndex >= 0) this.pathIndex--;
+                        else if (isDefender) {
+                            let threat = enemies.find(e => !e.isDying && (
+                                towers.some(t => { let s = BUILDINGS[t.id].size || 1; return Math.hypot(e.x - (t.x*TILE_SIZE+(TILE_SIZE*s)/2), e.y - (t.y*TILE_SIZE+(TILE_SIZE*s)/2)) < 180; }) ||
+                                Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250
+                            ));
+                            if (threat) {
+                                let thIdx = threat.pathIndex >= 0 ? threat.pathIndex : pathCoords.length - 1;
+                                if (this.pathIndex > thIdx) this.pathIndex--; else if (this.pathIndex < thIdx) this.pathIndex++;
+                            } else {
+                                let tents = towers.filter(t => t.id === 'tent');
+                                if (tents.length > 0) {
+                                    let tentIdx = getNearestPathIndex(tents[0].x, tents[0].y);
+                                    if (this.pathIndex > tentIdx) this.pathIndex--; else if (this.pathIndex < tentIdx) this.pathIndex++;
+                                }
+                            }
+                        }
+                    }
                 } else { 
                     this.x += (dx / dist) * this.speed; 
                     this.y += (dy / dist) * this.speed; 
@@ -1873,6 +1891,38 @@ update(targetEnemy) {
             effect.update(); 
             if (!effect.alive) ambientEffects.splice(i, 1); else effect.draw();
         }
+
+        // ============================================
+        // 【新增】：無縫藍色螢光興建範圍 (連續填充不現網格)
+        // ============================================
+        if (selectedBuilding && !isDeleteMode) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(52, 152, 219, 0.35)'; // 半透明科技藍
+            ctx.shadowColor = '#00a8ff';
+            ctx.shadowBlur = 20; // 整個範圍邊緣發出強烈螢光
+            
+            ctx.beginPath();
+            let tc = pathCoords[pathCoords.length - 1]; 
+            for(let r=6; r<20; r++){
+                for(let c=0; c<20; c++){
+                    let inRange = false;
+                    if (Math.abs(tc.x - c) <= 3 && Math.abs(tc.y - r) <= 3) inRange = true;
+                    if (!inRange) {
+                        inRange = towers.some(t => {
+                            let s = BUILDINGS[t.id].size || 1;
+                            return c >= t.x - 3 && c <= t.x + s - 1 + 3 && r >= t.y - 3 && r <= t.y + s - 1 + 3;
+                        });
+                    }
+                    // 只要是空地且在領地內，就加入路徑 (無縫融合)
+                    let isEmpty = !isPath(c, r) && !getTowerAt(c, r) && !(c===17 && r===17) && !(c===2 && r===2);
+                    if (inRange && isEmpty) {
+                        ctx.rect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+            ctx.fill(); // 一次過填滿，完全不會有一格格的邊線！
+            ctx.restore();
+        }        
 
         // ============================================
         // 3. 處理部隊與建築大腦 (不在此畫圖)
