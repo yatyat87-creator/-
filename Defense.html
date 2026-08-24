@@ -122,8 +122,11 @@
             <div id="header">
                 <span style="color: #8e44ad;">👿 敵軍: <span id="enemy-hp-display">1000</span></span>
                 <span id="wave-display" style="color: #2980b9; margin: 0 10px;">強度: Lv.1</span>
+                <!-- 【新增】：遊戲時間計時器 -->
+                <span id="timer-display" style="color: #34495e; font-family: monospace; font-size: 18px;">⏱️ 00:00</span>
                 <span style="color: #e74c3c;">❤️ 我方: <span id="hp-display">1000</span></span>
             </div>
+
             
             <div style="display:flex; justify-content:space-around; background:#ecf0f1; padding:8px; border-radius:8px; border:2px dashed #bdc3c7; font-weight:bold; margin-bottom:0;">
                 <span style="color:#f39c12;">💰 <span id="game-gold">50</span></span>
@@ -529,6 +532,10 @@
         updateResourcesUI();
         updateCampsUI();
         updateGeneralsUI();
+        
+        // 【新增】：重置計時器
+        window.gameTimeSeconds = 0;
+        document.getElementById('timer-display').innerText = "⏱️ 00:00";
         
         // 【核心新增】：開局前重置計時器
         lastFrameTime = performance.now(); 
@@ -1786,6 +1793,15 @@ draw() {
         // 1. 戰鬥與資源大腦邏輯 (只有遊戲進行中執行)
         // ============================================
         if (isPlaying) {
+            
+            // 【新增】：遊戲計時器 (每 60 幀 = 1 秒)
+            if (globalAnimTick % 60 === 0) {
+                window.gameTimeSeconds = (window.gameTimeSeconds || 0) + 1;
+                let m = String(Math.floor(window.gameTimeSeconds / 60)).padStart(2, '0');
+                let s = String(window.gameTimeSeconds % 60).padStart(2, '0');
+                document.getElementById('timer-display').innerText = `⏱️ ${m}:${s}`;
+            }
+
             // 【武將自動大腦與出兵隊列】
             if (globalAnimTick % 30 === 0) {
                 let tents = towers.filter(t => t.id === 'tent');
@@ -2104,7 +2120,14 @@ draw() {
                     if (pUnit.retreatTimer > 180) { pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; pUnit.isRetreating = true; }
                 } else { pUnit.retreatTimer = 0; }
             }
-            if (pUnit.hp <= 0 && !pUnit.isDying) { pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; }
+            // 【核心修正】：攔截致命傷！如果是可變身且未變身的武將 (如來)，強制鎖血 1 滴，免除死亡！
+            if (pUnit.hp <= 0 && !pUnit.isDying) { 
+                if (pUnit.unitData.isTransformable && !pUnit.isTransformed && !pUnit.isTransforming) {
+                    pUnit.hp = 1; // 鎖血！交給 update() 函數去觸發變身
+                } else {
+                    pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; 
+                }
+            }
             if (pUnit.isDying) {
                 pUnit.deathTimer--;
                 if (pUnit.deathTimer <= 0) {
