@@ -136,11 +136,20 @@
         <canvas id="gameCanvas" width="800" height="800"></canvas>
         
         <div id="camps-container">
-            <!-- 【新增】：加回拆除模式按鈕 -->
-            <button id="btn-delete" onclick="toggleDeleteMode()" style="margin-bottom: 8px;">🛠️ 拆除模式: 關閉</button>
+            <!-- 【新增】：加回拆除按鈕 -->
+            <button id="btn-delete" onclick="toggleDeleteMode()" style="margin-bottom: 8px; width: 100%; background: #7f8c8d; color: white; border: none; padding: 6px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s;">🛠️ 拆除模式: 關閉</button>
+            
+            <!-- 【新增】：獨立的建築資訊與升級介面 -->
+            <div class="camp-row" id="upgrade-ui-row" style="display: none; background: #dff9fb; padding: 8px; border-radius: 5px; border: 2px solid #3498db; margin-bottom: 8px;">
+                <span class="camp-label" id="selected-building-name" style="color: #2980b9; width: auto; margin-right: 10px;">🏠 建築</span>
+                <span style="flex:1; font-size:14px; color:#2c3e50; font-weight:bold;" id="selected-building-info">Lv.1</span>
+                <button id="btn-upgrade-building" onclick="upgradeSelectedTarget()" style="background:#f39c12; color:white; border:none; padding:6px 12px; border-radius:5px; font-weight:bold; cursor:pointer; font-size:14px;">升級 (50金)</button>
+            </div>
+
             <div class="camp-row">
                 <span class="camp-label">🏗️ 建築</span>
-                <div id="build-menu" class="camp-slots">
+
+                    <div id="build-menu" class="camp-slots">
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-farm" onclick="selectBuilding('farm')">🌾農田<br>50金</button>
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-lumber" onclick="selectBuilding('lumber')">🪓伐木<br>50金</button>
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-market" onclick="selectBuilding('market')">⚖️市場<br>50金</button>
@@ -166,8 +175,8 @@
                 <button id="btn-deploy" onclick="deployOffense()">出擊<br>選定</button>
             </div>
             
-            <!-- 【新增】：將領獨立出戰區 -->
-            <div class="camp-row" id="generals-deploy-container">
+            <!-- 【新增】：預設隱藏將領介面 -->
+            <div class="camp-row" id="generals-deploy-container" style="display: none;">
                 <span class="camp-label">🔥 將領</span>
                 <div id="generals-camp" class="camp-slots">
                     <!-- 將領按鈕將在此動態生成 -->
@@ -581,14 +590,15 @@ function checkAnswer(selected) {
         const btn = document.getElementById('btn-delete');
         if(isDeleteMode) { 
             btn.style.background = "#e74c3c"; 
-            btn.innerText = "🛠️ 拆除模式: 開啟 (點擊地圖建築或兵種即可拆除)"; 
+            btn.innerText = "🛠️ 拆除模式: 開啟 (點擊地圖建築即可拆除)"; 
             selectedBuilding = null; 
             document.querySelectorAll('#build-menu .slot').forEach(btn => btn.style.borderColor = '#7f8c8d');
         } else { 
             btn.style.background = "#7f8c8d"; 
-            btn.innerText = "🛠️ 拆除模式: 關閉 (關閉時點擊建築即為升級)"; 
+            btn.innerText = "🛠️ 拆除模式: 關閉"; 
         }
     }
+
 
     function selectBuilding(bId) {
         if (isDeleteMode) return;
@@ -827,6 +837,54 @@ function checkAnswer(selected) {
         updateCampsUI(); 
     };
 
+    // ============================================
+    // 【新增】：獨立升級介面邏輯
+    // ============================================
+    let currentSelectedTarget = null;
+    let currentSelectedType = null; 
+
+    window.showUpgradeUI = function(name, level, cost) {
+        const upgradeUI = document.getElementById('upgrade-ui-row');
+        if (upgradeUI) {
+            upgradeUI.style.display = 'flex';
+            document.getElementById('selected-building-name').innerText = `🏠 ${name}`;
+            document.getElementById('selected-building-info').innerText = `目前: Lv.${level}`;
+            document.getElementById('btn-upgrade-building').innerText = `升級 (${cost}金)`;
+        }
+    };
+
+    window.upgradeSelectedTarget = function() {
+        if (!currentSelectedTarget) return;
+        const feedback = document.getElementById('feedback');
+        
+        if (currentSelectedType === 'base') {
+            let cost = 300 * currentSelectedTarget.level;
+            if (gameGold >= cost) {
+                gameGold -= cost; currentSelectedTarget.level++;
+                currentSelectedTarget.maxHp += 1000; currentSelectedTarget.hp += 1000;
+                currentSelectedTarget.damage += 10; currentSelectedTarget.healRate += 2;
+                updateResourcesUI();
+                feedback.innerText = `✨ 城鎮中心升級為 Lv.${currentSelectedTarget.level}！`; feedback.style.color = "#f1c40f";
+                showUpgradeUI('城鎮中心', currentSelectedTarget.level, 300 * currentSelectedTarget.level);
+            } else {
+                feedback.innerText = `⚠️ 升級城鎮中心需要 ${cost} 金幣！請答題賺錢。`; feedback.style.color = "#e74c3c";
+            }
+        } else if (currentSelectedType === 'tower') {
+            let cost = 50 * currentSelectedTarget.level;
+            if (gameGold >= cost) { 
+                gameGold -= cost; currentSelectedTarget.level++; 
+                if(currentSelectedTarget.id === 'gate') { currentSelectedTarget.maxHp += 500; currentSelectedTarget.hp += 500; } 
+                updateResourcesUI(); 
+                let bData = BUILDINGS[currentSelectedTarget.id];
+                feedback.innerText = `✨ ${bData.name}升級為 Lv.${currentSelectedTarget.level}！`; feedback.style.color = "#f1c40f";
+                showUpgradeUI(bData.name, currentSelectedTarget.level, 50 * currentSelectedTarget.level);
+            } else {
+                feedback.innerText = `⚠️ 升級需要 ${cost} 金幣！請答題賺錢。`; feedback.style.color = "#e74c3c";
+            }
+        }
+    };
+
+
     // --- Canvas 與地圖建造邏輯 ---
     const canvas = document.getElementById('gameCanvas'); 
     const ctx = canvas.getContext('2d');
@@ -882,6 +940,7 @@ function checkAnswer(selected) {
     }
 
     // 【核心點擊建造邏輯】
+    // 【核心點擊邏輯】：分離建造、拆除與選取升級
     canvas.addEventListener('click', (e) => {
         if (gameOver || gameWon) return;
         const rect = canvas.getBoundingClientRect(); if (rect.width === 0) return; 
@@ -891,30 +950,21 @@ function checkAnswer(selected) {
         if (gx < 0 || gx >= 20 || gy < 0 || gy >= 20) return; 
 
         const feedback = document.getElementById('feedback');
-
-        // 【新增】：點擊主堡進行升級
-        if (gx === 17 && gy === 17) {
-            if (isDeleteMode) { feedback.innerText = "⚠️ 城鎮中心無法拆除！"; feedback.style.color = "#e74c3c"; } 
-            else {
-                let cost = 300 * playerBase.level;
-                if (gameGold >= cost) {
-                    gameGold -= cost; playerBase.level++;
-                    playerBase.maxHp += 1000; playerBase.hp += 1000;
-                    playerBase.damage += 10; playerBase.healRate += 2;
-                    updateResourcesUI();
-                    feedback.innerText = `✨ 城鎮中心升級為 Lv.${playerBase.level}！`; feedback.style.color = "#f1c40f";
-                } else {
-                    feedback.innerText = `⚠️ 升級城鎮中心需要 ${cost} 金幣！請答題賺錢。`; feedback.style.color = "#e74c3c";
-                }
-            }
-            return;
-        }
-        if (gx === 2 && gy === 2) { feedback.innerText = "⚠️ 這是敵方城鎮中心！"; feedback.style.color = "#e74c3c"; return; }
-
         const existingTower = getTowerAt(gx, gy);
+
+        // 預設先隱藏所有額外介面
+        const upgradeUI = document.getElementById('upgrade-ui-row');
+        const barracksUI = document.getElementById('barracks-ui-row');
+        const generalsUI = document.getElementById('generals-deploy-container');
+        if (upgradeUI) upgradeUI.style.display = 'none';
+        if (barracksUI) barracksUI.style.display = 'none';
+        if (generalsUI) generalsUI.style.display = 'none';
+        currentSelectedTarget = null;
+        currentSelectedType = null;
 
         // 1. 拆除模式
         if (isDeleteMode) {
+            if (gx === 17 && gy === 17) { feedback.innerText = "⚠️ 城鎮中心無法拆除！"; feedback.style.color = "#e74c3c"; return; }
             if (existingTower) { 
                 towers = towers.filter(t => t !== existingTower); 
                 feedback.innerText = "🗑️ 成功拆除建築物！"; 
@@ -923,36 +973,14 @@ function checkAnswer(selected) {
             return;
         }
 
-        // 2. 升級模式
-        if (existingTower && !selectedBuilding) {
-            let cost = 50 * existingTower.level;
-            if (gameGold >= cost) { 
-                gameGold -= cost; existingTower.level++; 
-                if(existingTower.id === 'gate') { existingTower.maxHp += 500; existingTower.hp += 500; } // 城門升級加血
-                updateResourcesUI(); 
-                feedback.innerText = `✨ 建築升級為 Lv.${existingTower.level}！`; 
-                feedback.style.color = "#f1c40f";
-            } else {
-                feedback.innerText = `⚠️ 升級需要 ${cost} 金幣！請答題賺錢。`; 
-                feedback.style.color = "#e74c3c";
-            }
-            return;
-        }
-
-// 3. 建造模式
+        // 2. 建造模式 (優先判定)
         if (selectedBuilding) {
             let bData = BUILDINGS[selectedBuilding];
             let bSize = bData.size || 1;
 
-            // 1. 檢查地圖邊界與敵方交戰區
-            if (gx + bSize > 20 || gy + bSize > 20) {
-                feedback.innerText = "⚠️ 建築範圍超出地圖邊界！"; feedback.style.color = "#e74c3c"; return;
-            }
-            if (gy < 6) {
-                feedback.innerText = "⚠️ 敵軍前線山地 (前 6 行) 無法進行建築！"; feedback.style.color = "#e74c3c"; return;
-            }
+            if (gx + bSize > 20 || gy + bSize > 20) { feedback.innerText = "⚠️ 建築範圍超出地圖邊界！"; feedback.style.color = "#e74c3c"; return; }
+            if (gy < 6) { feedback.innerText = "⚠️ 敵軍前線山地 (前 6 行) 無法進行建築！"; feedback.style.color = "#e74c3c"; return; }
 
-            // 2. 特殊建築數量與距離限制
             if (bData.id === 'gate') {
                 let existingGates = towers.filter(t => t.id === 'gate');
                 if (existingGates.length >= 3) { feedback.innerText = "⚠️ 整個地圖最多只能建造 3 座城門！"; feedback.style.color = "#e74c3c"; return; }
@@ -961,22 +989,15 @@ function checkAnswer(selected) {
                 let inRing = enemyRing.some(p => p.x === gx && p.y === gy) || playerRing.some(p => p.x === gx && p.y === gy);
                 if (inRing) { feedback.innerText = "⚠️ 城門不能蓋在主堡陣地上！"; feedback.style.color = "#e74c3c"; return; }
             }
-            if (bData.id === 'barracks' && towers.some(t => t.id === 'barracks')) {
-                feedback.innerText = "⚠️ 軍營只可以起一個！"; feedback.style.color = "#e74c3c"; return;
-            }
-            // 【新增】：限制大帳也只能建造一個
-            if (bData.id === 'tent' && towers.some(t => t.id === 'tent')) {
-                feedback.innerText = "⚠️ 大帳只可以起一個！"; feedback.style.color = "#e74c3c"; return;
-            }
+            if (bData.id === 'barracks' && towers.some(t => t.id === 'barracks')) { feedback.innerText = "⚠️ 軍營只可以起一個！"; feedback.style.color = "#e74c3c"; return; }
+            if (bData.id === 'tent' && towers.some(t => t.id === 'tent')) { feedback.innerText = "⚠️ 大帳只可以起一個！"; feedback.style.color = "#e74c3c"; return; }
 
-            // 3. 【核心修正】全面檢查 1x1 或 2x2 的佔地範圍內，是否有道路或已建建築
             let overlapPath = false;
             let overlapBuilding = false;
             for (let dx = 0; dx < bSize; dx++) {
                 for (let dy = 0; dy < bSize; dy++) {
                     if (isPath(gx + dx, gy + dy)) overlapPath = true;
                     if (getTowerAt(gx + dx, gy + dy)) overlapBuilding = true;
-                    // 防呆：不能蓋在雙方主堡上面
                     if ((gx + dx === 17 && gy + dy === 17) || (gx + dx === 2 && gy + dy === 2)) overlapBuilding = true;
                 }
             }
@@ -988,7 +1009,6 @@ function checkAnswer(selected) {
             }
             if (overlapBuilding) { feedback.innerText = "⚠️ 這裡空間不足，已經有建築或主堡了！"; feedback.style.color = "#e74c3c"; return; }
 
-            // 4. 領地範圍判定 (城鎮中心或現有建築 3 格內)
             let tc = pathCoords[pathCoords.length - 1]; 
             let inRange = false;
             for (let dx = 0; dx < bSize; dx++) {
@@ -1002,29 +1022,46 @@ function checkAnswer(selected) {
             }
             if (!inRange) { feedback.innerText = "⚠️ 只能在我方建築或城鎮中心方圓 3 格內領地建造！"; feedback.style.color = "#e74c3c"; return; }
 
-            // 5. 扣除資源 (這部分保留您原本的代碼)
-            if (bData.costType === 'gold' && gameGold >= bData.cost) {
-                gameGold -= bData.cost;
-            } else if (bData.costType === 'wood' && gameWood >= bData.cost) {
-                gameWood -= bData.cost;
-            } else if (bData.costType === 'stone' && gameStone >= bData.cost) {
-                gameStone -= bData.cost;
-            } else { 
+            if (bData.costType === 'gold' && gameGold >= bData.cost) { gameGold -= bData.cost; } 
+            else if (bData.costType === 'wood' && gameWood >= bData.cost) { gameWood -= bData.cost; } 
+            else if (bData.costType === 'stone' && gameStone >= bData.cost) { gameStone -= bData.cost; } 
+            else { 
                 const resName = bData.costType === 'gold' ? '金幣' : (bData.costType === 'wood' ? '木材' : '石頭');
                 feedback.innerText = `⚠️ 資源不足！建造 ${bData.name} 需要 ${bData.cost} ${resName}！`; 
                 feedback.style.color = "#e74c3c"; return; 
             }
             
             updateResourcesUI(); 
-            // 【特別注意】：新增 dir, state, frame 等參數，避免 2x2 建築出錯
             towers.push({ 
                 x: gx, y: gy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0,
                 state: 0, frame: 0, dir: 0 
             });
-            feedback.innerText = `🏗️ 成功建造 ${bData.name}！`; 
+            feedback.innerText = `🏗️ 成功建造 ${bData.name}！可繼續點擊空地建造。`; 
             feedback.style.color = "#2ecc71";
+            return; // 起樓完成，結束邏輯，不彈出升級 UI
+        }
+
+        // 3. 點擊選取與升級模式 (非建造、非拆除)
+        if (gx === 2 && gy === 2) { feedback.innerText = "⚠️ 這是敵方城鎮中心！"; feedback.style.color = "#e74c3c"; return; }
+
+        if (gx === 17 && gy === 17) {
+            currentSelectedTarget = playerBase;
+            currentSelectedType = 'base';
+            showUpgradeUI('城鎮中心', playerBase.level, 300 * playerBase.level);
+            return;
+        }
+
+        if (existingTower) {
+            currentSelectedTarget = existingTower;
+            currentSelectedType = 'tower';
+            let bData = BUILDINGS[existingTower.id];
+            showUpgradeUI(bData.name, existingTower.level, 50 * existingTower.level);
+
+            if (existingTower.id === 'barracks' && barracksUI) barracksUI.style.display = 'flex';
+            if (existingTower.id === 'tent' && generalsUI) generalsUI.style.display = 'flex';
         }
     });
+
 
 class Enemy {
         constructor(wave, eTypeKey) {
