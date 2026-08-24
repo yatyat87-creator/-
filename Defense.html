@@ -584,17 +584,18 @@ function checkAnswer(selected) {
                 floatingTexts.push({ x: p.x + p.drawOffsetX, y: p.y + p.drawOffsetY - 30, text: praise, color: "#fff", timer: 60, vx: (Math.random()-0.5)*0.5, vy: -0.5 - Math.random()*0.5 });
             });
 
-            // 3. 市場賺錢噴泉特效 (加入隨機 X/Y 偏移，形成金幣散開的效果)
+            // 3. 市場賺錢噴泉特效 (根據等級動態顯示金額)
             towers.forEach(t => {
                 if (t.id === 'market') {
+                    let bonusAmount = t.level * 50; // 動態計算該市場的實際加成
                     floatingTexts.push({ 
                         x: t.x * TILE_SIZE + TILE_SIZE/2 + (Math.random() * 10 - 5), 
                         y: t.y * TILE_SIZE - 10 + (Math.random() * 10 - 5), 
-                        text: "💰+50", 
+                        text: `💰+${bonusAmount}`, 
                         color: "#f1c40f", 
                         timer: 50 + Math.random() * 20, 
-                        vx: (Math.random() - 0.5) * 1.5, // 橫向散開
-                        vy: -0.8 - Math.random(),        // 向上彈出
+                        vx: (Math.random() - 0.5) * 1.5, 
+                        vy: -0.8 - Math.random(),        
                         font: 'bold 14px Arial'
                     });
                 }
@@ -1579,7 +1580,10 @@ update(targetEnemy) {
             return false;
         }
         
-        draw() {
+draw() {
+            // 【核心修正】：如果是安全撤退，強制覆蓋為「行走狀態(0)」，不播「死亡狀態(3)」
+            if (this.isRetreating) this.state = 0; 
+
             if (this.state === 0) this.frame = Math.floor(globalAnimTick / 10) % 5; 
             else if (this.state === 4) this.frame = Math.floor(globalAnimTick / 15) % 4; 
             else if (this.state === 1 || this.state === 2) { 
@@ -1596,9 +1600,12 @@ update(targetEnemy) {
 
             if (this.isDying) {
                 let deathProgress = 1 - (this.deathTimer / 45);
-                if (this.deathTimer % 6 < 3) ctx.globalAlpha = 0.3; 
-                else ctx.globalAlpha = 0.9;
-                cy -= deathProgress * 15; 
+                // 【核心修正】：只有真正的「戰死」才會閃爍和飄走
+                if (!this.isRetreating) {
+                    if (this.deathTimer % 6 < 3) ctx.globalAlpha = 0.3; 
+                    else ctx.globalAlpha = 0.9;
+                    cy -= deathProgress * 15; 
+                }
             }
 
             if (this.currentImg && this.currentImg.complete && !this.currentImg.isFailed && this.currentImg.naturalWidth > 0) {
@@ -1613,7 +1620,24 @@ update(targetEnemy) {
                 ctx.translate(cx, cy - 5 + yOffset);
                 if (this.facingLeft) { ctx.scale(-1, 1); }
                 
-                // 【核心修正】：使用 CSS 濾鏡 (Filter) 來製作白光剪影，徹底解決正方形問題！
+                // ============================================
+                // 【新增】：百頁簾由下至上消失特效 (安全撤退專用)
+                // ============================================
+                if (this.isDying && this.isRetreating) {
+                    let deathProgress = 1 - (this.deathTimer / 45);
+                    ctx.beginPath();
+                    let numBlinds = 8; // 將角色橫向切成 8 條百頁簾
+                    let blindH = drawHeight / numBlinds;
+                    for (let i = 0; i < numBlinds; i++) {
+                        // 讓底部的百頁簾優先開始消失 (delay 較小)
+                        let delay = (numBlinds - 1 - i) * 0.08; 
+                        let localProgress = Math.max(0, Math.min(1, (deathProgress - delay) * 2));
+                        // 畫出正在縮小的矩形遮罩
+                        ctx.rect(-drawWidth / 2, -drawHeight / 2 + i * blindH, drawWidth, blindH * (1 - localProgress));
+                    }
+                    ctx.clip(); // 啟動遮罩！範圍外的圖片會直接隱藏
+                }
+
                 if (this.isTransforming) {
                     let whiteIntensity = 0;
                     if (this.transformTimer > 45) {
@@ -1621,7 +1645,6 @@ update(targetEnemy) {
                     } else {
                         whiteIntensity = this.transformTimer / 45;
                     }
-                    // 將亮度推到極致 (最高 50 倍)，人物會完美變成純白剪影，且不影響透明背景
                     ctx.filter = `brightness(${1 + whiteIntensity * 50})`;
                 } else {
                     ctx.filter = 'none';
@@ -1629,7 +1652,7 @@ update(targetEnemy) {
 
                 ctx.drawImage(this.currentImg, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); 
                 
-                ctx.filter = 'none'; // 畫完後必須重置濾鏡
+                ctx.filter = 'none'; 
                 
             } else {
                 ctx.fillStyle = this.unitData.isGeneral ? '#fcf3cf' : 'white'; ctx.fillRect(cx - TILE_SIZE/2 + 2, cy - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
@@ -1639,7 +1662,6 @@ update(targetEnemy) {
             
             ctx.restore();
 
-            // 【修改】：根據角色體型 (currentScale) 動態推高血條，防止遮面
             if (!this.isDying && !this.isTransforming) {
                 let hpOffset = this.currentScale * 15; 
                 ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
@@ -1828,10 +1850,27 @@ update(targetEnemy) {
                     let bData = BUILDINGS[t.id];
                     if (bData.type === 'resource') {
                         let amount = bData.resAmount * t.level;
-                        if (bData.resType === 'meat') gameMeat += amount;
-                        if (bData.resType === 'wood') gameWood += amount;
-                        if (bData.resType === 'gold') gameGold += amount;
-                        if (bData.resType === 'stone') gameStone += amount;
+                        let resSymbol = '';
+                        let resColor = '#fff';
+
+                        // 判斷資源類型，給予對應的符號與顏色
+                        if (bData.resType === 'meat') { gameMeat += amount; resSymbol = '🍖'; resColor = '#e74c3c'; }
+                        if (bData.resType === 'wood') { gameWood += amount; resSymbol = '🪵'; resColor = '#e67e22'; }
+                        if (bData.resType === 'gold') { gameGold += amount; resSymbol = '💰'; resColor = '#f1c40f'; }
+                        if (bData.resType === 'stone') { gameStone += amount; resSymbol = '🪨'; resColor = '#95a5a6'; }
+                        
+                        // 加入資源生產的對白氣泡 (緩緩向上飄出)
+                        let sizeMult = bData.size || 1;
+                        floatingTexts.push({ 
+                            x: t.x * TILE_SIZE + (TILE_SIZE * sizeMult)/2 + (Math.random() * 10 - 5), 
+                            y: t.y * TILE_SIZE - 5 + (Math.random() * 10 - 5), 
+                            text: `${resSymbol}+${amount}`, 
+                            color: resColor, 
+                            timer: 40 + Math.random() * 20, 
+                            vx: (Math.random() - 0.5) * 0.5, 
+                            vy: -0.5 - Math.random() * 0.5,
+                            font: 'bold 12px Arial'
+                        });
                     }
                 });
                 updateResourcesUI();
