@@ -161,7 +161,8 @@
                     <button class="slot" style="font-size:11px; width:55px; background:#fff;" id="btn-b-tent" onclick="selectBuilding('tent')">🎪大帳<br>200木</button>
                 </div>
             </div>
-            <div class="camp-row">
+<!-- 【修改】：加入 id="barracks-ui-row" 及預設隱藏 -->
+            <div class="camp-row" id="barracks-ui-row" style="display: none;">
                 <span class="camp-label">⚔️ 兵營</span>
                 <button id="btn-buy-soldier" style="font-size:12px; background:#2ecc71; color:white; border:none; padding:5px; border-radius:5px; cursor:pointer;" onclick="buySoldier()">招募<br>50肉</button>
                 <div id="offense-camp" class="camp-slots" style="margin-left:5px;">
@@ -175,7 +176,7 @@
                 <button id="btn-deploy" onclick="deployOffense()">出擊<br>選定</button>
             </div>
             
-            <!-- 【新增】：預設隱藏將領介面 -->
+            <!-- 【修改】：加入預設隱藏 style="display: none;" -->
             <div class="camp-row" id="generals-deploy-container" style="display: none;">
                 <span class="camp-label">🔥 將領</span>
                 <div id="generals-camp" class="camp-slots">
@@ -342,6 +343,9 @@
     let gameOver = false, gameWon = false;
     let enemies = [], playerUnits = [], towers = [];
     let globalAnimTick = 0;
+    // 【新增】：對白氣泡陣列
+    let floatingTexts = []; 
+
     // 【新增】：控制雲影飄動的座標變數
     let cloudOffsetX = 0, cloudOffsetY = 0;
     // 用於控制兩隻兩隻出兵的排隊系統
@@ -471,6 +475,7 @@
         towers.length = 0;
         deployQueue.length = 0;
         ambientEffects.length = 0;
+        floatingTexts.length = 0; // 【新增】：返回主選單時清空氣泡
         if (typeof offenseCamp !== 'undefined') offenseCamp.fill(null);
 
         // 4. 重置雙方主堡 (血量恢復滿血)
@@ -561,13 +566,41 @@ function checkAnswer(selected) {
         if (gameOver || gameWon) return; 
         const feedback = document.getElementById('feedback');
         if (selected === currentAnswer) {
-            // 【新增】：計算市場加成 (每蓋一座或每升級一次多 50 金幣)
             let marketBonus = towers.filter(t => t.id === 'market').reduce((sum, t) => sum + (t.level * 50), 0);
             let earnedGold = 50 + marketBonus;
             
             gameGold += earnedGold; 
-            updateResourcesUI(); 
             
+            // 1. 主城回血特效
+            let healAmount = playerBase.maxHp * 0.15;
+            playerBase.hp = Math.min(playerBase.maxHp, playerBase.hp + healAmount);
+            floatingTexts.push({ x: playerBase.x * TILE_SIZE + TILE_SIZE/2, y: playerBase.y * TILE_SIZE - 20, text: "💖 +15% HP", color: "#2ecc71", timer: 60, vy: -0.8 });
+
+            // 2. 士兵讚賞 (隨機抽最多 3 隻士兵講嘢，防止重疊)
+            const praises = ["好叻呀！", "勁呀！", "太聰明啦！", "答得好！", "滿分！"];
+            let aliveUnits = playerUnits.filter(p => !p.isDying);
+            aliveUnits.sort(() => 0.5 - Math.random()).slice(0, 3).forEach(p => {
+                let praise = praises[Math.floor(Math.random() * praises.length)];
+                floatingTexts.push({ x: p.x + p.drawOffsetX, y: p.y + p.drawOffsetY - 30, text: praise, color: "#fff", timer: 60, vx: (Math.random()-0.5)*0.5, vy: -0.5 - Math.random()*0.5 });
+            });
+
+            // 3. 市場賺錢噴泉特效 (加入隨機 X/Y 偏移，形成金幣散開的效果)
+            towers.forEach(t => {
+                if (t.id === 'market') {
+                    floatingTexts.push({ 
+                        x: t.x * TILE_SIZE + TILE_SIZE/2 + (Math.random() * 10 - 5), 
+                        y: t.y * TILE_SIZE - 10 + (Math.random() * 10 - 5), 
+                        text: "💰+50", 
+                        color: "#f1c40f", 
+                        timer: 50 + Math.random() * 20, 
+                        vx: (Math.random() - 0.5) * 1.5, // 橫向散開
+                        vy: -0.8 - Math.random(),        // 向上彈出
+                        font: 'bold 14px Arial'
+                    });
+                }
+            });
+            
+            updateResourcesUI(); 
             let bonusText = marketBonus > 0 ? ` (包含市場加成 +${marketBonus})` : "";
             feedback.innerText = `✔️ 答對了！獲得 ${earnedGold} 金幣！${bonusText}`; 
             feedback.style.color = "#2ecc71"; 
@@ -973,72 +1006,81 @@ function checkAnswer(selected) {
             return;
         }
 
-        // 2. 建造模式 (優先判定)
+// 2. 建造模式 (優先判定)
         if (selectedBuilding) {
-            let bData = BUILDINGS[selectedBuilding];
-            let bSize = bData.size || 1;
+            // 【新增】：如果在建造模式點擊了現有建築或主堡，自動取消建造模式！
+            if (existingTower || (gx === 17 && gy === 17) || (gx === 2 && gy === 2)) {
+                selectedBuilding = null;
+                document.querySelectorAll('#build-menu .slot').forEach(btn => btn.style.borderColor = '#7f8c8d');
+                // 這裡不 return，讓程式繼續往下跑進入「選取與升級模式」打開選單
+            } else {
+                // 正常的起樓邏輯
+                let bData = BUILDINGS[selectedBuilding];
+                let bSize = bData.size || 1;
 
-            if (gx + bSize > 20 || gy + bSize > 20) { feedback.innerText = "⚠️ 建築範圍超出地圖邊界！"; feedback.style.color = "#e74c3c"; return; }
-            if (gy < 6) { feedback.innerText = "⚠️ 敵軍前線山地 (前 6 行) 無法進行建築！"; feedback.style.color = "#e74c3c"; return; }
+                if (gx + bSize > 20 || gy + bSize > 20) { feedback.innerText = "⚠️ 建築範圍超出地圖邊界！"; feedback.style.color = "#e74c3c"; return; }
+                if (gy < 6) { feedback.innerText = "⚠️ 敵軍前線山地 (前 6 行) 無法進行建築！"; feedback.style.color = "#e74c3c"; return; }
 
-            if (bData.id === 'gate') {
-                let existingGates = towers.filter(t => t.id === 'gate');
-                if (existingGates.length >= 3) { feedback.innerText = "⚠️ 整個地圖最多只能建造 3 座城門！"; feedback.style.color = "#e74c3c"; return; }
-                let tooClose = existingGates.some(g => Math.abs(g.x - gx) <= 2 && Math.abs(g.y - gy) <= 2);
-                if (tooClose) { feedback.innerText = "⚠️ 城門不能蓋在另一座城門的 2 格範圍內！"; feedback.style.color = "#e74c3c"; return; }
-                let inRing = enemyRing.some(p => p.x === gx && p.y === gy) || playerRing.some(p => p.x === gx && p.y === gy);
-                if (inRing) { feedback.innerText = "⚠️ 城門不能蓋在主堡陣地上！"; feedback.style.color = "#e74c3c"; return; }
-            }
-            if (bData.id === 'barracks' && towers.some(t => t.id === 'barracks')) { feedback.innerText = "⚠️ 軍營只可以起一個！"; feedback.style.color = "#e74c3c"; return; }
-            if (bData.id === 'tent' && towers.some(t => t.id === 'tent')) { feedback.innerText = "⚠️ 大帳只可以起一個！"; feedback.style.color = "#e74c3c"; return; }
-
-            let overlapPath = false;
-            let overlapBuilding = false;
-            for (let dx = 0; dx < bSize; dx++) {
-                for (let dy = 0; dy < bSize; dy++) {
-                    if (isPath(gx + dx, gy + dy)) overlapPath = true;
-                    if (getTowerAt(gx + dx, gy + dy)) overlapBuilding = true;
-                    if ((gx + dx === 17 && gy + dy === 17) || (gx + dx === 2 && gy + dy === 2)) overlapBuilding = true;
+                if (bData.id === 'gate') {
+                    let existingGates = towers.filter(t => t.id === 'gate');
+                    if (existingGates.length >= 3) { feedback.innerText = "⚠️ 整個地圖最多只能建造 3 座城門！"; feedback.style.color = "#e74c3c"; return; }
+                    let tooClose = existingGates.some(g => Math.abs(g.x - gx) <= 2 && Math.abs(g.y - gy) <= 2);
+                    if (tooClose) { feedback.innerText = "⚠️ 城門不能蓋在另一座城門的 2 格範圍內！"; feedback.style.color = "#e74c3c"; return; }
+                    let inRing = enemyRing.some(p => p.x === gx && p.y === gy) || playerRing.some(p => p.x === gx && p.y === gy);
+                    if (inRing) { feedback.innerText = "⚠️ 城門不能蓋在主堡陣地上！"; feedback.style.color = "#e74c3c"; return; }
                 }
-            }
+                if (bData.id === 'barracks' && towers.some(t => t.id === 'barracks')) { feedback.innerText = "⚠️ 軍營只可以起一個！"; feedback.style.color = "#e74c3c"; return; }
+                if (bData.id === 'tent' && towers.some(t => t.id === 'tent')) { feedback.innerText = "⚠️ 大帳只可以起一個！"; feedback.style.color = "#e74c3c"; return; }
 
-            if (bData.id === 'gate') { 
-                if (!isPath(gx, gy)) { feedback.innerText = "⚠️ 城門必須蓋在一般道路上！"; feedback.style.color = "#e74c3c"; return; } 
-            } else { 
-                if (overlapPath) { feedback.innerText = "⚠️ 建築的任何一角都不能蓋在道路上！"; feedback.style.color = "#e74c3c"; return; } 
-            }
-            if (overlapBuilding) { feedback.innerText = "⚠️ 這裡空間不足，已經有建築或主堡了！"; feedback.style.color = "#e74c3c"; return; }
-
-            let tc = pathCoords[pathCoords.length - 1]; 
-            let inRange = false;
-            for (let dx = 0; dx < bSize; dx++) {
-                for (let dy = 0; dy < bSize; dy++) {
-                    let cx = gx + dx, cy = gy + dy;
-                    if ((Math.abs(tc.x - cx) <= 3 && Math.abs(tc.y - cy) <= 3) || towers.some(t => Math.abs(t.x - cx) <= 3 && Math.abs(t.y - cy) <= 3)) {
-                        inRange = true; break;
+                let overlapPath = false; let overlapBuilding = false;
+                for (let dx = 0; dx < bSize; dx++) {
+                    for (let dy = 0; dy < bSize; dy++) {
+                        if (isPath(gx + dx, gy + dy)) overlapPath = true;
+                        if (getTowerAt(gx + dx, gy + dy)) overlapBuilding = true;
+                        if ((gx + dx === 17 && gy + dy === 17) || (gx + dx === 2 && gy + dy === 2)) overlapBuilding = true;
                     }
                 }
-                if (inRange) break;
-            }
-            if (!inRange) { feedback.innerText = "⚠️ 只能在我方建築或城鎮中心方圓 3 格內領地建造！"; feedback.style.color = "#e74c3c"; return; }
 
-            if (bData.costType === 'gold' && gameGold >= bData.cost) { gameGold -= bData.cost; } 
-            else if (bData.costType === 'wood' && gameWood >= bData.cost) { gameWood -= bData.cost; } 
-            else if (bData.costType === 'stone' && gameStone >= bData.cost) { gameStone -= bData.cost; } 
-            else { 
-                const resName = bData.costType === 'gold' ? '金幣' : (bData.costType === 'wood' ? '木材' : '石頭');
-                feedback.innerText = `⚠️ 資源不足！建造 ${bData.name} 需要 ${bData.cost} ${resName}！`; 
-                feedback.style.color = "#e74c3c"; return; 
+                if (bData.id === 'gate') { if (!isPath(gx, gy)) { feedback.innerText = "⚠️ 城門必須蓋在一般道路上！"; feedback.style.color = "#e74c3c"; return; } } 
+                else { if (overlapPath) { feedback.innerText = "⚠️ 建築的任何一角都不能蓋在道路上！"; feedback.style.color = "#e74c3c"; return; } }
+                if (overlapBuilding) { feedback.innerText = "⚠️ 這裡空間不足，已經有建築或主堡了！"; feedback.style.color = "#e74c3c"; return; }
+
+// 【修改】：精準領地判定 (主堡 3格範圍，普通建築 1格範圍)
+                let inRange = false;
+                for (let dx = 0; dx < bSize; dx++) {
+                    for (let dy = 0; dy < bSize; dy++) {
+                        let cx = gx + dx, cy = gy + dy;
+                        
+                        // 1. 檢查是否在主堡 3 格勢力範圍內 (以主堡 17,17 為絕對中心)
+                        if (Math.abs(playerBase.x - cx) <= 3 && Math.abs(playerBase.y - cy) <= 3) {
+                            inRange = true; break;
+                        }
+                        
+                        // 2. 檢查是否在現有建築 1 格範圍內
+                        if (towers.some(t => {
+                            let s = BUILDINGS[t.id].size || 1;
+                            return cx >= t.x - 1 && cx <= t.x + s && cy >= t.y - 1 && cy <= t.y + s;
+                        })) { 
+                            inRange = true; break; 
+                        }
+                    }
+                    if (inRange) break;
+                }
+                if (!inRange) { feedback.innerText = "⚠️ 只能在我方主堡(大範圍)或現有建築(1格)周圍建造！"; feedback.style.color = "#e74c3c"; return; }
+
+                if (bData.costType === 'gold' && gameGold >= bData.cost) { gameGold -= bData.cost; } 
+                else if (bData.costType === 'wood' && gameWood >= bData.cost) { gameWood -= bData.cost; } 
+                else if (bData.costType === 'stone' && gameStone >= bData.cost) { gameStone -= bData.cost; } 
+                else { 
+                    const resName = bData.costType === 'gold' ? '金幣' : (bData.costType === 'wood' ? '木材' : '石頭');
+                    feedback.innerText = `⚠️ 資源不足！需要 ${bData.cost} ${resName}！`; feedback.style.color = "#e74c3c"; return; 
+                }
+                
+                updateResourcesUI(); 
+                towers.push({ x: gx, y: gy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0, state: 0, frame: 0, dir: 0 });
+                feedback.innerText = `🏗️ 成功建造 ${bData.name}！可繼續點擊空地建造。`; feedback.style.color = "#2ecc71";
+                return; 
             }
-            
-            updateResourcesUI(); 
-            towers.push({ 
-                x: gx, y: gy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0,
-                state: 0, frame: 0, dir: 0 
-            });
-            feedback.innerText = `🏗️ 成功建造 ${bData.name}！可繼續點擊空地建造。`; 
-            feedback.style.color = "#2ecc71";
-            return; // 起樓完成，結束邏輯，不彈出升級 UI
         }
 
         // 3. 點擊選取與升級模式 (非建造、非拆除)
@@ -1930,36 +1972,38 @@ update(targetEnemy) {
         }
 
         // ============================================
-        // 【新增】：無縫藍色螢光興建範圍 (連續填充不現網格)
+        // 【修改】：無縫藍色螢光興建範圍 (修正偏位並適配主堡大範圍)
         // ============================================
         if (selectedBuilding && !isDeleteMode) {
             ctx.save();
-            ctx.fillStyle = 'rgba(52, 152, 219, 0.35)'; // 半透明科技藍
+            ctx.fillStyle = 'rgba(52, 152, 219, 0.35)'; 
             ctx.shadowColor = '#00a8ff';
-            ctx.shadowBlur = 20; // 整個範圍邊緣發出強烈螢光
+            ctx.shadowBlur = 20; 
             
             ctx.beginPath();
-            let tc = pathCoords[pathCoords.length - 1]; 
             for(let r=6; r<20; r++){
                 for(let c=0; c<20; c++){
                     let inRange = false;
-                    if (Math.abs(tc.x - c) <= 3 && Math.abs(tc.y - r) <= 3) inRange = true;
+                    
+                    // 1. 主堡 3 格範圍 (絕對置中於 17, 17)
+                    if (Math.abs(playerBase.x - c) <= 3 && Math.abs(playerBase.y - r) <= 3) inRange = true;
+                    
+                    // 2. 普通建築 1 格範圍
                     if (!inRange) {
                         inRange = towers.some(t => {
                             let s = BUILDINGS[t.id].size || 1;
-                            return c >= t.x - 3 && c <= t.x + s - 1 + 3 && r >= t.y - 3 && r <= t.y + s - 1 + 3;
+                            return c >= t.x - 1 && c <= t.x + s && r >= t.y - 1 && r <= t.y + s;
                         });
                     }
-                    // 只要是空地且在領地內，就加入路徑 (無縫融合)
                     let isEmpty = !isPath(c, r) && !getTowerAt(c, r) && !(c===17 && r===17) && !(c===2 && r===2);
                     if (inRange && isEmpty) {
                         ctx.rect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                     }
                 }
             }
-            ctx.fill(); // 一次過填滿，完全不會有一格格的邊線！
+            ctx.fill(); 
             ctx.restore();
-        }        
+        }
 
         // ============================================
         // 3. 處理部隊與建築大腦 (不在此畫圖)
@@ -2201,10 +2245,39 @@ update(targetEnemy) {
             ctx.fillRect(startX, startY, drawW, drawH); ctx.restore();
         }
 
-        // 7. 更新血量 UI
+        // ============================================
+        // 8. 【修改】：畫出動態對白氣泡 (支援飄動與噴泉物理效果)
+        // ============================================
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            let ft = floatingTexts[i];
+            ft.timer--;
+            
+            // 加入 X 同 Y 軸的物理飄動
+            ft.x += (ft.vx || 0);
+            ft.y += (ft.vy || -0.5); 
+            
+            if (ft.timer <= 0) {
+                floatingTexts.splice(i, 1);
+                continue;
+            }
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, ft.timer / 15); // 最後 15 幀慢慢變透明
+            ctx.fillStyle = ft.color || 'white';
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            // 允許市場使用更小更俐落的字體
+            ctx.font = ft.font || 'bold 16px Microsoft JhengHei';
+            ctx.textAlign = 'center';
+            
+            ctx.strokeText(ft.text, ft.x, ft.y);
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.restore();
+        }
+
+        // 7. 更新血量 UI (原有的代碼)
         document.getElementById('hp-display').innerText = Math.max(0, Math.floor(playerBase.hp));
         document.getElementById('enemy-hp-display').innerText = Math.max(0, Math.floor(enemyBase.hp));
-    }
+    } // gameLoop 結束的括號
 
     updateLobbyUI();
 </script>
