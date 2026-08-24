@@ -1760,24 +1760,26 @@ draw() {
         }
     }
 
-    // --- 遊戲主迴圈 (終極鎖幀與深度排序版) ---
+    // --- 遊戲主迴圈 ---
     function gameLoop(timestamp) {
-        // 【終極鎖幀魔法】：強制適應 120Hz/60Hz 螢幕，絕不加速！
+        // 1. 強制註冊下一幀
         window.animFrameId = requestAnimationFrame(gameLoop);
         
-        let now = performance.now();
-        window.lastFrameTime = window.lastFrameTime || now;
-        let elapsed = now - window.lastFrameTime;
+        // 2. 【物理鎖幀 3.0】：改用絕對真實時間 Date.now()，無視手機系統的刷新率作弊！
+        let now = Date.now();
+        if (!window._realLastTime) window._realLastTime = now;
+        let elapsed = now - window._realLastTime;
         
-        // 1000ms / 60fps ≈ 16.6ms。只要距離上次畫圖少過 16ms，就直接跳過，唔執行任何邏輯！
-        if (elapsed < 16) return; 
+        // 3. 容錯閘門：真實世界只要過得少於 15 毫秒 (即高於 60 FPS)，直接腰斬，唔准運算！
+        if (elapsed < 15) return; 
         
-        // 更新時間 (減去餘數，保持遊戲節奏平穩不卡頓)
-        window.lastFrameTime = now - (elapsed % 16);
+        // 4. 嚴格重置時間
+        window._realLastTime = now; 
 
-        // --- 以下保留原本的邏輯 ---
+        // --- 遊戲邏輯開始 ---
         ctx.clearRect(0, 0, 800, 800);
         globalAnimTick++;
+
         let isPlaying = !gameOver && !gameWon;
 
         // ============================================
