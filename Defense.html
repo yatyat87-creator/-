@@ -242,7 +242,7 @@
         
         // 防禦建築：建造與升級皆用石(stone)
         "tower": { id: "tower", name: "箭塔", symbol: "🏹", color: "#bdc3c7", type: "attack", dmg: 1.5, range: 2.5, spd: 1.2, costType: "stone", upgradeCostType: "stone", cost: 100, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/箭塔.png" }, 
-        "gate": { id: "gate", name: "城門", symbol: "⛩️", color: "#2c3e50", type: "wall", costType: "stone", upgradeCostType: "stone", cost: 100, hp: 1000, imgSrc: "城門4x4網址.png" }
+        "gate": { id: "gate", name: "城門", symbol: "⛩️", color: "#2c3e50", type: "wall", costType: "stone", upgradeCostType: "stone", cost: 100, hp: 1000, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Gate.png" }
     };
 
 // 【修改】：敵方也全面採用我方的參數架構 (攻速、走速、射程、大小設定與精靈圖)
@@ -726,11 +726,10 @@ window.startBattlePhase = function() {
                 playerBase.hp = Math.min(playerBase.maxHp, playerBase.hp + healAmount);
                 floatingTexts.push({ x: bx, y: by - 35, text: `💖 +${healPct}% HP`, color: "#2ecc71", timer: 60, vy: -1 });
 
-                // 2. 根據場上建築派發額外加成 (35 * 建築等級 * 倍數) - 大幅提高升級回報！
+                // 2. 根據場上建築派發額外加成 (10 * 建築等級 * 倍數)
                 towers.forEach(t => {
                     let bData = BUILDINGS[t.id];
-                    // 【核心修改】：將 10 改為 35，令升級建築變得極度抵玩！
-                    let amount = 35 * t.level * comboMultiplier;
+                    let amount = 10 * t.level * comboMultiplier;
                     let resSymbol = ''; let resColor = '#fff';
                     let valid = false;
                     
@@ -1136,8 +1135,24 @@ window.showUpgradeUI = function(name, level, costText) {
             return gx >= t.x && gx < t.x + s && gy >= t.y && gy < t.y + s;
         }); 
     }
+    
+    // 【新增】：智能判定城門方向 (根據周圍四格道路形狀)
+    function calculateGateDir(gx, gy) {
+        let hasTop = isPath(gx, gy - 1);
+        let hasBottom = isPath(gx, gy + 1);
+        let hasLeft = isPath(gx - 1, gy);
+        let hasRight = isPath(gx + 1, gy);
 
-    // 【核心點擊建造邏輯】
+        // 3) 彎路 (左上 或 右下) -> 第三橫行 (dir: 2)
+        if ((hasLeft && hasTop) || (hasRight && hasBottom)) return 2; 
+        // 4) 彎路 (右上 或 左下) -> 第四橫行 (dir: 3)
+        if ((hasRight && hasTop) || (hasLeft && hasBottom)) return 3; 
+        // 2) 橫路 (右至左) -> 第二橫行 (dir: 1)
+        if (hasLeft && hasRight) return 1; 
+        // 1) 預設為直路 (上至下) -> 第一橫行 (dir: 0)
+        return 0; 
+    }
+
     // 【核心點擊邏輯】：分離建造、拆除與選取升級
     canvas.addEventListener('click', (e) => {
         if (gameOver || gameWon) return;
@@ -1242,7 +1257,12 @@ window.showUpgradeUI = function(name, level, costText) {
                 }
                 
                 updateResourcesUI(); 
-                towers.push({ x: gx, y: gy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0, state: 0, frame: 0, dir: 0 });
+                
+                // 【修改】：如果建的是城門，呼叫智能函數決定方向
+                let newDir = 0;
+                if (bData.id === 'gate') newDir = calculateGateDir(gx, gy);
+                
+                towers.push({ x: gx, y: gy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0, state: 0, frame: 0, dir: newDir });
                 feedback.innerText = `🏗️ 成功建造 ${bData.name}！可繼續點擊空地建造。`; feedback.style.color = "#2ecc71";
                 return; 
             }
@@ -2212,20 +2232,6 @@ draw() {
                 e.isDying = true; 
                 e.state = 3; 
                 e.deathTimer = 45; 
-
-                // 【新增】：打倒敵人掉落資源！(按敵人等級與種類)
-                // 屍王/巨屍掉落 5 倍，黑天龍掉落 50 倍，普通怪 1 倍
-                let dropMult = (e.id === 'boss' || e.id === 'tank') ? 5 : (e.id === 'black_dragon' ? 50 : 1);
-                let dropGold = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
-                let dropMeat = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
-                
-                gameGold += dropGold;
-                gameMeat += dropMeat;
-                
-                // 顯示掉落氣泡 (隨機左右彈出)
-                floatingTexts.push({ x: e.x + (Math.random()*20-10), y: e.y - 15, text: `💰+${dropGold}`, color: "#f1c40f", timer: 50, vx: (Math.random()-0.5)*1.5, vy: -1.5, font: 'bold 12px Arial' });
-                floatingTexts.push({ x: e.x + (Math.random()*20-10), y: e.y + 15, text: `🍖+${dropMeat}`, color: "#e74c3c", timer: 50, vx: (Math.random()-0.5)*1.5, vy: -1.5, font: 'bold 12px Arial' });
-                updateResourcesUI();
                 
                 // 【新增】：如果死嘅係黑天龍，啟動 40 秒復活倒數
                 if (e.id === 'black_dragon') {
