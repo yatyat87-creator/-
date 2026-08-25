@@ -1431,6 +1431,10 @@ class Enemy {
                     return enemies.some(e => {
                         if (e === this || e.lane !== testLane || e.isDying || e.range > this.range + 10) return false;
                         if (this.pathIndex >= pathCoords.length && e.pathIndex >= pathCoords.length) return false;
+                        
+                        // 【新增】：如果自己行得快過前面隻怪（例如快屍快過巨屍），就直接爬頭穿過去！
+                        if (this.speed > e.speed) return false;
+
                         if (Math.hypot(e.x - this.x, e.y - this.y) < 24) { 
                             if (e.pathIndex > this.pathIndex) return true;
                             if (e.pathIndex === this.pathIndex) {
@@ -1716,7 +1720,12 @@ update(targetEnemy) {
                     return playerUnits.some(p => {
                         if (p === this || p.lane !== testLane || p.isDying || p.range > this.range + 10) return false;
                         if (this.pathIndex < 0 && p.pathIndex < 0) return false;
+                        
+                        // 【新增】：如果自己行得快過前面個隊友（例如騎兵快過步兵），就無視阻擋，直接爬頭穿過去！
+                        if (this.speed > p.speed) return false;
+
                         if (Math.hypot(p.x - this.x, p.y - this.y) < 24) { 
+
                             if (p.pathIndex < this.pathIndex) return true; 
                             if (p.pathIndex === this.pathIndex) {
                                 let myDist = Math.hypot(tx - this.x, ty - this.y), pDist = Math.hypot(tx - p.x, ty - p.y);
