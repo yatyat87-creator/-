@@ -726,10 +726,11 @@ window.startBattlePhase = function() {
                 playerBase.hp = Math.min(playerBase.maxHp, playerBase.hp + healAmount);
                 floatingTexts.push({ x: bx, y: by - 35, text: `💖 +${healPct}% HP`, color: "#2ecc71", timer: 60, vy: -1 });
 
-                // 2. 根據場上建築派發額外加成 (10 * 建築等級 * 倍數)
+                // 2. 根據場上建築派發額外加成 (35 * 建築等級 * 倍數) - 大幅提高升級回報！
                 towers.forEach(t => {
                     let bData = BUILDINGS[t.id];
-                    let amount = 10 * t.level * comboMultiplier;
+                    // 【核心修改】：將 10 改為 35，令升級建築變得極度抵玩！
+                    let amount = 35 * t.level * comboMultiplier;
                     let resSymbol = ''; let resColor = '#fff';
                     let valid = false;
                     
@@ -2211,6 +2212,20 @@ draw() {
                 e.isDying = true; 
                 e.state = 3; 
                 e.deathTimer = 45; 
+
+                // 【新增】：打倒敵人掉落資源！(按敵人等級與種類)
+                // 屍王/巨屍掉落 5 倍，黑天龍掉落 50 倍，普通怪 1 倍
+                let dropMult = (e.id === 'boss' || e.id === 'tank') ? 5 : (e.id === 'black_dragon' ? 50 : 1);
+                let dropGold = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
+                let dropMeat = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
+                
+                gameGold += dropGold;
+                gameMeat += dropMeat;
+                
+                // 顯示掉落氣泡 (隨機左右彈出)
+                floatingTexts.push({ x: e.x + (Math.random()*20-10), y: e.y - 15, text: `💰+${dropGold}`, color: "#f1c40f", timer: 50, vx: (Math.random()-0.5)*1.5, vy: -1.5, font: 'bold 12px Arial' });
+                floatingTexts.push({ x: e.x + (Math.random()*20-10), y: e.y + 15, text: `🍖+${dropMeat}`, color: "#e74c3c", timer: 50, vx: (Math.random()-0.5)*1.5, vy: -1.5, font: 'bold 12px Arial' });
+                updateResourcesUI();
                 
                 // 【新增】：如果死嘅係黑天龍，啟動 40 秒復活倒數
                 if (e.id === 'black_dragon') {
