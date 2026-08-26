@@ -281,7 +281,17 @@
             hasAoE: true,          // 【新增】：開啟範圍攻擊
             isTransformable: true  // 【新增】：開啟瀕死變身機制
         },
-        "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, moveSpd: 1.5, atkSpd: 1.0, hpMult: 2.5, drawScale: 1.8, desc: "進攻：戰神降臨", ultChance: 0.30, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布5x5.png" }
+        "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, moveSpd: 1.5, atkSpd: 1.0, hpMult: 2.5, drawScale: 1.8, desc: "進攻：戰神降臨", ultChance: 0.30, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布5x5.png" },
+        
+        // 【新增】：未來戰士（機甲）將領
+        "g5": { 
+            id: "g5", name: "未來上將", symbol: "甲", color: "#6b8e23", price: 200, isGeneral: true, 
+            dmg: 3.5, range: 4.5, moveSpd: 0.8, atkSpd: 0.5, hpMult: 3, drawScale: 1.8, 
+            desc: "遠程：飛彈攻擊，爆炸範圍傷害", 
+            ultChance: 0,         // 不使用原本的大絕，飛彈設定為普攻自帶範圍
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/未來戰士.png", // <--- 請替換為你上傳的 未來戰士.jpg 連結
+            hasAoE: true          // 開啟範圍攻擊
+        }
     };
     
     // 【新增】：讓敵軍也載入精靈圖
@@ -343,10 +353,13 @@
     let ambientEffects = []; // 存放畫面上所有的環境物件
 
     let combatEffects = []; // 【新增】：用來存放畫面上的爆炸特效
+    let projectiles = []; // 【新增】：用來存放飛行中的飛彈
     const EFFECT_IMGS = {
-        aoe_normal: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png"),     // 一般範圍攻擊 (紅圈特效)
-        aoe_transformed: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png") // 變身後範圍攻擊 (金圈特效)
-    };   
+        aoe_normal: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png"),     
+        aoe_transformed: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png"), 
+        // 【新增】：飛彈爆炸特效圖片
+        aoe_missile: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Missle exposion.png") // 如果你沒有這張圖，可以先用 aoe_normal 的連結代替
+    };
    
     // 【新增】：靜態環境裝飾物設定 (預留 imgSrc 供日後填入 PNG 網址)
     const DECORATION_TYPES = {
@@ -1768,24 +1781,35 @@ update(targetEnemy) {
                 this.state = this.isUlt ? 2 : 1; 
                 this.facingLeft = (enemyBase.x * TILE_SIZE + TILE_SIZE/2) < this.x;
                 
-                let attackProgress = 1 - (this.cooldown / this.fireRate);
+let attackProgress = 1 - (this.cooldown / this.fireRate);
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
                     let finalDamage = this.isUlt ? this.damage * 2.5 : this.damage;
-                    enemyBase.hp -= finalDamage; 
                     this.hasDealtDamage = true;
                     
-                    if (this.unitData.hasAoE) {
-                        let aoeRadius = this.isTransformed ? 120 : 60; 
-                        let impactX = enemyBase.x * TILE_SIZE + TILE_SIZE/2;
-                        let impactY = enemyBase.y * TILE_SIZE + TILE_SIZE/2;
-                        enemies.forEach(e => {
-                            if (Math.hypot(e.x - impactX, e.y - impactY) <= aoeRadius) e.hp -= finalDamage;
+                    let impactX = enemyBase.x * TILE_SIZE + TILE_SIZE/2;
+                    let impactY = enemyBase.y * TILE_SIZE + TILE_SIZE/2;
+
+                    if (this.id === 'g5') {
+                        // 【新增】：機甲專屬，發射飛彈
+                        projectiles.push({
+                            x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 10,
+                            tx: impactX, ty: impactY,
+                            damage: finalDamage, aoeRadius: 80, speed: 12, type: 'missile'
                         });
-                        combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, isTransformed: this.isTransformed });
                     } else {
-                        ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
-                        ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                        ctx.lineTo(enemyBase.x * TILE_SIZE + TILE_SIZE/2, enemyBase.y * TILE_SIZE + TILE_SIZE/2); ctx.stroke();
+                        // 一般武將即時傷害
+                        enemyBase.hp -= finalDamage; 
+                        if (this.unitData.hasAoE) {
+                            let aoeRadius = this.isTransformed ? 120 : 60; 
+                            enemies.forEach(e => {
+                                if (Math.hypot(e.x - impactX, e.y - impactY) <= aoeRadius) e.hp -= finalDamage;
+                            });
+                            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, isTransformed: this.isTransformed });
+                        } else {
+                            ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                            ctx.lineTo(impactX, impactY); ctx.stroke();
+                        }
                     }
                 }
                 return false;
@@ -1804,26 +1828,37 @@ update(targetEnemy) {
                 this.state = this.isUlt ? 2 : 1;
                 this.facingLeft = targetEnemy.x < this.x;
                 
-                let attackProgress = 1 - (this.cooldown / this.fireRate);
+let attackProgress = 1 - (this.cooldown / this.fireRate);
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
                     let finalDamage = this.isUlt ? this.damage * 2.5 : this.damage;
-                    targetEnemy.hp -= finalDamage; 
                     this.hasDealtDamage = true;
                     
-                    if (this.unitData.hasAoE) {
-                        let aoeRadius = this.isTransformed ? 120 : 60; 
-                        let impactX = targetEnemy.x + targetEnemy.drawOffsetX;
-                        let impactY = targetEnemy.y + targetEnemy.drawOffsetY;
-                        enemies.forEach(e => {
-                            if (e !== targetEnemy && Math.hypot((e.x + e.drawOffsetX) - impactX, (e.y + e.drawOffsetY) - impactY) <= aoeRadius) {
-                                e.hp -= finalDamage;
-                            }
+                    let impactX = targetEnemy.x + targetEnemy.drawOffsetX;
+                    let impactY = targetEnemy.y + targetEnemy.drawOffsetY;
+
+                    if (this.id === 'g5') {
+                        // 【新增】：機甲專屬，發射飛彈
+                        projectiles.push({
+                            x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 10,
+                            tx: impactX, ty: impactY,
+                            damage: finalDamage, aoeRadius: 80, speed: 12, type: 'missile'
                         });
-                        combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, isTransformed: this.isTransformed });
                     } else {
-                        ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
-                        ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                        ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                        // 一般武將即時傷害
+                        targetEnemy.hp -= finalDamage; 
+                        if (this.unitData.hasAoE) {
+                            let aoeRadius = this.isTransformed ? 120 : 60; 
+                            enemies.forEach(e => {
+                                if (e !== targetEnemy && Math.hypot((e.x + e.drawOffsetX) - impactX, (e.y + e.drawOffsetY) - impactY) <= aoeRadius) {
+                                    e.hp -= finalDamage;
+                                }
+                            });
+                            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, type: this.isTransformed ? 'transformed' : 'normal', isTransformed: this.isTransformed });
+                        } else {
+                            ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                            ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                        }
                     }
                 }
             } else {
@@ -2141,6 +2176,8 @@ draw() {
                             });
                         } else if (gId === 'g2') { shouldDeploy = (playerUnits.filter(p => p.id === 'b6' && !p.isDying).length >= 4); } 
                           else if (gId === 'g4') { shouldDeploy = enemies.some(e => (e.id === 'boss' || e.id === 'black_dragon') && !e.isDying); }
+                          // 【新增】：g5 (未來上將) 的出陣條件：場上盾兵 (b5) 達到 4 個或以上
+                          else if (gId === 'g5') { shouldDeploy = (playerUnits.filter(p => p.id === 'b5' && !p.isDying).length >= 4); }
 
                         if (shouldDeploy) {
                             g.isDeployed = true;
@@ -2598,6 +2635,53 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
         renderList.sort((a, b) => a.y - b.y).forEach(item => item.draw());
         
         // ============================================
+        // 【新增】：處理飛行中的飛彈 (Projectiles)
+        // ============================================
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            let p = projectiles[i];
+            let dx = p.tx - p.x;
+            let dy = p.ty - p.y;
+            let dist = Math.hypot(dx, dy);
+
+            if (dist < p.speed) {
+                // 1. 命中目標！造成範圍傷害
+                enemies.forEach(e => {
+                    if (Math.hypot((e.x + e.drawOffsetX) - p.tx, (e.y + e.drawOffsetY) - p.ty) <= p.aoeRadius) {
+                        e.hp -= p.damage;
+                    }
+                });
+                // 順便判定有沒有炸到敵方主堡
+                if (Math.hypot((enemyBase.x*TILE_SIZE+TILE_SIZE/2) - p.tx, (enemyBase.y*TILE_SIZE+TILE_SIZE/2) - p.ty) <= p.aoeRadius) {
+                    enemyBase.hp -= p.damage;
+                }
+                
+                // 2. 產生爆炸特效 (此處會觸發你在第 4 步改好的飛彈爆炸圖)
+                combatEffects.push({ x: p.tx, y: p.ty, radius: p.aoeRadius, timer: 30, type: p.type });
+                projectiles.splice(i, 1);
+            } else {
+                // 3. 飛彈尚未抵達，繼續移動
+                p.x += (dx / dist) * p.speed;
+                p.y += (dy / dist) * p.speed;
+                
+                // 4. 畫出飛彈 (自動旋轉朝向目標，帶隨機尾焰)
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate(Math.atan2(dy, dx));
+                
+                // 畫出銀色彈體與紅色彈頭
+                ctx.fillStyle = '#bdc3c7';
+                ctx.beginPath(); ctx.roundRect(-10, -4, 20, 8, 4); ctx.fill();
+                ctx.fillStyle = '#c0392b';
+                ctx.beginPath(); ctx.arc(10, 0, 4, -Math.PI/2, Math.PI/2); ctx.fill();
+                
+                // 畫出推進尾焰 (動態跳動)
+                ctx.fillStyle = '#f39c12';
+                ctx.beginPath(); ctx.moveTo(-10, -3); ctx.lineTo(-10 - (Math.random()*15 + 5), 0); ctx.lineTo(-10, 3); ctx.fill();
+                ctx.restore();
+            }
+        }
+        
+        // ============================================
         // 5. 畫戰鬥特效 (無色界神力 / AoE 爆炸)
         // ============================================
         for (let i = combatEffects.length - 1; i >= 0; i--) {
@@ -2624,19 +2708,36 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 continue; 
             }
             
-            // 一般 AoE 爆炸
-            let img = eff.isTransformed ? EFFECT_IMGS.aoe_transformed : EFFECT_IMGS.aoe_normal;
+            // 一般 AoE 爆炸與飛彈爆炸
+            let effType = eff.type || 'normal';
+            let img = (effType === 'missile') ? EFFECT_IMGS.aoe_missile : 
+                      ((effType === 'transformed') ? EFFECT_IMGS.aoe_transformed : EFFECT_IMGS.aoe_normal);
+                      
             if (img && img.complete && !img.isFailed && img.naturalWidth > 0) {
                 let fw = img.naturalWidth / 4; let fh = img.naturalHeight;
-                let frame = Math.floor((20 - eff.timer) / 5); if (frame > 3) frame = 3;
+                let sx = 0; let sy = 0; let frame = 0;
+                
+                // 根據特效類型處理動畫
+                if (effType === 'missile') {
+                    // 假設飛彈爆炸是 5 幀 (5x1)
+                    frame = Math.floor((30 - eff.timer) / 6); if (frame > 4) frame = 4;
+                    fw = img.naturalWidth / 5; fh = img.naturalHeight;
+                    sx = frame * fw; sy = 0; 
+                } else {
+                    // 原有如來的 4 幀動畫
+                    fw = img.naturalWidth / 4; fh = img.naturalHeight;
+                    frame = Math.floor((20 - eff.timer) / 5); if (frame > 3) frame = 3;
+                    sx = frame * fw; sy = 0; 
+                }
+                
                 let drawSize = eff.radius * 2.5; 
                 ctx.save();
                 ctx.globalCompositeOperation = 'screen'; 
-                ctx.drawImage(img, frame * fw, 0, fw, fh, eff.x - drawSize/2, eff.y - drawSize/2, drawSize, drawSize);
+                ctx.drawImage(img, sx, sy, fw, fh, eff.x - drawSize/2, eff.y - drawSize/2, drawSize, drawSize);
                 ctx.restore();
             } else {
                 ctx.beginPath(); ctx.arc(eff.x, eff.y, eff.radius, 0, Math.PI * 2);
-                ctx.fillStyle = eff.isTransformed ? 'rgba(241, 196, 15, 0.3)' : 'rgba(231, 76, 60, 0.3)';
+                ctx.fillStyle = eff.isTransformed ? 'rgba(241, 196, 15, 0.3)' : (effType === 'missile' ? 'rgba(255, 165, 0, 0.4)' : 'rgba(231, 76, 60, 0.3)');
                 ctx.fill();
             }
         }
