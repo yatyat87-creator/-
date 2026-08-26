@@ -1187,6 +1187,7 @@ window.showUpgradeUI = function(name, level, costText) {
 
     // 【核心點擊邏輯】：分離建造、拆除與選取升級
     // 【新增】：智能判定建造是否合法的統一函數
+    // 【新增】：智能判定建造是否合法的統一函數
     function validatePlacement(tx, ty, bData, towerToIgnore) {
         let bSize = bData.size || 1;
         if (tx < 0 || ty < 0 || tx + bSize > 20 || ty + bSize > 20) return "⚠️ 建築範圍超出邊界！";
@@ -1198,6 +1199,15 @@ window.showUpgradeUI = function(name, level, costText) {
             if (existingGates.some(g => Math.abs(g.x - tx) <= 2 && Math.abs(g.y - ty) <= 2)) return "⚠️ 城門不能蓋在另一座城門 2 格內！";
             if (enemyRing.some(p => p.x === tx && p.y === ty) || playerRing.some(p => p.x === tx && p.y === ty)) return "⚠️ 城門不能蓋在主堡陣地上！";
             if (!isPath(tx, ty)) return "⚠️ 城門必須蓋在一般道路上！";
+        }
+
+        if (bData.id === 'barracks') {
+            let existingBarracks = towers.filter(t => t.id === 'barracks' && t !== towerToIgnore);
+            if (existingBarracks.length >= 1) return "⚠️ 軍營只可以起一個！";
+        }
+        if (bData.id === 'tent') {
+            let existingTents = towers.filter(t => t.id === 'tent' && t !== towerToIgnore);
+            if (existingTents.length >= 1) return "⚠️ 大帳只可以起一個！";
         }
 
         let overlapPath = false; let overlapBuilding = false;
@@ -1212,23 +1222,75 @@ window.showUpgradeUI = function(name, level, costText) {
         if (bData.id !== 'gate' && overlapPath) return "⚠️ 不能蓋在道路上！";
         if (overlapBuilding) return "⚠️ 空間不足，已有建築或主堡！";
 
-        let inRange = false;
-        for (let dx = 0; dx < bSize; dx++) {
-            for (let dy = 0; dy < bSize; dy++) {
-                let cx = tx + dx, cy = ty + dy;
-                if (Math.abs(playerBase.x - cx) <= 3 && Math.abs(playerBase.y - cy) <= 3) { inRange = true; break; }
-                if (towers.some(t => {
-                    if (t === towerToIgnore) return false;
-                    let s = BUILDINGS[t.id].size || 1;
-                    return cx >= t.x - 1 && cx <= t.x + s && cy >= t.y - 1 && cy <= t.y + s;
-                })) { inRange = true; break; }
+        // ==========================================
+        // 【核心修復】：全建築連通性檢查 (BFS)
+        // 確保所有建築必須形成一個整體，並連接著主堡，防止「過河拆橋 / 左腳踩右腳」Bug！
+        // ==========================================
+        let tempTowers = towers.filter(t => t !== towerToIgnore);
+        tempTowers.push({ x: tx, y: ty, id: bData.id });
+
+        let connected = new Set();
+        let queue = [];
+
+        // 判定建築是否碰到主堡陣地 (3格範圍)
+        let isNearBase = (x, y, size) => {
+            for (let dx = 0; dx < size; dx++) {
+                for (let dy = 0; dy < size; dy++) {
+                    let cx = x + dx, cy = y + dy;
+                    if (Math.abs(playerBase.x - cx) <= 3 && Math.abs(playerBase.y - cy) <= 3) return true;
+                }
             }
-            if (inRange) break;
+            return false;
+        };
+
+        // 判定兩棟建築是否相鄰 (包含對角線)
+        let isNearTower = (t1, t2) => {
+            let s1 = BUILDINGS[t1.id].size || 1;
+            let s2 = BUILDINGS[t2.id].size || 1;
+            for(let dx1 = 0; dx1 < s1; dx1++) {
+                for(let dy1 = 0; dy1 < s1; dy1++) {
+                    let cx1 = t1.x + dx1, cy1 = t1.y + dy1;
+                    for(let dx2 = 0; dx2 < s2; dx2++) {
+                        for(let dy2 = 0; dy2 < s2; dy2++) {
+                            let cx2 = t2.x + dx2, cy2 = t2.y + dy2;
+                            if (Math.abs(cx1 - cx2) <= 1 && Math.abs(cy1 - cy2) <= 1) return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+
+        // 1. 找出所有直接連住主城的建築，作為網絡起點
+        for(let i = 0; i < tempTowers.length; i++) {
+            let t = tempTowers[i];
+            let s = BUILDINGS[t.id].size || 1;
+            if (isNearBase(t.x, t.y, s)) {
+                connected.add(i);
+                queue.push(i);
+            }
         }
-        if (!inRange) return "⚠️ 只能在我方主堡(大範圍)或現有建築(1格)周圍建造！";
+
+        // 2. 擴散檢查：將所有互相連住的建築加入網絡
+        while(queue.length > 0) {
+            let currIdx = queue.shift();
+            let currT = tempTowers[currIdx];
+            for(let i = 0; i < tempTowers.length; i++) {
+                if (!connected.has(i) && isNearTower(currT, tempTowers[i])) {
+                    connected.add(i);
+                    queue.push(i);
+                }
+            }
+        }
+
+        // 3. 判斷是否所有建築都在連通網內
+        if (connected.size !== tempTowers.length) {
+            return "⚠️ 建築必須連接著主城陣地，不可斷開或孤立！";
+        }
         
         return null; // 代表完全合法無錯誤
     }
+
 
     // 【核心點擊建造邏輯：整合智能 2x2 對齊與移動模式】
     canvas.addEventListener('click', (e) => {
