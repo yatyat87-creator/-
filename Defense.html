@@ -358,7 +358,9 @@
         aoe_normal: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png"),     
         aoe_transformed: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png"), 
         // 【新增】：飛彈爆炸特效圖片
-        aoe_missile: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Missle exposion.png") // 如果你沒有這張圖，可以先用 aoe_normal 的連結代替
+        aoe_missile: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Missle exposion.png"), // 如果你沒有這張圖，可以先用 aoe_normal 的連結代替
+        // 【新增】：飛彈飛行中的本體圖片
+        missile_body: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Flying Misscle.png") // <--- 替換為你的去背飛彈 PNG 連結
     };
    
     // 【新增】：靜態環境裝飾物設定 (預留 imgSrc 供日後填入 PNG 網址)
@@ -2663,20 +2665,23 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 p.x += (dx / dist) * p.speed;
                 p.y += (dy / dist) * p.speed;
                 
-                // 4. 畫出飛彈 (自動旋轉朝向目標，帶隨機尾焰)
+                // 4. 畫出飛彈圖片 (自動旋轉朝向目標)
                 ctx.save();
                 ctx.translate(p.x, p.y);
                 ctx.rotate(Math.atan2(dy, dx));
                 
-                // 畫出銀色彈體與紅色彈頭
-                ctx.fillStyle = '#bdc3c7';
-                ctx.beginPath(); ctx.roundRect(-10, -4, 20, 8, 4); ctx.fill();
-                ctx.fillStyle = '#c0392b';
-                ctx.beginPath(); ctx.arc(10, 0, 4, -Math.PI/2, Math.PI/2); ctx.fill();
-                
-                // 畫出推進尾焰 (動態跳動)
-                ctx.fillStyle = '#f39c12';
-                ctx.beginPath(); ctx.moveTo(-10, -3); ctx.lineTo(-10 - (Math.random()*15 + 5), 0); ctx.lineTo(-10, 3); ctx.fill();
+                let mImg = EFFECT_IMGS.missile_body;
+                if (mImg && mImg.complete && !mImg.isFailed && mImg.naturalWidth > 0) {
+                    // 根據你的圖片比例調整顯示大小，這裡預設為 30x15
+                    let drawW = 30;
+                    let drawH = 15; 
+                    // 將圖片中心點對齊
+                    ctx.drawImage(mImg, -drawW/2, -drawH/2, drawW, drawH);
+                } else {
+                    // 如果圖片未載入，顯示一個簡單的預設白點
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI*2); ctx.fill();
+                }
                 ctx.restore();
             }
         }
