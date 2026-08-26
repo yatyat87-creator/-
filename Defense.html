@@ -155,11 +155,14 @@
                     <div id="question" style="font-size: 36px; font-weight: bold; margin-bottom: 25px; color: #f1c40f;">題目加載中...</div>
                     <div class="options-grid" id="options-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;"></div>
                     
-                    <!-- 【核心修復】：乾淨的 Feedback 區 -->
-                    <div id="feedback" style="font-size: 18px; margin-top: 20px; font-weight: bold; height: 25px;">請選擇正確答案！</div>
+                    <!-- 【修改】：改名為 quiz-feedback，專門俾答題用 -->
+                    <div id="quiz-feedback" style="font-size: 18px; margin-top: 20px; font-weight: bold; height: 25px;">請選擇正確答案！</div>
                 </div>
             </div>
-        </div>        
+        </div>
+        <!-- 【新增】：主遊戲專用提示訊息區，確保起樓同戰鬥時一定睇到！ -->
+        <div id="feedback" style="font-size: 16px; font-weight: bold; text-align: center; margin: 10px 0; height: 20px; color: #f1c40f;">請先完成答題賺取資源！</div>
+
         <div id="camps-container">
             <!-- 【新增】：移動建築按鈕 -->
             <button id="btn-move" onclick="toggleMoveMode()" style="margin-bottom: 8px; width: 100%; background: #3498db; color: white; border: none; padding: 6px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s;">🔄 移動模式: 關閉</button>
@@ -682,7 +685,8 @@ window.startBattlePhase = function() {
 
     function checkAnswer(selected) {
         if (gameOver || gameWon) return; 
-        const feedback = document.getElementById('feedback');
+        // 【修改】：答題邏輯現在指向專屬的 quiz-feedback
+        const feedback = document.getElementById('quiz-feedback');
         
         // 防止連點，暫時鎖定所有選項按鈕
         let options = document.querySelectorAll('.option-btn');
