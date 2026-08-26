@@ -243,7 +243,7 @@
         "tent": { id: "tent", name: "大帳", symbol: "🎪", color: "#8e44ad", type: "military", costType: "gold", upgradeCostType: "gold", cost: 200, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/大帳.png" },
         
         // 防禦建築：建造與升級皆用石(stone)
-        "tower": { id: "tower", name: "箭塔", symbol: "🏹", color: "#bdc3c7", type: "attack", dmg: 1.5, range: 2.5, spd: 1.2, costType: "wood", upgradeCostType: "stone", cost: 100, hp: 800, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/箭塔.png" }, 
+        "tower": { id: "tower", name: "箭塔", symbol: "🏹", color: "#bdc3c7", type: "attack", dmg: 1.5, range: 2.5, spd: 1.2, costType: "stone", upgradeCostType: "stone", cost: 100, hp: 800, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/箭塔.png" }, 
         "gate": { id: "gate", name: "城門", symbol: "⛩️", color: "#2c3e50", type: "wall", costType: "stone", upgradeCostType: "stone", cost: 100, hp: 1000, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Gate.png" }
     };
 
@@ -2195,14 +2195,17 @@ draw() {
                     }
                     feedback.style.color = "#e74c3c";
                 }
-            } else if (enemies.length === 0 && !gameOver && !gameWon) {
+            } else if (enemies.length === 0 && waveEnemiesToSpawn <= 0 && !gameOver && !gameWon) {
                 // 【時間到 且 畫面再無敵人】：戰鬥階段真正結束，士兵撤退回兵營
                 document.getElementById('timer-display').innerText = "⏱️ 戰鬥勝利！";
-                                // 【新增】：戰鬥後建築物自動修復並滿血！
+                
+                // 戰鬥後建築物自動修復並滿血！
                 towers.forEach(t => {
                     if (t.maxHp > 0) { t.hp = t.maxHp; t.isDestroyed = false; }
                 });
-
+                
+                let refundedMeat = 0; // 記錄退回的肉量
+                
                 playerUnits.forEach(p => {
                     if (p.isDying) return;
                     if (p.unitData.isGeneral) {
@@ -2211,18 +2214,30 @@ draw() {
                         let emptyIdx = offenseCamp.indexOf(null);
                         if (emptyIdx !== -1) {
                             offenseCamp[emptyIdx] = { id: p.id, level: p.level }; 
+                        } else {
+                            // 【新增】：兵營無位，多餘士兵解散，變回 50 肉
+                            refundedMeat += 50;
                         }
                     }
                 });
+                
+                // 顯示退兵回饋
+                if (refundedMeat > 0) {
+                    gameMeat += refundedMeat;
+                    let bx = playerBase.x * TILE_SIZE + TILE_SIZE / 2;
+                    let by = playerBase.y * TILE_SIZE - 20;
+                    floatingTexts.push({ x: bx, y: by, text: `🍖退兵 +${refundedMeat}`, color: "#e74c3c", timer: 90, vx: 0, vy: -1, font: 'bold 16px Arial' });
+                }
                 
                 playerUnits = []; 
                 deployQueue = []; 
                 updateCampsUI();  
                 updateGeneralsUI();
+                updateResourcesUI(); // 更新介面數字
                 
                 currentWave++;
                 startQuizPhase();
-                return; 
+                return;
             } else if (window.battleTimeRemaining <= 0) {
                 // 時間到，但畫面上仲有怪，提示玩家清怪
                 document.getElementById('timer-display').innerText = "⏱️ 清理殘軍中...";
@@ -2360,6 +2375,20 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 e.isDying = true; 
                 e.state = 3; 
                 e.deathTimer = 45; 
+
+                // 【修復】：打倒敵人掉落資源！(按敵人等級與種類)
+                // 屍王/巨屍掉落 5 倍，黑天龍掉落 50 倍，普通怪 1 倍
+                let dropMult = (e.id === 'boss' || e.id === 'tank') ? 5 : (e.id === 'black_dragon' ? 50 : 1);
+                let dropGold = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
+                let dropMeat = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
+                
+                gameGold += dropGold;
+                gameMeat += dropMeat;
+                
+                // 顯示掉落氣泡 (隨機左右彈出)
+                floatingTexts.push({ x: e.x + (Math.random()*20-10), y: e.y - 15, text: `💰+${dropGold}`, color: "#f1c40f", timer: 50, vx: (Math.random()-0.5)*1.5, vy: -1.5, font: 'bold 12px Arial' });
+                floatingTexts.push({ x: e.x + (Math.random()*20-10), y: e.y + 15, text: `🍖+${dropMeat}`, color: "#e74c3c", timer: 50, vx: (Math.random()-0.5)*1.5, vy: -1.5, font: 'bold 12px Arial' });
+                updateResourcesUI();
                 
                 // 【新增】：如果死嘅係黑天龍，啟動 40 秒復活倒數
                 if (e.id === 'black_dragon') {
