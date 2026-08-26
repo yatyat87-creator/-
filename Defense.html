@@ -161,6 +161,8 @@
             </div>
         </div>        
         <div id="camps-container">
+            <!-- 【新增】：移動建築按鈕 -->
+            <button id="btn-move" onclick="toggleMoveMode()" style="margin-bottom: 8px; width: 100%; background: #3498db; color: white; border: none; padding: 6px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s;">🔄 移動模式: 關閉</button>
             <!-- 【新增】：加回拆除按鈕 -->
             <button id="btn-delete" onclick="toggleDeleteMode()" style="margin-bottom: 8px; width: 100%; background: #7f8c8d; color: white; border: none; padding: 6px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s;">🛠️ 拆除模式: 關閉</button>
             
@@ -241,7 +243,7 @@
         "tent": { id: "tent", name: "大帳", symbol: "🎪", color: "#8e44ad", type: "military", costType: "gold", upgradeCostType: "gold", cost: 200, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/大帳.png" },
         
         // 防禦建築：建造與升級皆用石(stone)
-        "tower": { id: "tower", name: "箭塔", symbol: "🏹", color: "#bdc3c7", type: "attack", dmg: 1.5, range: 2.5, spd: 1.2, costType: "stone", upgradeCostType: "stone", cost: 100, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/箭塔.png" }, 
+        "tower": { id: "tower", name: "箭塔", symbol: "🏹", color: "#bdc3c7", type: "attack", dmg: 1.5, range: 2.5, spd: 1.2, costType: "wood", upgradeCostType: "stone", cost: 100, hp: 800, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/箭塔.png" }, 
         "gate": { id: "gate", name: "城門", symbol: "⛩️", color: "#2c3e50", type: "wall", costType: "stone", upgradeCostType: "stone", cost: 100, hp: 1000, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Gate.png" }
     };
 
@@ -768,12 +770,41 @@ window.startBattlePhase = function() {
     }
 
     // --- 建造與兵營操作 ---
-    function toggleDeleteMode() {
+    // --- 建造、移動與兵營操作 ---
+    let buildingToMove = null;
+    let isMoveMode = false;
+
+    window.toggleMoveMode = function() {
+        isMoveMode = !isMoveMode; 
+        isDeleteMode = false; // 互斥
+        document.getElementById('btn-delete').style.background = "#7f8c8d";
+        document.getElementById('btn-delete').innerText = "🛠️ 拆除模式: 關閉";
+        
+        const btn = document.getElementById('btn-move');
+        if(isMoveMode) { 
+            btn.style.background = "#2980b9"; 
+            btn.innerText = "🔄 移動模式: 開啟 (選取建築 -> 點擊空地)"; 
+            selectedBuilding = null; 
+            buildingToMove = null;
+            document.querySelectorAll('#build-menu .slot').forEach(btn => btn.style.borderColor = '#7f8c8d');
+        } else { 
+            btn.style.background = "#3498db"; 
+            btn.innerText = "🔄 移動模式: 關閉"; 
+            buildingToMove = null;
+        }
+    }
+
+    window.toggleDeleteMode = function() {
         isDeleteMode = !isDeleteMode; 
+        isMoveMode = false; // 互斥
+        document.getElementById('btn-move').style.background = "#3498db";
+        document.getElementById('btn-move').innerText = "🔄 移動模式: 關閉";
+        buildingToMove = null;
+
         const btn = document.getElementById('btn-delete');
         if(isDeleteMode) { 
             btn.style.background = "#e74c3c"; 
-            btn.innerText = "🛠️ 拆除模式: 開啟 (點擊地圖建築即可拆除)"; 
+            btn.innerText = "🛠️ 拆除模式: 開啟 (點擊建築即可拆除)"; 
             selectedBuilding = null; 
             document.querySelectorAll('#build-menu .slot').forEach(btn => btn.style.borderColor = '#7f8c8d');
         } else { 
@@ -781,6 +812,7 @@ window.startBattlePhase = function() {
             btn.innerText = "🛠️ 拆除模式: 關閉"; 
         }
     }
+
 
 
     function selectBuilding(bId) {
@@ -1154,6 +1186,51 @@ window.showUpgradeUI = function(name, level, costText) {
     }
 
     // 【核心點擊邏輯】：分離建造、拆除與選取升級
+    // 【新增】：智能判定建造是否合法的統一函數
+    function validatePlacement(tx, ty, bData, towerToIgnore) {
+        let bSize = bData.size || 1;
+        if (tx < 0 || ty < 0 || tx + bSize > 20 || ty + bSize > 20) return "⚠️ 建築範圍超出邊界！";
+        if (ty < 6) return "⚠️ 敵軍前線無法進行建築！";
+
+        if (bData.id === 'gate') {
+            let existingGates = towers.filter(t => t.id === 'gate' && t !== towerToIgnore);
+            if (!towerToIgnore && existingGates.length >= 3) return "⚠️ 最多只能建造 3 座城門！";
+            if (existingGates.some(g => Math.abs(g.x - tx) <= 2 && Math.abs(g.y - ty) <= 2)) return "⚠️ 城門不能蓋在另一座城門 2 格內！";
+            if (enemyRing.some(p => p.x === tx && p.y === ty) || playerRing.some(p => p.x === tx && p.y === ty)) return "⚠️ 城門不能蓋在主堡陣地上！";
+            if (!isPath(tx, ty)) return "⚠️ 城門必須蓋在一般道路上！";
+        }
+
+        let overlapPath = false; let overlapBuilding = false;
+        for (let dx = 0; dx < bSize; dx++) {
+            for (let dy = 0; dy < bSize; dy++) {
+                if (isPath(tx + dx, ty + dy)) overlapPath = true;
+                let tAt = getTowerAt(tx + dx, ty + dy);
+                if (tAt && tAt !== towerToIgnore) overlapBuilding = true;
+                if ((tx + dx === 17 && ty + dy === 17) || (tx + dx === 2 && ty + dy === 2)) overlapBuilding = true;
+            }
+        }
+        if (bData.id !== 'gate' && overlapPath) return "⚠️ 不能蓋在道路上！";
+        if (overlapBuilding) return "⚠️ 空間不足，已有建築或主堡！";
+
+        let inRange = false;
+        for (let dx = 0; dx < bSize; dx++) {
+            for (let dy = 0; dy < bSize; dy++) {
+                let cx = tx + dx, cy = ty + dy;
+                if (Math.abs(playerBase.x - cx) <= 3 && Math.abs(playerBase.y - cy) <= 3) { inRange = true; break; }
+                if (towers.some(t => {
+                    if (t === towerToIgnore) return false;
+                    let s = BUILDINGS[t.id].size || 1;
+                    return cx >= t.x - 1 && cx <= t.x + s && cy >= t.y - 1 && cy <= t.y + s;
+                })) { inRange = true; break; }
+            }
+            if (inRange) break;
+        }
+        if (!inRange) return "⚠️ 只能在我方主堡(大範圍)或現有建築(1格)周圍建造！";
+        
+        return null; // 代表完全合法無錯誤
+    }
+
+    // 【核心點擊建造邏輯：整合智能 2x2 對齊與移動模式】
     canvas.addEventListener('click', (e) => {
         if (gameOver || gameWon) return;
         const rect = canvas.getBoundingClientRect(); if (rect.width === 0) return; 
@@ -1180,73 +1257,62 @@ window.showUpgradeUI = function(name, level, costText) {
             if (gx === 17 && gy === 17) { feedback.innerText = "⚠️ 城鎮中心無法拆除！"; feedback.style.color = "#e74c3c"; return; }
             if (existingTower) { 
                 towers = towers.filter(t => t !== existingTower); 
-                feedback.innerText = "🗑️ 成功拆除建築物！"; 
-                feedback.style.color = "#e74c3c";
+                feedback.innerText = "🗑️ 成功拆除建築物！"; feedback.style.color = "#e74c3c";
             } 
             return;
         }
 
-// 2. 建造模式 (優先判定)
+        // 2. 移動模式
+        if (isMoveMode) {
+            if (gx === 17 && gy === 17) { feedback.innerText = "⚠️ 城鎮中心無法移動！"; feedback.style.color = "#e74c3c"; return; }
+            if (gx === 2 && gy === 2) return;
+
+            if (!buildingToMove) {
+                if (existingTower) {
+                    buildingToMove = existingTower;
+                    feedback.innerText = `🔄 已拿起【${BUILDINGS[existingTower.id].name}】，請點擊藍色範圍內的空地放置！`;
+                    feedback.style.color = "#3498db";
+                }
+            } else {
+                if (existingTower === buildingToMove) { buildingToMove = null; feedback.innerText = "🔄 取消移動。"; feedback.style.color = "#fff"; return; }
+                let bData = BUILDINGS[buildingToMove.id];
+                let bSize = bData.size || 1;
+                // 【智能 2x2 對齊】：如果係 2x2 建築，自動測試周圍 4 個偏移位，玩家求其撳中邊格都得！
+                let offsets = bSize === 2 ? [{x:0, y:0}, {x:-1, y:0}, {x:0, y:-1}, {x:-1, y:-1}] : [{x:0, y:0}];
+                
+                let bestGx = -1, bestGy = -1; let lastError = "⚠️ 無法在此處放置！";
+                for(let off of offsets) {
+                    let err = validatePlacement(gx + off.x, gy + off.y, bData, buildingToMove);
+                    if (!err) { bestGx = gx + off.x; bestGy = gy + off.y; break; }
+                    lastError = err;
+                }
+                if (bestGx === -1) { feedback.innerText = lastError; feedback.style.color = "#e74c3c"; return; }
+
+                if (bData.id === 'gate') buildingToMove.dir = calculateGateDir(bestGx, bestGy);
+                buildingToMove.x = bestGx; buildingToMove.y = bestGy; buildingToMove = null;
+                feedback.innerText = `✔️ 成功移動 ${bData.name}！`; feedback.style.color = "#2ecc71";
+            }
+            return;
+        }
+
+        // 3. 建造模式
         if (selectedBuilding) {
-            // 【新增】：如果在建造模式點擊了現有建築或主堡，自動取消建造模式！
             if (existingTower || (gx === 17 && gy === 17) || (gx === 2 && gy === 2)) {
                 selectedBuilding = null;
                 document.querySelectorAll('#build-menu .slot').forEach(btn => btn.style.borderColor = '#7f8c8d');
-                // 這裡不 return，讓程式繼續往下跑進入「選取與升級模式」打開選單
             } else {
-                // 正常的起樓邏輯
                 let bData = BUILDINGS[selectedBuilding];
                 let bSize = bData.size || 1;
-
-                if (gx + bSize > 20 || gy + bSize > 20) { feedback.innerText = "⚠️ 建築範圍超出地圖邊界！"; feedback.style.color = "#e74c3c"; return; }
-                if (gy < 6) { feedback.innerText = "⚠️ 敵軍前線山地 (前 6 行) 無法進行建築！"; feedback.style.color = "#e74c3c"; return; }
-
-                if (bData.id === 'gate') {
-                    let existingGates = towers.filter(t => t.id === 'gate');
-                    if (existingGates.length >= 3) { feedback.innerText = "⚠️ 整個地圖最多只能建造 3 座城門！"; feedback.style.color = "#e74c3c"; return; }
-                    let tooClose = existingGates.some(g => Math.abs(g.x - gx) <= 2 && Math.abs(g.y - gy) <= 2);
-                    if (tooClose) { feedback.innerText = "⚠️ 城門不能蓋在另一座城門的 2 格範圍內！"; feedback.style.color = "#e74c3c"; return; }
-                    let inRing = enemyRing.some(p => p.x === gx && p.y === gy) || playerRing.some(p => p.x === gx && p.y === gy);
-                    if (inRing) { feedback.innerText = "⚠️ 城門不能蓋在主堡陣地上！"; feedback.style.color = "#e74c3c"; return; }
+                // 【智能 2x2 對齊】：容錯機制發動！
+                let offsets = bSize === 2 ? [{x:0, y:0}, {x:-1, y:0}, {x:0, y:-1}, {x:-1, y:-1}] : [{x:0, y:0}];
+                
+                let bestGx = -1, bestGy = -1; let lastError = "⚠️ 無法在此處建造！";
+                for(let off of offsets) {
+                    let err = validatePlacement(gx + off.x, gy + off.y, bData, null);
+                    if (!err) { bestGx = gx + off.x; bestGy = gy + off.y; break; }
+                    lastError = err;
                 }
-                if (bData.id === 'barracks' && towers.some(t => t.id === 'barracks')) { feedback.innerText = "⚠️ 軍營只可以起一個！"; feedback.style.color = "#e74c3c"; return; }
-                if (bData.id === 'tent' && towers.some(t => t.id === 'tent')) { feedback.innerText = "⚠️ 大帳只可以起一個！"; feedback.style.color = "#e74c3c"; return; }
-
-                let overlapPath = false; let overlapBuilding = false;
-                for (let dx = 0; dx < bSize; dx++) {
-                    for (let dy = 0; dy < bSize; dy++) {
-                        if (isPath(gx + dx, gy + dy)) overlapPath = true;
-                        if (getTowerAt(gx + dx, gy + dy)) overlapBuilding = true;
-                        if ((gx + dx === 17 && gy + dy === 17) || (gx + dx === 2 && gy + dy === 2)) overlapBuilding = true;
-                    }
-                }
-
-                if (bData.id === 'gate') { if (!isPath(gx, gy)) { feedback.innerText = "⚠️ 城門必須蓋在一般道路上！"; feedback.style.color = "#e74c3c"; return; } } 
-                else { if (overlapPath) { feedback.innerText = "⚠️ 建築的任何一角都不能蓋在道路上！"; feedback.style.color = "#e74c3c"; return; } }
-                if (overlapBuilding) { feedback.innerText = "⚠️ 這裡空間不足，已經有建築或主堡了！"; feedback.style.color = "#e74c3c"; return; }
-
-// 【修改】：精準領地判定 (主堡 3格範圍，普通建築 1格範圍)
-                let inRange = false;
-                for (let dx = 0; dx < bSize; dx++) {
-                    for (let dy = 0; dy < bSize; dy++) {
-                        let cx = gx + dx, cy = gy + dy;
-                        
-                        // 1. 檢查是否在主堡 3 格勢力範圍內 (以主堡 17,17 為絕對中心)
-                        if (Math.abs(playerBase.x - cx) <= 3 && Math.abs(playerBase.y - cy) <= 3) {
-                            inRange = true; break;
-                        }
-                        
-                        // 2. 檢查是否在現有建築 1 格範圍內
-                        if (towers.some(t => {
-                            let s = BUILDINGS[t.id].size || 1;
-                            return cx >= t.x - 1 && cx <= t.x + s && cy >= t.y - 1 && cy <= t.y + s;
-                        })) { 
-                            inRange = true; break; 
-                        }
-                    }
-                    if (inRange) break;
-                }
-                if (!inRange) { feedback.innerText = "⚠️ 只能在我方主堡(大範圍)或現有建築(1格)周圍建造！"; feedback.style.color = "#e74c3c"; return; }
+                if (bestGx === -1) { feedback.innerText = lastError; feedback.style.color = "#e74c3c"; return; }
 
                 if (bData.costType === 'gold' && gameGold >= bData.cost) { gameGold -= bData.cost; } 
                 else if (bData.costType === 'wood' && gameWood >= bData.cost) { gameWood -= bData.cost; } 
@@ -1255,38 +1321,25 @@ window.showUpgradeUI = function(name, level, costText) {
                     const resName = bData.costType === 'gold' ? '金幣' : (bData.costType === 'wood' ? '木材' : '石頭');
                     feedback.innerText = `⚠️ 資源不足！需要 ${bData.cost} ${resName}！`; feedback.style.color = "#e74c3c"; return; 
                 }
-                
                 updateResourcesUI(); 
-                
-                // 【修改】：如果建的是城門，呼叫智能函數決定方向
-                let newDir = 0;
-                if (bData.id === 'gate') newDir = calculateGateDir(gx, gy);
-                
-                towers.push({ x: gx, y: gy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0, state: 0, frame: 0, dir: newDir });
+                let newDir = bData.id === 'gate' ? calculateGateDir(bestGx, bestGy) : 0;
+                towers.push({ x: bestGx, y: bestGy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0, state: 0, frame: 0, dir: newDir });
                 feedback.innerText = `🏗️ 成功建造 ${bData.name}！可繼續點擊空地建造。`; feedback.style.color = "#2ecc71";
                 return; 
             }
         }
 
-        // 3. 點擊選取與升級模式 (非建造、非拆除)
+        // 4. 點擊選取與升級模式
         if (gx === 2 && gy === 2) { feedback.innerText = "⚠️ 這是敵方城鎮中心！"; feedback.style.color = "#e74c3c"; return; }
-
         if (gx === 17 && gy === 17) {
-            currentSelectedTarget = playerBase;
-            currentSelectedType = 'base';
-            showUpgradeUI('城鎮中心', playerBase.level, 300 * playerBase.level);
-            return;
+            currentSelectedTarget = playerBase; currentSelectedType = 'base';
+            showUpgradeUI('城鎮中心', playerBase.level, `${300 * playerBase.level}金`); return;
         }
-
         if (existingTower) {
-            currentSelectedTarget = existingTower;
-            currentSelectedType = 'tower';
+            currentSelectedTarget = existingTower; currentSelectedType = 'tower';
             let bData = BUILDINGS[existingTower.id];
-            
-            // 【核心修復】：判斷該建築升級所需資源，並加上「金/木/石」字眼
             let resUnit = bData.upgradeCostType === 'gold' ? '金' : (bData.upgradeCostType === 'wood' ? '木' : '石');
             showUpgradeUI(bData.name, existingTower.level, `${50 * existingTower.level}${resUnit}`);
-
             if (existingTower.id === 'barracks' && barracksUI) barracksUI.style.display = 'flex';
             if (existingTower.id === 'tent' && generalsUI) generalsUI.style.display = 'flex';
         }
@@ -2083,7 +2136,11 @@ draw() {
             } else if (enemies.length === 0 && !gameOver && !gameWon) {
                 // 【時間到 且 畫面再無敵人】：戰鬥階段真正結束，士兵撤退回兵營
                 document.getElementById('timer-display').innerText = "⏱️ 戰鬥勝利！";
-                
+                                // 【新增】：戰鬥後建築物自動修復並滿血！
+                towers.forEach(t => {
+                    if (t.maxHp > 0) { t.hp = t.maxHp; t.isDestroyed = false; }
+                });
+
                 playerUnits.forEach(p => {
                     if (p.isDying) return;
                     if (p.unitData.isGeneral) {
@@ -2199,7 +2256,7 @@ draw() {
         // ============================================
         // 【修改】：無縫藍色螢光興建範圍 (修正偏位並適配主堡大範圍)
         // ============================================
-        if (selectedBuilding && !isDeleteMode) {
+if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove) && !isDeleteMode) {
             ctx.save();
             ctx.fillStyle = 'rgba(52, 152, 219, 0.35)'; 
             ctx.shadowColor = '#00a8ff';
@@ -2321,40 +2378,45 @@ draw() {
             }
         }
 
-        // 防禦塔與城門更新
+        // 防禦塔與城門更新 (包含損毀邏輯)
         towers.forEach(tower => {
             const cx = tower.x * TILE_SIZE, cy = tower.y * TILE_SIZE;
             let bData = BUILDINGS[tower.id];
-            if (isPlaying && bData.type === 'attack') {
-                const range = 60 + (bData.range * 30) + (tower.level * 10);
-                const damage = 10 * bData.dmg * tower.level;
-                const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
-                if (tower.cooldown > 0) {
-                    tower.cooldown--; tower.state = (tower.cooldown > fireRate - 15) ? 1 : 0; 
-                } else {
-                    const target = enemies.find(e => !e.isDying && Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
-                    if (target) {
-                        target.hp -= damage; tower.cooldown = fireRate; tower.state = 1; tower.facingLeft = target.x < cx + TILE_SIZE / 2;
-                        // 畫箭塔攻擊線條
-                        ctx.strokeStyle = bData.color; ctx.lineWidth = 3;
-                        ctx.beginPath(); ctx.moveTo(cx + TILE_SIZE / 2, cy + TILE_SIZE / 2); ctx.lineTo(target.x, target.y); ctx.stroke();
-                    } else { tower.state = 0; }
-                }
+
+            // 檢查損毀狀態
+            if (tower.maxHp > 0 && tower.hp <= 0 && !tower.isDestroyed) {
+                tower.isDestroyed = true;
+                combatEffects.push({ x: cx + TILE_SIZE/2, y: cy + TILE_SIZE/2, radius: 40, timer: 30 }); 
+                let feedback = document.getElementById('feedback');
+                feedback.innerText = `⚠️ 我方【${bData.name}】被毀！戰後將自動修復！`; feedback.style.color = "#e74c3c";
             }
-            if (tower.id === 'gate' && isPlaying) {
-                let sizeMult = bData.size || 1;
-                let centerX = cx + (TILE_SIZE * sizeMult)/2;
-                let centerY = cy + (TILE_SIZE * sizeMult)/2;
-                let allyNear = playerUnits.some(p => !p.isDying && Math.hypot(p.x - centerX, p.y - centerY) < 60);
-                if (globalAnimTick % 5 === 0) { tower.frame = allyNear ? Math.min(3, tower.frame + 1) : Math.max(0, tower.frame - 1); }
+
+            if (!tower.isDestroyed) {
+                if (isPlaying && bData.type === 'attack') {
+                    const range = 60 + (bData.range * 30) + (tower.level * 10);
+                    const damage = 10 * bData.dmg * tower.level;
+                    const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
+                    if (tower.cooldown > 0) { tower.cooldown--; tower.state = (tower.cooldown > fireRate - 15) ? 1 : 0; } 
+                    else {
+                        const target = enemies.find(e => !e.isDying && Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
+                        if (target) {
+                            target.hp -= damage; tower.cooldown = fireRate; tower.state = 1; tower.facingLeft = target.x < cx + TILE_SIZE / 2;
+                            ctx.strokeStyle = bData.color; ctx.lineWidth = 3;
+                            ctx.beginPath(); ctx.moveTo(cx + TILE_SIZE / 2, cy + TILE_SIZE / 2); ctx.lineTo(target.x, target.y); ctx.stroke();
+                        } else { tower.state = 0; }
+                    }
+                }
+                if (tower.id === 'gate' && isPlaying) {
+                    let sizeMult = bData.size || 1;
+                    let centerX = cx + (TILE_SIZE * sizeMult)/2; let centerY = cy + (TILE_SIZE * sizeMult)/2;
+                    let allyNear = playerUnits.some(p => !p.isDying && Math.hypot(p.x - centerX, p.y - centerY) < 60);
+                    if (globalAnimTick % 5 === 0) { tower.frame = allyNear ? Math.min(3, tower.frame + 1) : Math.max(0, tower.frame - 1); }
+                }
             }
         });
 
-        // ============================================
-        // 4. 【核心 Z-Index】：所有物件深度排序並畫出
-        // ============================================
+        // 畫圖排列
         let renderList = [];
-        
         enemies.forEach(e => renderList.push({ y: e.y + e.drawOffsetY, draw: () => e.draw() }));
         playerUnits.forEach(p => renderList.push({ y: p.y + p.drawOffsetY, draw: () => p.draw() }));
         
@@ -2388,6 +2450,11 @@ draw() {
             
             renderList.push({ y: drawY, draw: () => {
                 const cx = tower.x * TILE_SIZE, cy = tower.y * TILE_SIZE;
+                ctx.save();
+                
+                // 損毀狀態變灰
+                if (tower.isDestroyed) ctx.filter = 'grayscale(100%) brightness(0.5)';
+
                 if (bData.img && bData.img.complete && !bData.img.isFailed && bData.img.naturalWidth > 0) {
                     let cols = 4, rows = 1, sx = 0, sy = 0;
                     if (tower.id === 'gate') { cols = 4; rows = 4; sx = tower.frame * (bData.img.naturalWidth / cols); sy = tower.dir * (bData.img.naturalHeight / rows); } 
@@ -2397,23 +2464,40 @@ draw() {
                     let fw = bData.img.naturalWidth / cols, fh = bData.img.naturalHeight / rows;
                     let drawScale = 1.3, drawWidth = TILE_SIZE * drawScale * sizeMult, aspectRatio = fh / fw, drawHeight = drawWidth * aspectRatio;
                     
-                    ctx.save();
                     let centerX = cx + (TILE_SIZE * sizeMult) / 2, centerY = cy + TILE_SIZE * sizeMult - drawHeight / 2 - 5;
                     ctx.translate(centerX, centerY);
                     if (tower.id === 'tower' && tower.facingLeft) ctx.scale(-1, 1);
                     ctx.drawImage(bData.img, sx, sy, fw, fh, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-                    ctx.restore();
                 } else {
                     ctx.fillStyle = bData.color; ctx.fillRect(cx + 2, cy + 2, (TILE_SIZE * sizeMult) - 4, (TILE_SIZE * sizeMult) - 4);
                     ctx.fillStyle = 'white'; ctx.font = '22px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(bData.symbol, cx + (TILE_SIZE * sizeMult) / 2, cy + (TILE_SIZE * sizeMult) / 2);
                 }
-                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+tower.level, cx + (TILE_SIZE * sizeMult)/2, cy + (TILE_SIZE * sizeMult) - 5);
-                if (tower.id === 'gate') {
-                    ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE, 4); 
-                    ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx, cy - 8, TILE_SIZE * (tower.hp / tower.maxHp), 4);
+                ctx.restore();
+
+                // 畫血條與狀態
+                if (tower.maxHp > 0) {
+                    if (!tower.isDestroyed) {
+                        ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE * sizeMult, 4); 
+                        ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx, cy - 8, (TILE_SIZE * sizeMult) * (tower.hp / tower.maxHp), 4);
+                    } else {
+                        ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center';
+                        ctx.fillText('❌ 損毀', cx + (TILE_SIZE * sizeMult)/2, cy + (TILE_SIZE * sizeMult)/2);
+                    }
+                }
+                
+                // 畫移動選取框
+                if (typeof buildingToMove !== 'undefined' && tower === buildingToMove) {
+                    ctx.strokeStyle = '#3498db'; ctx.lineWidth = 4;
+                    ctx.strokeRect(cx, cy, TILE_SIZE * sizeMult, TILE_SIZE * sizeMult);
+                }
+                
+                if (!tower.isDestroyed) {
+                    ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; 
+                    ctx.fillText('Lv'+tower.level, cx + (TILE_SIZE * sizeMult)/2, cy + (TILE_SIZE * sizeMult) - 5);
                 }
             }});
         });
+
 
         // 執行深度排序畫圖
         renderList.sort((a, b) => a.y - b.y).forEach(item => item.draw());
