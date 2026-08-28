@@ -111,7 +111,7 @@
         <div class="gold-display">💰 金幣: <span id="gold-count">0</span></div>
         <div class="section-title">🌟 選擇難度 (決定敵軍最高強度與等級差)</div>
         <div style="display:flex; justify-content:center; gap:15px; margin-bottom:15px; font-weight:bold; font-size:14px;">
-            <label><input type="radio" name="difficulty" value="15" data-offset="2" checked> 🟢 簡單 (上限Lv.15, 敵方-2級)</label>
+            <label><input type="radio" name="difficulty" value="15" data-offset="1" checked> 🟢 簡單 (上限Lv.15, 敵方-2級)</label>
             <label><input type="radio" name="difficulty" value="30" data-offset="1"> 🟡 普通 (上限Lv.30, 敵方-1級)</label>
             <label><input type="radio" name="difficulty" value="50" data-offset="0"> 🔴 困難 (上限Lv.50, 同等級)</label>
         </div>
@@ -1165,6 +1165,36 @@ window.showUpgradeUI = function(name, level, costText) {
                 updateResourcesUI(); 
                 feedback.innerText = `✨ ${bData.name}升級為 Lv.${currentSelectedTarget.level}！`; feedback.style.color = "#f1c40f";
                 showUpgradeUI(bData.name, currentSelectedTarget.level, `${50 * currentSelectedTarget.level}${resUnit}`);
+
+                // ==========================================
+                // 【新增】：即時更新難度邏輯 (不需等下一波)
+                // ==========================================
+                if (currentSelectedTarget.id === 'barracks' || currentSelectedTarget.id === 'tent') {
+                    let barracksLvl = 1, tentLvl = 1;
+                    let bList = towers.filter(t => t.id === 'barracks');
+                    let tList = towers.filter(t => t.id === 'tent');
+                    if (bList.length > 0) barracksLvl = Math.max(...bList.map(t => t.level));
+                    if (tList.length > 0) tentLvl = Math.max(...tList.map(t => t.level));
+                    
+                    // 重新計算平均等級並套用難度偏移
+                    let avgLevel = Math.floor((barracksLvl + tentLvl) / 2);
+                    difficultyLevel = Math.max(1, Math.min(maxDifficultyLevel, avgLevel - (window.diffOffset || 0)));
+                    
+                    let newLevel = Math.floor(difficultyLevel);
+                    
+                    // 如果目前是戰鬥階段，即時更新 UI 標籤與敵軍主堡強度
+                    if (gamePhase === 2) {
+                        document.getElementById('wave-display').innerText = `強度: Lv.${newLevel} (第${currentWave}波)`;
+                        if (newLevel > enemyBase.level) {
+                            enemyBase.level = newLevel;
+                            enemyBase.maxHp = 2000 + (enemyBase.level - 1) * 1000;
+                            enemyBase.hp = enemyBase.maxHp; 
+                            enemyBase.damage = 20 + (enemyBase.level - 1) * 10;
+                        }
+                    }
+                }
+                // ==========================================
+
             } else {
                 feedback.innerText = `⚠️ 升級需要 ${cost} ${resName}！資源不足。`; feedback.style.color = "#e74c3c";
             }
@@ -1511,25 +1541,23 @@ class Enemy {
         }
 
         // ==========================================
-        // 【新增】：狂王羅侯專屬刀氣大絕
-        // 功能：生成一個穿透性刀氣，攻擊玩家主堡
+        // 【修改】：狂王羅侯專屬刀氣 (支援普攻與大絕)
         // ==========================================
-        triggerRahuSlashWave() {
+        triggerRahuSlashWave(targetX, targetY) {
             if (!this.unitData.isSlashWaveable) return;
             
-            let dx = (playerBase.x * TILE_SIZE + TILE_SIZE/2) - this.x;
-            let dy = (playerBase.y * TILE_SIZE + TILE_SIZE/2) - this.y;
-            let dist = Math.hypot(dx, dy);
-            
-            // 羅侯的刀氣傷害為 dmg * 2.5
+            // 普攻正常傷害，大絕 2.5 倍傷害
             let finalDmg = this.isUlt ? this.damage * 2.5 : this.damage;
             
-            // 生成一個 SlashWave 實體，攻擊主堡
-            slashWaves.push(new SlashWave(finalDmg, this.x, this.y, (playerBase.x * TILE_SIZE + TILE_SIZE/2), (playerBase.y * TILE_SIZE + TILE_SIZE/2), 'slash', this.isUlt));
+            // 生成刀氣並朝向目標 X, Y 飛行
+            slashWaves.push(new SlashWave(finalDmg, this.x, this.y, targetX, targetY, 'slash', this.isUlt));
             
-            let feedback = document.getElementById('feedback');
-            feedback.innerText = `⚔️ 狂王羅侯發動大絕：【狂王伏魔劍】！強大刀氣殺向主城！`;
-            feedback.style.color = "#ff3333"; // 紅色
+            // 只有觸發大絕時，才顯示紅字警告 (避免普攻狂洗畫面)
+            if (this.isUlt) {
+                let feedback = document.getElementById('feedback');
+                feedback.innerText = `⚔️ 狂王羅侯發動大絕：【狂王伏魔劍】！強大刀氣橫掃戰場！`;
+                feedback.style.color = "#ff3333"; 
+            }
         }
 
         update(targetPlayer) {
@@ -1586,7 +1614,10 @@ class Enemy {
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
                     this.hasDealtDamage = true;
                     if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
-                    else if (this.id === 'rahu' && this.isUlt) { this.triggerRahuSlashWave(); } // 【新增】：整合羅侯刀氣大絕
+                    // 【修改】：拿掉 && this.isUlt，讓羅侯普攻也射刀氣，並傳入主堡座標
+                    else if (this.id === 'rahu') { 
+                        this.triggerRahuSlashWave(playerBase.x * TILE_SIZE + TILE_SIZE/2, playerBase.y * TILE_SIZE + TILE_SIZE/2); 
+                    } 
                     else {
                         playerBase.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
                         ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
@@ -1611,6 +1642,10 @@ class Enemy {
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
                     this.hasDealtDamage = true;
                     if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
+                    // 【修改】：拿掉 && this.isUlt，並傳入鎖定的目標部隊座標
+                    else if (this.id === 'rahu') { 
+                        this.triggerRahuSlashWave(targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); 
+                    } 
                     else {
                         targetPlayer.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
                         ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
@@ -2183,71 +2218,79 @@ draw() {
     // 【新增】：狂王羅侯專屬穿透性刀氣類別 (SlashWave)
     // 功能：飛行時對路徑上所有玩家實體造成穿透性傷害
     // ==========================================
+// ==========================================
+    // 【修改】：狂王羅侯專屬穿透性刀氣類別 (SlashWave)
+    // 功能：沿著發射角度飛出畫面外，沿途擊中所有物體各一次
+    // ==========================================
     class SlashWave {
         constructor(dmg, x, y, tx, ty, type, isRahuUlting) {
-            this.x = x; this.y = y; this.tx = tx; this.ty = ty;
-            this.dmg = dmg; this.speed = 10; this.type = type; // 速度快過飛彈
-            this.frame = 0; this.animOffset = Math.floor(Math.random() * 60); // 隨機幀偏移
+            this.x = x; this.y = y; 
+            this.dmg = dmg; this.speed = 12; this.type = type; 
+            this.frame = 0; this.animOffset = Math.floor(Math.random() * 60); 
             
-            this.facingLeft = tx < x;
-            this.width = 120; // 寬度較大
-            this.isRahuUlting = isRahuUlting; // 是否由羅侯大絕觸發
-
-            // 使用專屬刀氣精靈圖
+            // 【核心修正】：將目標點轉化為飛行角度與 X/Y 速度向量，讓它能無限延伸
+            let angle = Math.atan2(ty - y, tx - x);
+            this.vx = Math.cos(angle) * this.speed;
+            this.vy = Math.sin(angle) * this.speed;
+            this.facingLeft = this.vx < 0;
+            
+            this.width = 120; // 刀氣寬度
+            this.isRahuUlting = isRahuUlting; 
             this.img = EFFECT_IMGS.aoe_slash;
+            
+            // 【新增】：用 Set 紀錄已經擊中過的目標，確保每個目標只會受傷一次
+            this.hitTargets = new Set();
         }
 
-        update() {
-            let dx = this.tx - this.x; let dy = this.ty - this.y;
-            let dist = Math.hypot(dx, dy);
+update() {
+            // 1. 邊界判定：如果飛出地圖外 200px 距離，才徹底消失
+            if (this.x < -200 || this.x > 1000 || this.y < -200 || this.y > 1000) {
+                return true;
+            }
 
-            if (dist < this.speed) {
-                // 1. 抵達目標！命中主堡並消失
-                if (Math.hypot((playerBase.x*TILE_SIZE+TILE_SIZE/2) - this.tx, (playerBase.y*TILE_SIZE+TILE_SIZE/2) - this.ty) <= TILE_SIZE) {
-                    playerBase.hp -= this.dmg;
-                }
-                combatEffects.push({ x: this.tx, y: this.ty, radius: this.width * 1.5, timer: 20, type: 'normal', isTransformed: false });
-                return true; // 標記為消失
-            } else {
-                // 2. 繼續飛行，並檢查路徑上的碰撞
-                this.x += (dx / dist) * this.speed;
-                this.y += (dy / dist) * this.speed;
-                
-                // 3. 碰撞檢查：對路徑上所有玩家實體造成一次性傷害
-                let checkCollision = (targetArr) => {
-                    for (let i = targetArr.length - 1; i >= 0; i--) {
-                        let target = targetArr[i];
-                        if (target.isDying) continue;
-                        
-                        // 使用圓-圓碰撞，將刀氣視為一個移動的圓
-                        if (Math.hypot((target.x + target.drawOffsetX) - this.x, (target.y + target.drawOffsetY) - this.y) <= (this.width / 2 + TILE_SIZE / 2)) {
-                            // 檢查是否已被此刀氣傷害過
-                            if (!target.hasBeenSlashed) {
-                                target.hp -= this.dmg;
-                                target.hasBeenSlashed = true; // 標記為已被傷害
-                            }
+            // 2. 繼續飛行
+            this.x += this.vx;
+            this.y += this.vy;
+            
+            // 3. 沿途穿透傷害判定
+            let checkCollision = (targetArr) => {
+                for (let i = targetArr.length - 1; i >= 0; i--) {
+                    let target = targetArr[i];
+                    if (target.isDying) continue;
+                    
+                    // 圓形碰撞判定
+                    if (Math.hypot((target.x + (target.drawOffsetX||0)) - this.x, (target.y + (target.drawOffsetY||0)) - this.y) <= (this.width / 2 + TILE_SIZE / 2)) {
+                        // 如果該目標還沒被這發刀氣砍過，就扣血並加入已命中清單
+                        if (!this.hitTargets.has(target)) {
+                            target.hp -= this.dmg;
+                            this.hitTargets.add(target);
+                            // 【已移除】：命中時的 aoe_normal 爆炸特效
                         }
                     }
-                };
-                
-                checkCollision(playerUnits);
-                checkCollision(towers);
-                
-                // 每幀重置所有目標的標記 (重要：這意味著刀氣是持續傷害)
-                playerUnits.forEach(p => p.hasBeenSlashed = false);
-                towers.forEach(t => t.hasBeenSlashed = false);
+                }
+            };
+            
+            checkCollision(playerUnits);
+            checkCollision(towers);
+            
+            // 4. 獨立判定玩家主堡
+            let baseHitDist = Math.hypot((playerBase.x*TILE_SIZE+TILE_SIZE/2) - this.x, (playerBase.y*TILE_SIZE+TILE_SIZE/2) - this.y);
+            if (baseHitDist <= (this.width / 2 + TILE_SIZE) && !this.hitTargets.has(playerBase)) {
+                playerBase.hp -= this.dmg;
+                this.hitTargets.add(playerBase);
+                // 【已移除】：命中主堡時的 aoe_normal 爆炸特效
             }
-            return false; // 繼續飛行
+            
+            return false; // 回傳 false 讓刀氣繼續飛行
         }
         
         draw() {
             ctx.save();
             ctx.translate(this.x, this.y);
-            ctx.rotate(Math.atan2(this.ty - this.y, this.tx - this.x));
+            // 【核心修正】：根據 X/Y 向量動態旋轉圖片角度，確保刀尖永遠朝前
+            ctx.rotate(Math.atan2(this.vy, this.vx)); 
             
             if (this.img && this.img.complete && !this.img.isFailed && this.img.naturalWidth > 0) {
-                // 使用刀氣精靈圖 (image_1.png 底部 1x5)
-                // 假設 1x5 精靈圖
                 let frameWidth = this.img.naturalWidth / 5;
                 let frameHeight = this.img.naturalHeight;
                 let frame = Math.floor((globalAnimTick + this.animOffset) / 10) % 5;
@@ -2255,10 +2298,9 @@ draw() {
                 let drawW = this.width;
                 let drawH = drawW * (frameHeight / frameWidth);
                 
-                // 根據是否由羅侯大絕觸發，應用視覺特效
                 if (this.isRahuUlting) {
-                    ctx.globalCompositeOperation = 'screen'; // 應用濾色特效
-                    ctx.filter = `brightness(${1.5 + Math.sin(globalAnimTick / 10) * 0.5})`; // 應用亮度閃爍特效
+                    ctx.globalCompositeOperation = 'screen';
+                    ctx.filter = `brightness(${1.5 + Math.sin(globalAnimTick / 10) * 0.5})`;
                 }
 
                 ctx.drawImage(this.img, frame * frameWidth, 0, frameWidth, frameHeight, -drawW / 2, -drawH / 2, drawW, drawH);
@@ -2364,7 +2406,7 @@ draw() {
             if (window.battleTimeRemaining > 0) {
                 spawnTimer--;
                 if (spawnTimer <= 0) {
-                    let squadSize = Math.floor(Math.random() * 3) + 3; // 一次出 3 至 5 隻
+                    let squadSize = Math.floor(Math.random() * 3) + 4 + Math.floor(currentWave / 2); // 一次出 4 至 6 隻
                     
                     let leaderType = 'normal'; 
                     
@@ -2377,8 +2419,9 @@ draw() {
                     // 隨機從已解鎖的兵種中抽取隊長
                     leaderType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
 
-                    // 【修改】：第 6 波固定生成一次狂王羅侯
-                    if (currentWave === 6 && !window.bossSpawned && window.battleTimeRemaining < 150) {
+
+                    // 【修改】：第 1, 4, 6, 7 波固定生成一次狂王羅侯
+                    if ([1, 4, 6, 7].includes(currentWave) && !window.bossSpawned && window.battleTimeRemaining < 170) {
                         leaderType = 'rahu'; squadSize = 1; window.bossSpawned = true;
                     }
                     // 【修改】：第 9 波固定生成一次黑天龍
@@ -2597,8 +2640,7 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
 
                 // 【修復】：打倒敵人掉落資源！(按敵人等級與種類)
                 // 屍王/巨屍掉落 5 倍，黑天龍掉落 50 倍，普通怪 1 倍
-                let dropMult = (e.id === 'boss' || e.id === 'tank') ? 5 : (e.id === 'black_dragon' ? 50 : 1);
-                let dropGold = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
+let dropMult = (e.id === 'boss' || e.id === 'tank') ? 5 : ((e.id === 'black_dragon' || e.id === 'rahu') ? 50 : 1);                let dropGold = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
                 let dropMeat = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
                 
                 gameGold += dropGold;
