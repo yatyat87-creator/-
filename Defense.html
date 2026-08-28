@@ -261,7 +261,7 @@
         'black_dragon': { id: 'black_dragon', name: "天", symbol: "龍", color: '#000000', dmg: 15.0, range: 1.5, moveSpd: 0.25, atkSpd: 0.5, hpMult: 60.0, drawScale: 2.2, ultChance: 0.35, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/黑龍.png" },
         'rahu': { 
             id: 'rahu', name: "狂王羅侯", symbol: "狂", color: '#660000', 
-            dmg: 12.0, range: 2.5, moveSpd: 0.6, atkSpd: 0.7, hpMult: 40.0, 
+            dmg: 5.0, range: 2.5, moveSpd: 0.6, atkSpd: 1.5, hpMult: 18.0, 
             drawScale: 2.0, // 極致體型
             ultChance: 0.35, // 極高大絕機率
             // 使用生成的專屬 Boss 精靈圖 (image_1.png 頂部 5x5)
@@ -2428,7 +2428,7 @@ update() {
 
 
                     // 【修改】：第 1, 4, 6, 7 波固定生成一次狂王羅侯
-                    if ([1, 4, 6, 7].includes(currentWave) && !window.bossSpawned && window.battleTimeRemaining < 170) {
+                    if ([1, 4, 6, 7].includes(currentWave) && !window.bossSpawned && window.battleTimeRemaining < 100) {
                         leaderType = 'rahu'; squadSize = 1; window.bossSpawned = true;
                     }
                     // 【修改】：第 9 波固定生成一次黑天龍
