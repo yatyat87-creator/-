@@ -540,8 +540,7 @@
         else alert("最多攜帶 3 名武將出戰！");
         updateLobbyUI();
     }
-
-// 【修改】：極致穩定的返回大廳函式
+    // 【修改】：極致穩定的返回大廳函式
     window.returnToMenu = function() {
         // 1. 停止動畫迴圈 (使用 window. 前綴避免變數未宣告的報錯)
         if (window.animFrameId) {
@@ -560,7 +559,15 @@
         towers.length = 0;
         deployQueue.length = 0;
         ambientEffects.length = 0;
-        floatingTexts.length = 0; // 【新增】：返回主選單時清空氣泡
+        floatingTexts.length = 0; 
+        
+        // ==========================================
+        // 【新增修復】：清空刀氣、飛彈與戰鬥特效，防止殘留到新遊戲
+        // ==========================================
+        slashWaves.length = 0; 
+        projectiles.length = 0;
+        combatEffects.length = 0;
+
         if (typeof offenseCamp !== 'undefined') offenseCamp.fill(null);
 
         // 4. 重置雙方主堡 (血量恢復滿血)
