@@ -2520,14 +2520,32 @@ update() {
                 else {
                     let bx = base.x * TILE_SIZE + TILE_SIZE / 2; let by = base.y * TILE_SIZE + TILE_SIZE / 2;
                     let targetArr = isPlayer ? enemies : playerUnits;
-                    let target = targetArr.find(u => Math.hypot((u.x + u.drawOffsetX) - bx, (u.y + u.drawOffsetY) - by) <= base.range);
-                    if (target) {
-                        target.hp -= base.damage; base.cooldown = base.fireRate;
-                        ctx.strokeStyle = isPlayer ? '#f1c40f' : '#e74c3c'; ctx.lineWidth = 4;
-                        ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(target.x + target.drawOffsetX, target.y + target.drawOffsetY); ctx.stroke();
+                    
+                    // 【核心修改】：1. 篩選出所有在射程內、且未死亡的目標
+                    let targetsInRange = targetArr.filter(u => !u.isDying && Math.hypot((u.x + u.drawOffsetX) - bx, (u.y + u.drawOffsetY) - by) <= base.range);
+                    
+                    // 2. 計算最大攻擊數量 (等級 x 3)
+                    let maxTargets = base.level * 3;
+                    
+                    // 3. 擷取不超過最大數量的目標群
+                    let targetsToAttack = targetsInRange.slice(0, maxTargets);
+                    
+                    // 4. 對所有選定的目標同時發射雷射/弓箭
+                    if (targetsToAttack.length > 0) {
+                        targetsToAttack.forEach(target => {
+                            target.hp -= base.damage; 
+                            ctx.strokeStyle = isPlayer ? '#f1c40f' : '#e74c3c'; 
+                            ctx.lineWidth = 4;
+                            ctx.beginPath(); 
+                            ctx.moveTo(bx, by); 
+                            ctx.lineTo(target.x + target.drawOffsetX, target.y + target.drawOffsetY); 
+                            ctx.stroke();
+                        });
+                        base.cooldown = base.fireRate; // 攻擊完重置冷卻
                     }
                 }
             });
+
 
             if (globalAnimTick % 30 === 0) updateGeneralsUI();
         }
