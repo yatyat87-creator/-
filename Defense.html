@@ -234,6 +234,57 @@
         return img;
     }
 
+// ==========================================
+    // 【新增】：遊戲音效庫與播放管理器
+    // ==========================================
+    const SOUNDS = {
+        bgm_lobby: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-07.mp3"), // 【新增】：大廳與選擇難度 BGM
+        bgm_battle: [
+            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-08.mp3"),
+            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-05.mp3"),
+            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-04.mp3"),
+            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-02.mp3")
+        ],        click: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/click.mp3"), // 按鈕點擊
+        build: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/build.mp3"), // 建築成功/升級
+        error: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/error.mp3"), // 錯誤/資源不足
+        correct: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/correct.mp3"), // 答對
+        wrong: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/wrong.mp3"), // 答錯
+        melee: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/melee.mp3"), // 普攻揮砍
+        shoot: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/shoot.mp3"), // 射箭/主堡雷射
+        slash: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/slash.mp3"), // 狂王刀氣
+        explosion: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/explosion.mp3"), // 飛彈/大絕爆炸
+        death: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/death.mp3"), // 死亡音效
+        win: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/win.mp3"), // 勝利
+        lose: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/lose.mp3") // 戰敗
+    };
+    // 【新增】：記錄當前這場戰鬥抽到的 BGM
+    let currentBattleBgm = null;
+
+    // 設定大廳音樂無限循環
+    SOUNDS.bgm_lobby.loop = true;
+    SOUNDS.bgm_lobby.volume = 0.4;
+    
+    // 【修改】：用迴圈將所有戰鬥 BGM 都設定為無限循環與音量 0.4
+    SOUNDS.bgm_battle.forEach(bgm => {
+        bgm.loop = true;
+        bgm.volume = 0.4;
+    });
+
+    function playSound(key) {
+        if (SOUNDS[key]) {
+            let soundClone = SOUNDS[key].cloneNode();
+            soundClone.volume = 0.6; 
+            soundClone.play().catch(e => console.log("瀏覽器擋住了自動播放:", e));
+        }
+    }
+
+    document.body.addEventListener('click', function startLobbyBgm() {
+        if (document.getElementById('setup-screen').style.display !== 'none') {
+            SOUNDS.bgm_lobby.play().catch(e => console.log(e));
+        }
+        document.body.removeEventListener('click', startLobbyBgm); 
+    }, { once: true });
+
 // --- 建築物與兵種資料庫 ---
     const BUILDINGS = {
         // 資源建築：建造與升級皆用木(wood)
@@ -595,6 +646,15 @@
         gameStone = 0;
         gameGold = 50;
 
+        // 【修改】：如果有正在播放的戰鬥音樂，將其停止
+        if (currentBattleBgm) {
+            currentBattleBgm.pause();
+            currentBattleBgm.currentTime = 0;
+        }
+        
+        SOUNDS.bgm_lobby.currentTime = 0;
+        SOUNDS.bgm_lobby.play().catch(e => console.log(e));
+
         // 6. 更新大廳畫面
         updateLobbyUI();
     };
@@ -621,10 +681,17 @@
         document.getElementById('timer-display').innerText = "⏱️ 00:00";
         lastFrameTime = Date.now(); 
         
-        // 【核心】：開局直接進入答題期
+        SOUNDS.bgm_lobby.pause();
+        SOUNDS.bgm_lobby.currentTime = 0;
+        
+        // 【修改】：隨機抽取一首戰鬥 BGM，並開始播放
+        let randomIndex = Math.floor(Math.random() * SOUNDS.bgm_battle.length);
+        currentBattleBgm = SOUNDS.bgm_battle[randomIndex];
+        currentBattleBgm.currentTime = 0;
+        currentBattleBgm.play().catch(e => console.log(e));
+
         currentWave = 1;
         startQuizPhase(); 
-        
         window.animFrameId = requestAnimationFrame(gameLoop); 
     };
 
@@ -755,10 +822,12 @@ window.startBattlePhase = function() {
         questionsAnswered++; // 增加總答題進度
         
         if (selected === currentAnswer) {
-            comboMultiplier++; // 答對，增加倍數
+            comboMultiplier++; 
+            playSound('correct'); // 【新增答對音效】
             feedback.innerText = `✔️ 答對了！目前累積 ${comboMultiplier} 題！`; 
             feedback.style.color = "#2ecc71"; 
         } else { 
+            playSound('wrong'); // 【新增答錯音效】
             // 答錯，不加倍數，並顯示正確答案
             feedback.innerText = `❌ 答錯囉！正確答案是 ${currentAnswer}。`; 
             feedback.style.color = "#e74c3c"; 
@@ -1149,9 +1218,11 @@ window.showUpgradeUI = function(name, level, costText) {
                 currentSelectedTarget.maxHp += 1000; currentSelectedTarget.hp += 1000;
                 currentSelectedTarget.damage += 10; currentSelectedTarget.healRate += 2;
                 updateResourcesUI();
+                playSound('build'); // 【新增升級音效】
                 feedback.innerText = `✨ 城鎮中心升級為 Lv.${currentSelectedTarget.level}！`; feedback.style.color = "#f1c40f";
                 showUpgradeUI('城鎮中心', currentSelectedTarget.level, `${300 * currentSelectedTarget.level}金`);
             } else {
+                playSound('error'); // 【新增錯誤音效】
                 feedback.innerText = `⚠️ 升級城鎮中心需要 ${cost} 金幣！`; feedback.style.color = "#e74c3c";
             }
         } else if (currentSelectedType === 'tower') {
@@ -1475,11 +1546,13 @@ window.showUpgradeUI = function(name, level, costText) {
                 else if (bData.costType === 'stone' && gameStone >= bData.cost) { gameStone -= bData.cost; } 
                 else { 
                     const resName = bData.costType === 'gold' ? '金幣' : (bData.costType === 'wood' ? '木材' : '石頭');
+                    playSound('error'); // 【新增錯誤音效】
                     feedback.innerText = `⚠️ 資源不足！需要 ${bData.cost} ${resName}！`; feedback.style.color = "#e74c3c"; return; 
                 }
                 updateResourcesUI(); 
                 let newDir = bData.id === 'gate' ? calculateGateDir(bestGx, bestGy) : 0;
                 towers.push({ x: bestGx, y: bestGy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0, state: 0, frame: 0, dir: newDir });
+                playSound('build'); // 【新增建造成功音效】
                 feedback.innerText = `🏗️ 成功建造 ${bData.name}！可繼續點擊空地建造。`; feedback.style.color = "#2ecc71";
                 return; 
             }
@@ -1552,6 +1625,7 @@ class Enemy {
         // ==========================================
         triggerRahuSlashWave(targetX, targetY) {
             if (!this.unitData.isSlashWaveable) return;
+            playSound('slash'); // 【新增發射刀氣音效】
             
             // 普攻正常傷害，大絕 2.5 倍傷害
             let finalDmg = this.isUlt ? this.damage * 2.5 : this.damage;
@@ -1902,6 +1976,7 @@ update(targetEnemy) {
                     let impactY = enemyBase.y * TILE_SIZE + TILE_SIZE/2;
 
                     if (this.id === 'g5') {
+                        playSound('shoot');
                         // 【新增】：機甲專屬，發射飛彈
                         projectiles.push({
                             x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 10,
@@ -2271,7 +2346,7 @@ update() {
                         if (!this.hitTargets.has(target)) {
                             target.hp -= this.dmg;
                             this.hitTargets.add(target);
-                            // 【已移除】：命中時的 aoe_normal 爆炸特效
+                            playSound('melee'); // 【新增刀氣擊中音效】
                         }
                     }
                 }
@@ -2665,7 +2740,7 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
 
                 // 【修復】：打倒敵人掉落資源！(按敵人等級與種類)
                 // 屍王/巨屍掉落 5 倍，黑天龍掉落 50 倍，普通怪 1 倍
-let dropMult = (e.id === 'boss' || e.id === 'tank') ? 5 : ((e.id === 'black_dragon' || e.id === 'rahu') ? 50 : 1);                let dropGold = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
+                let dropMult = (e.id === 'boss' || e.id === 'tank') ? 5 : ((e.id === 'black_dragon' || e.id === 'rahu') ? 50 : 1);                let dropGold = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
                 let dropMeat = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
                 
                 gameGold += dropGold;
@@ -2693,6 +2768,8 @@ let dropMult = (e.id === 'boss' || e.id === 'tank') ? 5 : ((e.id === 'black_drag
                     e.update(closestPlayer);
                     if (playerBase.hp <= 0 && !gameOver) { 
                         gameOver = true;
+                        playSound('lose'); // 【新增戰敗音效】
+                        if (currentBattleBgm) currentBattleBgm.pause(); // 【修改】：停止當前戰鬥 BGM
                         document.getElementById('game-over-title').innerText = "💥 戰敗！";
                         document.getElementById('game-over-title').style.color = "#e74c3c";
                         document.getElementById('game-over-msg').innerText = "我方城池被敵軍攻破了...";
@@ -2745,7 +2822,10 @@ let dropMult = (e.id === 'boss' || e.id === 'tank') ? 5 : ((e.id === 'black_drag
                     let targetEnemy = enemies.find(e => !e.isDying && Math.hypot((e.x + e.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (e.y + e.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY)) <= pUnit.range);
                     pUnit.update(targetEnemy);
                     if (enemyBase.hp <= 0 && !gameWon) {
-                        gameWon = true; playerGold += 200; localStorage.setItem('tdGameGold_v2', playerGold);
+                        gameWon = true; 
+                        playerGold += 200; localStorage.setItem('tdGameGold_v2', playerGold);
+                        playSound('win'); 
+                        if (currentBattleBgm) currentBattleBgm.pause(); // 【修改】：停止當前戰鬥 BGM
                         document.getElementById('game-over-title').innerText = "🎉 勝利！";
                         document.getElementById('game-over-title').style.color = "#f1c40f";
                         document.getElementById('game-over-msg').innerText = "成功推平敵軍主堡！獲得 200 金幣！";
@@ -2889,6 +2969,8 @@ let dropMult = (e.id === 'boss' || e.id === 'tank') ? 5 : ((e.id === 'black_drag
             let dist = Math.hypot(dx, dy);
 
             if (dist < p.speed) {
+                // 命中目標！造成範圍傷害
+                playSound('explosion'); // 【新增爆炸音效】
                 // 1. 命中目標！造成範圍傷害
                 enemies.forEach(e => {
                     if (Math.hypot((e.x + e.drawOffsetX) - p.tx, (e.y + e.drawOffsetY) - p.ty) <= p.aoeRadius) {
