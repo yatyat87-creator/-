@@ -244,7 +244,8 @@
             new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-05.mp3"),
             new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-04.mp3"),
             new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-02.mp3")
-        ],        click: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/click.mp3"), // 按鈕點擊
+        ],
+        click: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/click.mp3"), // 按鈕點擊
         build: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Build.mp3"), // 建築成功/升級
         error: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/error.mp3"), // 錯誤/資源不足
         correct: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/correct.mp3"), // 答對
@@ -2503,7 +2504,7 @@ update() {
 
 
                     // 【修改】：第 1, 4, 6, 7 波固定生成一次狂王羅侯
-                    if ([1, 4, 6, 7].includes(currentWave) && !window.bossSpawned && window.battleTimeRemaining < 100) {
+                    if ([2, 4, 6, 8].includes(currentWave) && !window.bossSpawned && window.battleTimeRemaining < 100) {
                         leaderType = 'rahu'; squadSize = 1; window.bossSpawned = true;
                     }
                     // 【修改】：第 9 波固定生成一次黑天龍
@@ -2587,7 +2588,7 @@ update() {
                 document.getElementById('timer-display').innerText = "⏱️ 清理殘軍中...";
             }
 
-            // 主堡互射
+// 主堡互射
             [playerBase, enemyBase].forEach((base, idx) => {
                 let isPlayer = idx === 0;
                 if (globalAnimTick % 60 === 0 && base.hp < base.maxHp) base.hp = Math.min(base.maxHp, base.hp + base.healRate);
@@ -2596,17 +2597,18 @@ update() {
                     let bx = base.x * TILE_SIZE + TILE_SIZE / 2; let by = base.y * TILE_SIZE + TILE_SIZE / 2;
                     let targetArr = isPlayer ? enemies : playerUnits;
                     
-                    // 【核心修改】：1. 篩選出所有在射程內、且未死亡的目標
+                    // 1. 篩選出所有在射程內、且未死亡的目標
                     let targetsInRange = targetArr.filter(u => !u.isDying && Math.hypot((u.x + u.drawOffsetX) - bx, (u.y + u.drawOffsetY) - by) <= base.range);
                     
-                    // 2. 計算最大攻擊數量 (等級 x 3)
-                    let maxTargets = base.level * 3;
+                    // 【修改】：計算最大攻擊數量 (等級 + 3)
+                    let maxTargets = base.level + 3;
                     
                     // 3. 擷取不超過最大數量的目標群
                     let targetsToAttack = targetsInRange.slice(0, maxTargets);
                     
                     // 4. 對所有選定的目標同時發射雷射/弓箭
                     if (targetsToAttack.length > 0) {
+                        playSound('shoot'); // 播放主城射擊音效
                         targetsToAttack.forEach(target => {
                             target.hp -= base.damage; 
                             ctx.strokeStyle = isPlayer ? '#f1c40f' : '#e74c3c'; 
@@ -2738,6 +2740,8 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 e.state = 3; 
                 e.deathTimer = 45; 
 
+                playSound('death'); // 【新增】：敵軍死亡音效
+
                 // 【修復】：打倒敵人掉落資源！(按敵人等級與種類)
                 // 屍王/巨屍掉落 5 倍，黑天龍掉落 50 倍，普通怪 1 倍
                 let dropMult = (e.id === 'boss' || e.id === 'tank') ? 5 : ((e.id === 'black_dragon' || e.id === 'rahu') ? 50 : 1);                let dropGold = Math.floor((Math.random() * 5 + 5) * e.level * dropMult);
@@ -2805,6 +2809,7 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                     pUnit.hp = 1; // 鎖血！交給 update() 函數去觸發變身
                 } else {
                     pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; 
+                    playSound('death'); // 【新增】：我軍陣亡音效
                 }
             }
             if (pUnit.isDying) {
