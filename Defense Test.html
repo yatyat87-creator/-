@@ -360,7 +360,9 @@
             id: "g6", name: "小孟", symbol: "孟", color: "#e74c3c", price: 300, isGeneral: true, 
             dmg: 3.5, range: 5, moveSpd: 1.0, atkSpd: 1.0, hpMult: 1.5, drawScale: 1.6, 
             desc: "遠程：百步穿楊，直線貫穿傷害", ultChance: 0.25, 
-            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/小孟.png" // <--- 替換成你的 URL
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/小孟.png", // <--- 替換成你的 URL
+            // 【新增】：小孟的專屬貫穿箭矢 (預留連結位置)
+            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/小孟箭矢.png" 
         },
         "g7": { 
             id: "g7", name: "諸葛亮", symbol: "亮", color: "#3498db", price: 400, isGeneral: true, 
@@ -372,7 +374,9 @@
             id: "g8", name: "燎原火", symbol: "火", color: "#e67e22", price: 400, isGeneral: true, 
             dmg: 2.5, range: 2.5, moveSpd: 1.8, atkSpd: 1.5, hpMult: 2.5, drawScale: 1.7, 
             desc: "刺客：多體飛鏢，瀕死無痛覺爆發", ultChance: 0.25,
-            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/燎原火.png" // <--- 替換成你的 URL
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/燎原火.png", // <--- 替換成你的 URL
+            // 【新增】：燎原火的專屬大絕刀氣 (預留連結位置)
+            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/燎原火刀氣.png"
         }
     };
     
@@ -391,6 +395,13 @@
         GENERALS[key].img = loadSprite(GENERALS[key].imgSrc);
         // 【新增】：如果武將有第二型態，就載入 img2
         if (GENERALS[key].imgSrc2) GENERALS[key].img2 = loadSprite(GENERALS[key].imgSrc2);
+    }
+
+    for (let key in GENERALS) {
+        GENERALS[key].img = loadSprite(GENERALS[key].imgSrc);
+        if (GENERALS[key].imgSrc2) GENERALS[key].img2 = loadSprite(GENERALS[key].imgSrc2);
+        // 【新增】：如果武將有專屬刀氣/箭矢圖，也一併預先載入
+        if (GENERALS[key].slashImgSrc) GENERALS[key].slashImg = loadSprite(GENERALS[key].slashImgSrc);
     }
 
     // --- 地形圖片預載 (預備放 PNG 圖的地方) ---
@@ -1923,6 +1934,10 @@ class PlayerUnit {
             this.isTransformed = false;
             this.currentImg = this.unitData.img; // 預設使用第一張圖
             this.currentScale = this.unitData.drawScale || 1.5; // 預設大小
+
+        // 【新增修復】：明確宣告燎原火專用的屬性，避免 undefined 錯誤
+            this.immortalTriggered = false;
+            this.immortalTimer = 0;
         }
 
 update(targetEnemy) {
@@ -2460,8 +2475,8 @@ draw() {
     // ==========================================
 
     class SlashWave {
-        // 【新增】：加入 isPlayer 參數，判定是敵軍還是我方(小孟/燎原火)發射的
-        constructor(dmg, x, y, tx, ty, type, isUlt, isPlayer = false) {
+        // 【修改】：加入 customImg 參數，讓每個人都能傳入自己的專屬圖片
+        constructor(dmg, x, y, tx, ty, type, isUlt, isPlayer = false, customImg = null) {
             this.x = x; this.y = y; 
             this.dmg = dmg; this.speed = 12; this.type = type; 
             this.frame = 0; this.animOffset = Math.floor(Math.random() * 60); 
@@ -2471,10 +2486,11 @@ draw() {
             this.vy = Math.sin(angle) * this.speed;
             this.facingLeft = this.vx < 0;
             
-            this.width = type === 'arrow' ? 60 : 120; // 箭矢範圍較窄，刀氣較寬
+            this.width = type === 'arrow' ? 60 : 120; 
             this.isUlt = isUlt; 
-            this.isPlayer = isPlayer; // 記錄發射方
-            this.img = EFFECT_IMGS.aoe_slash; // 如果你未來有箭矢圖，可以在這裡切換
+            this.isPlayer = isPlayer; 
+            // 【修改】：優先使用傳入的專屬圖，如果沒有才退回使用羅侯的預設刀氣
+            this.img = customImg || EFFECT_IMGS.aoe_slash; 
             this.hitTargets = new Set();
         }
 
