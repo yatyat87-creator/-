@@ -896,10 +896,27 @@ window.startBattlePhase = function() {
                 playerBase.hp = Math.min(playerBase.maxHp, playerBase.hp + healAmount);
                 floatingTexts.push({ x: bx, y: by - 35, text: `💖 +${healPct}% HP`, color: "#2ecc71", timer: 60, vy: -1 });
 
-                // 2. 根據場上建築派發額外加成 (10 * 建築等級 * 倍數)
+// 2. 根據場上建築派發額外加成 (加入連鎖加成)
                 towers.forEach(t => {
                     let bData = BUILDINGS[t.id];
-                    let amount = 10 * t.level * comboMultiplier;
+                    
+                    // 【新增】：判斷同類建築是否相鄰 (十字方向)
+                    let adjacentCount = 0;
+                    if (bData.type === 'resource' || bData.id === 'market') {
+                        towers.forEach(other => {
+                            if (other !== t && other.id === t.id) {
+                                // 絕對距離為 1 代表上下左右相連
+                                if (Math.abs(t.x - other.x) + Math.abs(t.y - other.y) === 1) {
+                                    adjacentCount++;
+                                }
+                            }
+                        });
+                    }
+                    
+                    // 【新增】：每個相連的同類建築，產量額外加成 50%
+                    let bonusMult = 1 + (adjacentCount * 0.5);
+                    let amount = Math.floor(10 * t.level * comboMultiplier * bonusMult);
+                    
                     let resSymbol = ''; let resColor = '#fff';
                     let valid = false;
                     
@@ -910,7 +927,9 @@ window.startBattlePhase = function() {
                     
                     if (valid) {
                         let sizeMult = bData.size || 1;
-                        floatingTexts.push({ x: t.x * TILE_SIZE + (TILE_SIZE * sizeMult)/2 + (Math.random()*20-10), y: t.y * TILE_SIZE - 10 + (Math.random()*20-10), text: `${resSymbol}+${amount}`, color: resColor, timer: 90, vx: (Math.random()-0.5)*2, vy: -1-Math.random(), font: 'bold 16px Arial' });
+                        // 如果有連鎖加成，旁邊會多出一個 🔗 符號讓玩家知道策略奏效了
+                        let extraText = adjacentCount > 0 ? "🔗" : ""; 
+                        floatingTexts.push({ x: t.x * TILE_SIZE + (TILE_SIZE * sizeMult)/2 + (Math.random()*20-10), y: t.y * TILE_SIZE - 10 + (Math.random()*20-10), text: `${resSymbol}+${amount}${extraText}`, color: resColor, timer: 90, vx: (Math.random()-0.5)*2, vy: -1-Math.random(), font: 'bold 16px Arial' });
                     }
                 });
                 
@@ -1232,7 +1251,21 @@ window.startBattlePhase = function() {
     let currentSelectedTarget = null;
     let currentSelectedType = null; 
 
-window.showUpgradeUI = function(name, level, costText) {
+    // ============================================
+    // 【新增】：動態計算建築升級費用
+    // ============================================
+    window.getTowerUpgradeCost = function(tower) {
+        let bData = BUILDINGS[tower.id];
+        // 資源類與市場：首1-10等50木，11-20等75木，每10等增加25木
+        if (bData.type === 'resource' || bData.id === 'market') {
+            let tier = Math.floor((tower.level - 1) / 10);
+            return 50 + (tier * 25);
+        }
+        // 其他軍事/防禦建築：維持原本的 等級 * 50
+        return 50 * tower.level;
+    };
+
+    window.showUpgradeUI = function(name, level, costText) {
         const upgradeUI = document.getElementById('upgrade-ui-row');
         if (upgradeUI) {
             upgradeUI.style.display = 'flex';
@@ -1262,7 +1295,10 @@ window.showUpgradeUI = function(name, level, costText) {
             }
         } else if (currentSelectedType === 'tower') {
             let bData = BUILDINGS[currentSelectedTarget.id];
-            let cost = 50 * currentSelectedTarget.level;
+            
+            // 【修改】：使用新的階梯式費用公式
+            let cost = window.getTowerUpgradeCost(currentSelectedTarget); 
+            
             let canAfford = false;
             let resName = bData.upgradeCostType === 'gold' ? '金幣' : (bData.upgradeCostType === 'wood' ? '木材' : '石頭');
             let resUnit = bData.upgradeCostType === 'gold' ? '金' : (bData.upgradeCostType === 'wood' ? '木' : '石');
@@ -1277,7 +1313,10 @@ window.showUpgradeUI = function(name, level, costText) {
                 if(currentSelectedTarget.id === 'gate') { currentSelectedTarget.maxHp += 500; currentSelectedTarget.hp += 500; } 
                 updateResourcesUI(); 
                 feedback.innerText = `✨ ${bData.name}升級為 Lv.${currentSelectedTarget.level}！`; feedback.style.color = "#f1c40f";
-                showUpgradeUI(bData.name, currentSelectedTarget.level, `${50 * currentSelectedTarget.level}${resUnit}`);
+                
+                // 【修改】：升級後，重新計算並顯示下一級的費用
+                let nextCost = window.getTowerUpgradeCost(currentSelectedTarget);
+                showUpgradeUI(bData.name, currentSelectedTarget.level, `${nextCost}${resUnit}`);
 
                 // ==========================================
                 // 【新增】：即時更新難度邏輯 (不需等下一波)
@@ -1603,7 +1642,11 @@ window.showUpgradeUI = function(name, level, costText) {
             currentSelectedTarget = existingTower; currentSelectedType = 'tower';
             let bData = BUILDINGS[existingTower.id];
             let resUnit = bData.upgradeCostType === 'gold' ? '金' : (bData.upgradeCostType === 'wood' ? '木' : '石');
-            showUpgradeUI(bData.name, existingTower.level, `${50 * existingTower.level}${resUnit}`);
+            
+            // 【修改】：選取時使用新的費用公式
+            let cost = window.getTowerUpgradeCost(existingTower);
+            showUpgradeUI(bData.name, existingTower.level, `${cost}${resUnit}`);
+            
             if (existingTower.id === 'barracks' && barracksUI) barracksUI.style.display = 'flex';
             if (existingTower.id === 'tent' && generalsUI) generalsUI.style.display = 'flex';
         }
