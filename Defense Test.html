@@ -2106,35 +2106,49 @@ update(targetEnemy) {
                     }
                 }
             } 
-// =====================================
-            // 【修改】：荀彧專屬大腦 (優先找沒 Buff 的人，並往最前線走)
+            // =====================================
+            // 【修改】：荀彧專屬大腦 (優先找沒 Buff 的人，大家都滿 Buff 就原地自保)
             // =====================================
             else if (isBuffer) {
                 let ally = null;
-                // 1. 篩選出所有還活著的隊友 (不含自己)
                 let validAllies = playerUnits.filter(p => !p.isDying && p !== this);
+                let isAllBuffed = false; // 新增標記：是否大家都已經有 Buff 了
                 
                 if (validAllies.length > 0) {
-                    // 2. 優先找「沒有 Buff」的隊友
                     let alliesNoBuff = validAllies.filter(p => !p.atkBuffTimer || p.atkBuffTimer <= 0);
                     
-                    // 3. 判斷目標群體：有人沒 Buff 就找他們，大家都有就帶領推進
-                    let targetGroup = alliesNoBuff.length > 0 ? alliesNoBuff : validAllies;
-                    
-                    // 4. 在目標群體中，找出離敵軍主堡最近的 (pathIndex 越小越靠近敵軍)
-                    ally = targetGroup.reduce((prev, curr) => (curr.pathIndex < prev.pathIndex ? curr : prev));
+                    if (alliesNoBuff.length > 0) {
+                        // 狀態 1：有人缺 Buff -> 勇敢往前線走，尋找最前方的那個需要 Buff 的人
+                        ally = alliesNoBuff.reduce((prev, curr) => (curr.pathIndex < prev.pathIndex ? curr : prev));
+                    } else {
+                        // 狀態 2：大家都有 Buff -> 標記為滿狀態，並找距離自己「絕對距離最近」的隊友當作掩體
+                        isAllBuffed = true;
+                        ally = validAllies.reduce((prev, curr) => {
+                            let dCurr = Math.hypot(curr.x - this.x, curr.y - this.y);
+                            let dPrev = Math.hypot(prev.x - this.x, prev.y - this.y);
+                            return dCurr < dPrev ? curr : prev;
+                        });
+                    }
                 }
 
                 if (ally) {
                     hasValidTarget = true;
                     let thIdx = ally.pathIndex >= 0 ? ally.pathIndex : pathCoords.length - 1;
-                    if (this.pathIndex >= 0 && this.pathIndex < pathCoords.length && Math.abs(this.pathIndex - thIdx) > 1) {
+                    let distToAlly = Math.hypot(ally.x - this.x, ally.y - this.y);
+                    
+                    // 【關鍵防護】：如果大家都滿 Buff，而且荀彧已經在隊友附近 (距離小於 100)，就「原地待命」不要再往前擠！
+                    if (isAllBuffed && distToAlly < 100) {
+                        tx = this.x; ty = this.y; 
+                        this.drawOffsetX = 0; this.drawOffsetY = 0;
+                    }
+                    else if (this.pathIndex >= 0 && this.pathIndex < pathCoords.length && Math.abs(this.pathIndex - thIdx) > 1) {
                         targetNode = pathCoords[this.pathIndex];
                     } else {
                         tx = ally.x; ty = ally.y; 
                         this.drawOffsetX = 0; this.drawOffsetY = 0;
                     }
                 } else {
+
                     let tents = towers.filter(t => t.id === 'tent');
                     if (tents.length > 0) {
                         let tentIdx = getNearestPathIndex(tents[0].x, tents[0].y);
