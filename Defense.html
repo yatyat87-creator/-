@@ -135,10 +135,10 @@
 
             
             <div style="display:flex; justify-content:space-around; background:#ecf0f1; padding:8px; border-radius:8px; border:2px dashed #bdc3c7; font-weight:bold; margin-bottom:0;">
-                <span style="color:#f39c12;">💰 <span id="game-gold">50</span></span>
-                <span style="color:#e67e22;">🪵 <span id="game-wood">1000</span></span>
-                <span style="color:#c0392b;">🍖 <span id="game-meat">1000</span></span>
-                <span style="color:#7f8c8d;">🪨 <span id="game-stone">0</span></span>
+                <span style="color:#f39c12;">💰 <span id="game-gold">300</span></span>
+                <span style="color:#e67e22;">🪵 <span id="game-wood">100</span></span>
+                <span style="color:#c0392b;">🍖 <span id="game-meat">100</span></span>
+                <span style="color:#7f8c8d;">🪨 <span id="game-stone">100</span></span>
             </div>
         </div>
 
@@ -341,9 +341,12 @@
             desc: "進攻：範圍傷害，瀕死化身大佛", 
             ultChance: 0.20,
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/如來5x5.png", 
-            imgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/如來(大佛)5x5.png", // 【新增】：專屬第二型態圖片
-            hasAoE: true,          // 【新增】：開啟範圍攻擊
-            isTransformable: true  // 【新增】：開啟瀕死變身機制
+            imgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/如來(大佛)5x5.png", 
+            hasAoE: true,          
+            isTransformable: true,
+            // 【新增】：如來的專屬 AOE 圖片 (原本與變身後可分開)
+            aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png",
+            aoeImgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png"
         },
         "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, moveSpd: 1.5, atkSpd: 1.0, hpMult: 2.5, drawScale: 1.8, desc: "進攻：戰神降臨", ultChance: 0.30, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布5x5.png" },
         
@@ -355,6 +358,30 @@
             ultChance: 0,         // 不使用原本的大絕，飛彈設定為普攻自帶範圍
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/未來戰士.png", // <--- 請替換為你上傳的 未來戰士.jpg 連結
             hasAoE: true          // 開啟範圍攻擊
+        },
+        "g6": { 
+            id: "g6", name: "小孟", symbol: "孟", color: "#e74c3c", price: 300, isGeneral: true, 
+            dmg: 3.5, range: 5, moveSpd: 1.0, atkSpd: 1.0, hpMult: 1.5, drawScale: 1.6, 
+            desc: "遠程：百步穿楊，直線貫穿傷害", ultChance: 0.25, 
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/小孟.png", // <--- 替換成你的 URL
+            // 【新增】：小孟的專屬貫穿箭矢 (預留連結位置)
+            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/小孟箭.png" 
+        },
+        "g7": { 
+            id: "g7", name: "諸葛亮", symbol: "亮", color: "#3498db", price: 400, isGeneral: true, 
+            dmg: 0.7, range: 10, moveSpd: 0.8, atkSpd: 0.6, hpMult: 2, drawScale: 1.6, 
+            desc: "輔助：降防減速，大絕八陣圖控場", ultChance: 0.20, hasAoE: true,
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/諸葛亮.png",
+            // 【新增】：諸葛亮的專屬八陣圖特效
+            aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/八陣圖.png"
+        },
+        "g8": { 
+            id: "g8", name: "燎原火", symbol: "火", color: "#e67e22", price: 400, isGeneral: true, 
+            dmg: 2.5, range: 2.5, moveSpd: 1.8, atkSpd: 1.5, hpMult: 2.5, drawScale: 1.7, 
+            desc: "刺客：多體飛鏢，瀕死無痛覺爆發", ultChance: 0.25,
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/燎原火.png", // <--- 替換成你的 URL
+            // 【新增】：燎原火的專屬大絕刀氣 (預留連結位置)
+            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/燎原火槍氣.png"
         }
     };
     
@@ -373,6 +400,16 @@
         GENERALS[key].img = loadSprite(GENERALS[key].imgSrc);
         // 【新增】：如果武將有第二型態，就載入 img2
         if (GENERALS[key].imgSrc2) GENERALS[key].img2 = loadSprite(GENERALS[key].imgSrc2);
+    }
+
+    for (let key in GENERALS) {
+        GENERALS[key].img = loadSprite(GENERALS[key].imgSrc);
+        if (GENERALS[key].imgSrc2) GENERALS[key].img2 = loadSprite(GENERALS[key].imgSrc2);
+        if (GENERALS[key].slashImgSrc) GENERALS[key].slashImg = loadSprite(GENERALS[key].slashImgSrc);
+        
+        // 【新增】：自動預載所有武將專屬的 AOE 特效圖
+        if (GENERALS[key].aoeImgSrc) GENERALS[key].aoeImg = loadSprite(GENERALS[key].aoeImgSrc);
+        if (GENERALS[key].aoeImgSrc2) GENERALS[key].aoeImg2 = loadSprite(GENERALS[key].aoeImgSrc2);
     }
 
     // --- 地形圖片預載 (預備放 PNG 圖的地方) ---
@@ -429,15 +466,12 @@
     const EFFECT_IMGS = {
         aoe_normal: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png"),     
         aoe_transformed: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png"), 
-        // 【新增】：飛彈爆炸特效圖片
         aoe_missile: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Missle exposion.png"),
-        // 【新增】：飛彈飛行中的本體圖片
         missile_body: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Flying Misscle.png"),
+        aoe_slash: loadSprite(ENEMY_TYPES['rahu'] ? ENEMY_TYPES['rahu'].slashImgSrc : null),
         
-        // ==========================================
-        // 【新增】：羅侯刀氣飛行中的本體圖片 (使用專屬刀氣圖)
-        // ==========================================
-        aoe_slash: loadSprite(ENEMY_TYPES['rahu'] ? ENEMY_TYPES['rahu'].slashImgSrc : null) // <--- 指向與 Rahu slashImgSrc 相同的圖片
+        // 【新增】：諸葛亮專屬的八陣圖/法術特效 (請將網址替換為你上傳的 PNG)
+        aoe_magic: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/八陣圖特效.png") 
     };
    
     // 【新增】：靜態環境裝飾物設定 (預留 imgSrc 供日後填入 PNG 網址)
@@ -458,7 +492,7 @@
     let selectedGenerals = [];
 
 // 起始資源給予 1000 木材
-    let gameGold = 50, gameWood = 1000, gameMeat = 1000, gameStone = 0; 
+    let gameGold = 300, gameWood = 100, gameMeat = 100, gameStone = 100; 
     let selectedBuilding = null;
     let isDeleteMode = false;
     let offenseCamp = new Array(10).fill(null);
@@ -862,10 +896,27 @@ window.startBattlePhase = function() {
                 playerBase.hp = Math.min(playerBase.maxHp, playerBase.hp + healAmount);
                 floatingTexts.push({ x: bx, y: by - 35, text: `💖 +${healPct}% HP`, color: "#2ecc71", timer: 60, vy: -1 });
 
-                // 2. 根據場上建築派發額外加成 (10 * 建築等級 * 倍數)
+// 2. 根據場上建築派發額外加成 (加入連鎖加成)
                 towers.forEach(t => {
                     let bData = BUILDINGS[t.id];
-                    let amount = 10 * t.level * comboMultiplier;
+                    
+                    // 【新增】：判斷同類建築是否相鄰 (十字方向)
+                    let adjacentCount = 0;
+                    if (bData.type === 'resource' || bData.id === 'market') {
+                        towers.forEach(other => {
+                            if (other !== t && other.id === t.id) {
+                                // 絕對距離為 1 代表上下左右相連
+                                if (Math.abs(t.x - other.x) + Math.abs(t.y - other.y) === 1) {
+                                    adjacentCount++;
+                                }
+                            }
+                        });
+                    }
+                    
+                    // 【新增】：每個相連的同類建築，產量額外加成 50%
+                    let bonusMult = 1 + (adjacentCount * 0.5);
+                    let amount = Math.floor(10 * t.level * comboMultiplier * bonusMult);
+                    
                     let resSymbol = ''; let resColor = '#fff';
                     let valid = false;
                     
@@ -876,7 +927,9 @@ window.startBattlePhase = function() {
                     
                     if (valid) {
                         let sizeMult = bData.size || 1;
-                        floatingTexts.push({ x: t.x * TILE_SIZE + (TILE_SIZE * sizeMult)/2 + (Math.random()*20-10), y: t.y * TILE_SIZE - 10 + (Math.random()*20-10), text: `${resSymbol}+${amount}`, color: resColor, timer: 90, vx: (Math.random()-0.5)*2, vy: -1-Math.random(), font: 'bold 16px Arial' });
+                        // 如果有連鎖加成，旁邊會多出一個 🔗 符號讓玩家知道策略奏效了
+                        let extraText = adjacentCount > 0 ? "🔗" : ""; 
+                        floatingTexts.push({ x: t.x * TILE_SIZE + (TILE_SIZE * sizeMult)/2 + (Math.random()*20-10), y: t.y * TILE_SIZE - 10 + (Math.random()*20-10), text: `${resSymbol}+${amount}${extraText}`, color: resColor, timer: 90, vx: (Math.random()-0.5)*2, vy: -1-Math.random(), font: 'bold 16px Arial' });
                     }
                 });
                 
@@ -1198,7 +1251,21 @@ window.startBattlePhase = function() {
     let currentSelectedTarget = null;
     let currentSelectedType = null; 
 
-window.showUpgradeUI = function(name, level, costText) {
+    // ============================================
+    // 【新增】：動態計算建築升級費用
+    // ============================================
+    window.getTowerUpgradeCost = function(tower) {
+        let bData = BUILDINGS[tower.id];
+        // 資源類與市場：首1-10等50木，11-20等75木，每10等增加25木
+        if (bData.type === 'resource' || bData.id === 'market') {
+            let tier = Math.floor((tower.level - 1) / 10);
+            return 50 + (tier * 25);
+        }
+        // 其他軍事/防禦建築：維持原本的 等級 * 50
+        return 50 * tower.level;
+    };
+
+    window.showUpgradeUI = function(name, level, costText) {
         const upgradeUI = document.getElementById('upgrade-ui-row');
         if (upgradeUI) {
             upgradeUI.style.display = 'flex';
@@ -1228,7 +1295,10 @@ window.showUpgradeUI = function(name, level, costText) {
             }
         } else if (currentSelectedType === 'tower') {
             let bData = BUILDINGS[currentSelectedTarget.id];
-            let cost = 50 * currentSelectedTarget.level;
+            
+            // 【修改】：使用新的階梯式費用公式
+            let cost = window.getTowerUpgradeCost(currentSelectedTarget); 
+            
             let canAfford = false;
             let resName = bData.upgradeCostType === 'gold' ? '金幣' : (bData.upgradeCostType === 'wood' ? '木材' : '石頭');
             let resUnit = bData.upgradeCostType === 'gold' ? '金' : (bData.upgradeCostType === 'wood' ? '木' : '石');
@@ -1243,7 +1313,10 @@ window.showUpgradeUI = function(name, level, costText) {
                 if(currentSelectedTarget.id === 'gate') { currentSelectedTarget.maxHp += 500; currentSelectedTarget.hp += 500; } 
                 updateResourcesUI(); 
                 feedback.innerText = `✨ ${bData.name}升級為 Lv.${currentSelectedTarget.level}！`; feedback.style.color = "#f1c40f";
-                showUpgradeUI(bData.name, currentSelectedTarget.level, `${50 * currentSelectedTarget.level}${resUnit}`);
+                
+                // 【修改】：升級後，重新計算並顯示下一級的費用
+                let nextCost = window.getTowerUpgradeCost(currentSelectedTarget);
+                showUpgradeUI(bData.name, currentSelectedTarget.level, `${nextCost}${resUnit}`);
 
                 // ==========================================
                 // 【新增】：即時更新難度邏輯 (不需等下一波)
@@ -1569,7 +1642,11 @@ window.showUpgradeUI = function(name, level, costText) {
             currentSelectedTarget = existingTower; currentSelectedType = 'tower';
             let bData = BUILDINGS[existingTower.id];
             let resUnit = bData.upgradeCostType === 'gold' ? '金' : (bData.upgradeCostType === 'wood' ? '木' : '石');
-            showUpgradeUI(bData.name, existingTower.level, `${50 * existingTower.level}${resUnit}`);
+            
+            // 【修改】：選取時使用新的費用公式
+            let cost = window.getTowerUpgradeCost(existingTower);
+            showUpgradeUI(bData.name, existingTower.level, `${cost}${resUnit}`);
+            
             if (existingTower.id === 'barracks' && barracksUI) barracksUI.style.display = 'flex';
             if (existingTower.id === 'tent' && generalsUI) generalsUI.style.display = 'flex';
         }
@@ -1599,6 +1676,10 @@ class Enemy {
             this.ringTarget = { x: ringBase.x + (Math.random() * 0.5 - 0.25), y: ringBase.y + (Math.random() * 0.5 - 0.25) };
             // 【新增】：黑天龍專屬技能冷卻 (預設進場 3 秒後發動第一次)
             this.ultCooldown = 180;
+            // 【新增】：諸葛亮專用 DEBUFF 計時器
+            this.speedDebuffTimer = 0; // 減速
+            this.defDebuffTimer = 0;   // 降防
+            this.rootTimer = 0;        // 八陣圖定身
         }
 
 // 【新增】：黑天龍獨立大絕函數
@@ -1642,7 +1723,16 @@ class Enemy {
             }
         }
 
-        update(targetPlayer) {
+update(targetPlayer) {
+            if (this.rootTimer > 0) {
+                this.rootTimer--;
+                this.state = 4;
+                return false; 
+            }
+            if (this.speedDebuffTimer > 0) this.speedDebuffTimer--;
+            if (this.defDebuffTimer > 0) this.defDebuffTimer--;
+            let currentSpeed = this.speedDebuffTimer > 0 ? this.speed * 0.3 : this.speed;
+
             if (this.cooldown > 0) this.cooldown--;
 
             let targetNode = this.pathIndex < pathCoords.length ? pathCoords[this.pathIndex] : this.ringTarget;
@@ -1659,7 +1749,7 @@ class Enemy {
                 else if (tx > this.x + 1) this.facingLeft = false;
             }
 
-            // 1. 攻擊城門邏輯
+            // 1. 攻擊城門 (阻擋道路，優先度最高)
             let gate = towers.find(t => t.id === 'gate' && t.x === (targetNode ? Math.floor(targetNode.x) : -1) && t.y === (targetNode ? Math.floor(targetNode.y) : -1));
             if (gate) {
                 if (this.cooldown <= 0) { 
@@ -1672,14 +1762,39 @@ class Enemy {
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
                     this.hasDealtDamage = true;
                     if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
-                    else if (this.id === 'rahu' && this.isUlt) { this.triggerRahuSlashWave(); } // 【新增】：整合羅侯刀氣大絕
+                    else if (this.id === 'rahu' && this.isUlt) { this.triggerRahuSlashWave(); } 
                     else { gate.hp -= this.isUlt ? this.damage * 2.0 : this.damage; }
                 }
                 if (gate.hp <= 0) towers = towers.filter(t => t !== gate);
                 return false;
             }
             
-            // 2. 攻擊主堡邏輯
+            // 2. 【修改】：優先攻擊玩家部隊邏輯 (移到攻擊主堡上方)
+            if (targetPlayer && Math.hypot((targetPlayer.x + targetPlayer.drawOffsetX) - (this.x + this.drawOffsetX), (targetPlayer.y + targetPlayer.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
+                if (this.cooldown <= 0) { 
+                    this.cooldown = this.fireRate; this.hasDealtDamage = false; 
+                    let baseChance = this.unitData.ultChance || 0.05;
+                    this.isUlt = Math.random() < Math.min(0.50, baseChance + (this.level - 1) * 0.015);
+                }
+                this.state = this.isUlt ? 2 : 1; 
+                this.facingLeft = targetPlayer.x < this.x;
+                
+                let attackProgress = 1 - (this.cooldown / this.fireRate);
+                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
+                    this.hasDealtDamage = true;
+                    if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
+                    else if (this.id === 'rahu') { this.triggerRahuSlashWave(targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); } 
+                    else {
+                        targetPlayer.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
+                        ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
+                        ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                        ctx.lineTo(targetPlayer.x + targetPlayer.drawOffsetX, targetPlayer.y + targetPlayer.drawOffsetY); ctx.stroke();
+                    }
+                }
+                return false;
+            }
+
+            // 3. 【修改】：攻擊主堡邏輯 (降級至部隊之後)
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((playerBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (playerBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
@@ -1696,10 +1811,7 @@ class Enemy {
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
                     this.hasDealtDamage = true;
                     if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
-                    // 【修改】：拿掉 && this.isUlt，讓羅侯普攻也射刀氣，並傳入主堡座標
-                    else if (this.id === 'rahu') { 
-                        this.triggerRahuSlashWave(playerBase.x * TILE_SIZE + TILE_SIZE/2, playerBase.y * TILE_SIZE + TILE_SIZE/2); 
-                    } 
+                    else if (this.id === 'rahu') { this.triggerRahuSlashWave(playerBase.x * TILE_SIZE + TILE_SIZE/2, playerBase.y * TILE_SIZE + TILE_SIZE/2); } 
                     else {
                         playerBase.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
                         ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
@@ -1710,105 +1822,95 @@ class Enemy {
                 return false;
             }
 
-            // 3. 攻擊玩家部隊邏輯
-            if (targetPlayer && Math.hypot((targetPlayer.x + targetPlayer.drawOffsetX) - (this.x + this.drawOffsetX), (targetPlayer.y + targetPlayer.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
-                if (this.cooldown <= 0) { 
-                    this.cooldown = this.fireRate; this.hasDealtDamage = false; 
-                    let baseChance = this.unitData.ultChance || 0.05;
-                    this.isUlt = Math.random() < Math.min(0.50, baseChance + (this.level - 1) * 0.015);
-                }
-                this.state = this.isUlt ? 2 : 1; 
-                this.facingLeft = targetPlayer.x < this.x;
-                
-                let attackProgress = 1 - (this.cooldown / this.fireRate);
-                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                    this.hasDealtDamage = true;
-                    if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
-                    // 【修改】：拿掉 && this.isUlt，並傳入鎖定的目標部隊座標
-                    else if (this.id === 'rahu') { 
-                        this.triggerRahuSlashWave(targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); 
-                    } 
-                    else {
-                        targetPlayer.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
-                        ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
-                        ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                        ctx.lineTo(targetPlayer.x + targetPlayer.drawOffsetX, targetPlayer.y + targetPlayer.drawOffsetY); ctx.stroke();
-                    }
-                }
-            } else {
-                if (!targetNode) return true;
-                const tx = targetNode.x * TILE_SIZE + TILE_SIZE / 2, ty = targetNode.y * TILE_SIZE + TILE_SIZE / 2;
-                const dx = tx - this.x, dy = ty - this.y;
+            // 4. 移動與透明穿透
+            if (!targetNode) return true;
+            const tx = targetNode.x * TILE_SIZE + TILE_SIZE / 2, ty = targetNode.y * TILE_SIZE + TILE_SIZE / 2;
+            const dx = tx - this.x, dy = ty - this.y;
 
-                const isLaneBlocked = (testLane) => {
-                    return enemies.some(e => {
-                        if (e === this || e.lane !== testLane || e.isDying || e.range > this.range + 10) return false;
-                        if (this.pathIndex >= pathCoords.length && e.pathIndex >= pathCoords.length) return false;
-                        
-                        // 【新增】：如果自己行得快過前面隻怪（例如快屍快過巨屍），就直接爬頭穿過去！
-                        if (this.speed > e.speed) return false;
+            const isLaneBlocked = (testLane) => {
+                return enemies.some(e => {
+                    if (e === this || e.lane !== testLane || e.isDying || e.range > this.range + 10) return false;
+                    if (this.pathIndex >= pathCoords.length && e.pathIndex >= pathCoords.length) return false;
+                    
+                    // 【新增】：如果前方的敵人中了減速或定身，直接當作透明穿過去！
+                    if (e.speedDebuffTimer > 0 || e.rootTimer > 0) return false;
+                    
+                    if (this.speed > e.speed) return false;
 
-                        if (Math.hypot(e.x - this.x, e.y - this.y) < 24) { 
-                            if (e.pathIndex > this.pathIndex) return true;
-                            if (e.pathIndex === this.pathIndex) {
-                                let myDist = Math.hypot(tx - this.x, ty - this.y); let eDist = Math.hypot(tx - e.x, ty - e.y);
-                                if (eDist < myDist - 0.1) return true; 
-                                if (Math.abs(eDist - myDist) <= 0.1) return enemies.indexOf(e) < enemies.indexOf(this); 
-                            }
+                    if (Math.hypot(e.x - this.x, e.y - this.y) < 24) { 
+                        if (e.pathIndex > this.pathIndex) return true;
+                        if (e.pathIndex === this.pathIndex) {
+                            let myDist = Math.hypot(tx - this.x, ty - this.y); let eDist = Math.hypot(tx - e.x, ty - e.y);
+                            if (eDist < myDist - 0.1) return true; 
+                            if (Math.abs(eDist - myDist) <= 0.1) return enemies.indexOf(e) < enemies.indexOf(this); 
                         }
-                        return false;
-                    });
-                };
+                    }
+                    return false;
+                });
+            };
 
-                if (isLaneBlocked(this.lane)) {
-                    let possibleLanes = this.lane === 0 ? [-1, 1] : [0];
-                    possibleLanes.sort(() => Math.random() - 0.5);
-                    let switched = false;
-                    for (let l of possibleLanes) { if (!isLaneBlocked(l)) { this.lane = l; this.laneOffset = this.lane * 12; switched = true; break; } }
-                    if (!switched) { this.state = 4; return false; }
-                }
+            if (isLaneBlocked(this.lane)) {
+                let possibleLanes = this.lane === 0 ? [-1, 1] : [0];
+                possibleLanes.sort(() => Math.random() - 0.5);
+                let switched = false;
+                for (let l of possibleLanes) { if (!isLaneBlocked(l)) { this.lane = l; this.laneOffset = this.lane * 12; switched = true; break; } }
+                if (!switched) { this.state = 4; return false; }
+            }
 
-                this.state = 0; const dist = Math.hypot(dx, dy);
-                if (dist < this.speed) { this.x = tx; this.y = ty; if(this.pathIndex < pathCoords.length) this.pathIndex++; } 
-                else { this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed; }
+            this.state = 0; const dist = Math.hypot(dx, dy);
+            if (dist < currentSpeed) { 
+                this.x = tx; this.y = ty; 
+                if(this.pathIndex < pathCoords.length) this.pathIndex++; 
+            } 
+            else { 
+                this.x += (dx / dist) * currentSpeed; 
+                this.y += (dy / dist) * currentSpeed; 
             }
             return false;
         }
 
         
-draw() {
+        draw() {
             if (this.state === 0) this.frame = Math.floor(globalAnimTick / 10) % 5; 
             else if (this.state === 4) this.frame = Math.floor(globalAnimTick / 15) % 4; 
             else if (this.state === 1 || this.state === 2) { 
                 let attackProgress = 1 - (this.cooldown / this.fireRate); 
                 this.frame = Math.min(4, Math.floor(attackProgress * 5)); 
             } else if (this.state === 3) {
-                // 【新增】：退場動畫 (第四橫行) 播一次
                 let deathProgress = 1 - (this.deathTimer / 45); 
                 this.frame = Math.min(4, Math.floor(deathProgress * 5));
             }
 
             let cx = this.x + this.drawOffsetX, cy = this.y + this.drawOffsetY;
-
-            ctx.save(); // 將 ctx.save 提早，以便套用特效
+            ctx.save();
             
-            // 【新增】：曹操傳經典退場特效 (高頻率閃爍 + 慢慢飄散)
             if (this.isDying) {
                 let deathProgress = 1 - (this.deathTimer / 45);
-                if (this.deathTimer % 6 < 3) ctx.globalAlpha = 0.3; // 閃爍變淡
+                if (this.deathTimer % 6 < 3) ctx.globalAlpha = 0.3; 
                 else ctx.globalAlpha = 0.9;
-                cy -= deathProgress * 15; // 升天效果
+                cy -= deathProgress * 15; 
+            }
+
+            // ==========================================
+            // 【效能優化】：用輕量級的「腳底光環」取代耗能的 ctx.filter
+            // ==========================================
+            if (!this.isDying) {
+                if (this.rootTimer > 0) {
+                    ctx.fillStyle = 'rgba(128, 0, 128, 0.6)'; // 深紫色光環 (定身)
+                    ctx.beginPath(); ctx.ellipse(cx, cy + 10, 20, 10, 0, 0, Math.PI * 2); ctx.fill();
+                } else if (this.speedDebuffTimer > 0) {
+                    ctx.fillStyle = 'rgba(0, 191, 255, 0.6)'; // 冰藍色光環 (減速)
+                    ctx.beginPath(); ctx.ellipse(cx, cy + 10, 20, 10, 0, 0, Math.PI * 2); ctx.fill();
+                } else if (this.isUlt && this.unitData.id === 'rahu') {
+                    ctx.fillStyle = 'rgba(255, 50, 50, 0.4)'; // 羅侯紅色狂氣
+                    ctx.beginPath(); ctx.ellipse(cx, cy + 10, 30, 15, 0, 0, Math.PI * 2); ctx.fill();
+                }
             }
 
             if (this.unitData.img && this.unitData.img.complete && !this.unitData.img.isFailed && this.unitData.img.naturalWidth > 0) {
-                let cols = 5; let rows = 5; // 所有精靈圖都是 5x5
+                let cols = 5; let rows = 5; 
                 let frameWidth = this.unitData.img.naturalWidth / cols; let frameHeight = this.unitData.img.naturalHeight / rows;
                 let sx = this.frame * frameWidth; let sy = this.state * frameHeight; 
-                
-                // 大絕狀態視覺特效 (由 1.5 倍提升至 2.5 倍亮度)
-                if (this.isUlt && this.unitData.id === 'rahu') {
-                    ctx.filter = `brightness(${1 + Math.sin(globalAnimTick / 10) * 1.5})`; 
-                }
 
                 let drawWidth = TILE_SIZE * (this.unitData.drawScale || 1.5);
                 let aspectRatio = frameHeight / frameWidth;
@@ -1817,20 +1919,31 @@ draw() {
                 
                 ctx.translate(cx, cy - 5 + yOffset);
                 if (this.facingLeft) { ctx.scale(-1, 1); }
+                
+                // 【核心修復】：完全移除 ctx.filter，直接繪圖保證 60FPS 順暢度
                 ctx.drawImage(this.unitData.img, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); 
+                
             } else {
                 ctx.fillStyle = this.unitData.color; ctx.beginPath(); ctx.arc(cx, cy, 10 * (this.unitData.drawScale || 1), 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = 'white'; ctx.font = '12px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(this.unitData.symbol, cx, cy);
             }
             
-            ctx.restore(); // 提早關閉特效設定
+            ctx.restore(); 
 
-            // 【修改】：根據角色體型 (drawScale) 動態推高血條，防止遮面
             if (!this.isDying) {
                 let hpOffset = (this.unitData.drawScale || 1.5) * 15; 
                 ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
                 ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20, 3);
                 ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20 * (this.hp / this.maxHp), 3);
+                
+                // ==========================================
+                // 【新增】：在頭頂畫出明確的狀態圖示
+                // ==========================================
+                if (this.rootTimer > 0) {
+                    ctx.font = '16px Arial'; ctx.fillText('⛓️', cx, cy - hpOffset - 25);
+                } else if (this.speedDebuffTimer > 0) {
+                    ctx.font = '16px Arial'; ctx.fillText('❄️', cx, cy - hpOffset - 25);
+                }
             }
         }
     }
@@ -1858,67 +1971,52 @@ class PlayerUnit {
             this.isTransformed = false;
             this.currentImg = this.unitData.img; // 預設使用第一張圖
             this.currentScale = this.unitData.drawScale || 1.5; // 預設大小
+
+        // 【新增修復】：明確宣告燎原火專用的屬性，避免 undefined 錯誤
+            this.immortalTriggered = false;
+            this.immortalTimer = 0;
         }
 
 update(targetEnemy) {
-            // 1. 變身系統邏輯 (大佛)
             if (this.unitData.isTransformable && !this.isTransformed && !this.isTransforming && this.hp <= this.maxHp * 0.1) {
-                this.isTransforming = true;
-                this.transformTimer = 90; 
-                this.state = 0; 
-                this.cooldown = 0;
+                this.isTransforming = true; this.transformTimer = 90; this.state = 0; this.cooldown = 0;
                 if (this.hp <= 0) this.hp = 1; 
             }
-
             if (this.isTransforming) {
                 this.transformTimer--;
                 if (this.transformTimer === 45) {
-                    this.isTransformed = true;
-                    this.hp = this.maxHp; 
-                    this.currentImg = this.unitData.img2; 
-                    this.currentScale = 3.0; 
-                    this.damage *= 1.5; 
+                    this.isTransformed = true; this.hp = this.maxHp; this.currentImg = this.unitData.img2; 
+                    this.currentScale = 3.0; this.damage *= 1.5; 
                 }
-                if (this.transformTimer <= 0) {
-                    this.isTransforming = false;
-                }
+                if (this.transformTimer <= 0) { this.isTransforming = false; }
                 return false; 
             }
 
             if (this.cooldown > 0) this.cooldown--;
 
-            // ============================================
-            // 2. 決定行軍目標與防守者「正統尋路大腦」
-            // ============================================
-            let isDefender = (this.id === 'g1' || this.id === 'g3');
+            let isDefender = (this.id === 'g1' || this.id === 'g3' || this.id === 'g7');
             let tx = this.x, ty = this.y; 
             let hasValidTarget = false;
             let targetNode = null; 
 
             if (isDefender) {
-                let threat = null;
-                // 【修改】：關羽與如來共用相同的索敵邏輯
-                if (this.id === 'g1' || this.id === 'g3') {
-                    threat = enemies.find(e => !e.isDying && (
-                        towers.some(t => {
-                            let s = BUILDINGS[t.id].size || 1;
-                            let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
-                            let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
-                            return Math.hypot(e.x - centerX, e.y - centerY) < 180;
-                        }) ||
-                        Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250
-                    ));
-                }
+                let threat = enemies.find(e => !e.isDying && (
+                    towers.some(t => {
+                        let s = BUILDINGS[t.id].size || 1;
+                        let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
+                        let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
+                        return Math.hypot(e.x - centerX, e.y - centerY) < 180;
+                    }) ||
+                    Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250
+                ));
 
                 if (threat) {
                     this.retreatTimer = 0; hasValidTarget = true;
                     let thIdx = threat.pathIndex >= 0 ? threat.pathIndex : pathCoords.length - 1;
-                    
-                    // 如果距離敵人路徑超過 1 格，乖乖順住條路行過去！
                     if (this.pathIndex >= 0 && this.pathIndex < pathCoords.length && Math.abs(this.pathIndex - thIdx) > 1) {
                         targetNode = pathCoords[this.pathIndex];
                     } else {
-                        tx = threat.x; ty = threat.y; // 夠近先直接衝埋去
+                        tx = threat.x; ty = threat.y; 
                         this.drawOffsetX = 0; this.drawOffsetY = 0;
                     }
                 } else {
@@ -1952,9 +2050,80 @@ update(targetEnemy) {
                 if (tx < this.x - 1) this.facingLeft = true; else if (tx > this.x + 1) this.facingLeft = false;
             }
 
-            // ============================================
-            // 3. 攻擊敵方主堡邏輯
-            // ============================================
+            // 1. 【修改】：優先攻擊敵軍部隊邏輯 (移到攻擊主堡上方)
+            if (targetEnemy && Math.hypot((targetEnemy.x + targetEnemy.drawOffsetX) - (this.x + this.drawOffsetX), (targetEnemy.y + targetEnemy.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
+                if (this.cooldown <= 0) { 
+                    this.cooldown = this.fireRate; this.hasDealtDamage = false; 
+                    let baseChance = this.unitData.ultChance || 0.05;
+                    let ultChance = Math.min(0.60, baseChance + (this.level - 1) * 0.02);
+                    this.isUlt = Math.random() < ultChance;
+                }
+                this.state = this.isUlt ? 2 : 1;
+                this.facingLeft = targetEnemy.x < this.x;
+                
+                let attackProgress = 1 - (this.cooldown / this.fireRate);
+                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
+                    let finalDamage = this.isUlt ? this.damage * 2.5 : this.damage;
+                    this.hasDealtDamage = true;
+                    
+                    let impactX = targetEnemy.x + targetEnemy.drawOffsetX;
+                    let impactY = targetEnemy.y + targetEnemy.drawOffsetY;
+
+                    if (this.id === 'g5') {
+                        playSound('shoot');
+                        projectiles.push({ x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 10, tx: impactX, ty: impactY, damage: finalDamage, aoeRadius: 80, speed: 12, type: 'missile' });
+                    } else if (this.id === 'g6') {
+                        playSound('shoot');
+                        let arrowDmg = this.isUlt ? this.damage * 2 : this.damage;
+                        slashWaves.push(new SlashWave(arrowDmg, this.x, this.y, impactX, impactY, 'arrow', this.isUlt, true, this.unitData.slashImg));
+                    } else if (this.id === 'g7') {
+                        playSound('shoot');
+                        let aoeRadius = this.isUlt ? 120 : 80;
+                        enemies.forEach(e => {
+                            if (Math.hypot(e.x - impactX, e.y - impactY) <= aoeRadius) {
+                                let dmgDealt = (e.defDebuffTimer > 0) ? finalDamage * 1.5 : finalDamage;
+                                e.hp -= dmgDealt;
+                                if (this.isUlt) { e.rootTimer = 600; } 
+                                else { e.defDebuffTimer = 240; e.speedDebuffTimer = 240; } 
+                            }
+                        });
+                        combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 30, maxTimer: 30, frames: 4, customImg: this.unitData.aoeImg });
+                    } else if (this.id === 'g8') {
+                        playSound('melee');
+                        if (this.isUlt) {
+                            slashWaves.push(new SlashWave(this.damage * 2.5, this.x, this.y, impactX, impactY, 'slash', true, true, this.unitData.slashImg));
+                        } else {
+                            let targets = enemies.filter(e => !e.isDying && Math.hypot(e.x - this.x, e.y - this.y) <= this.range).slice(0, 5);
+                            targets.forEach(t => {
+                                let dmgDealt = (t.defDebuffTimer > 0) ? this.damage * 1.5 : this.damage;
+                                t.hp -= dmgDealt;
+                                ctx.strokeStyle = this.unitData.color; ctx.lineWidth = 2;
+                                ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                                ctx.lineTo(t.x, t.y); ctx.stroke();
+                            });
+                        }
+                    } else {
+                        targetEnemy.hp -= finalDamage; 
+                        if (this.unitData.hasAoE) {
+                            let aoeRadius = this.isTransformed ? 120 : 60; 
+                            enemies.forEach(e => {
+                                if (e !== targetEnemy && Math.hypot((e.x + e.drawOffsetX) - impactX, (e.y + e.drawOffsetY) - impactY) <= aoeRadius) {
+                                    e.hp -= finalDamage;
+                                }
+                            });
+                            let customAoeImg = (this.isTransformed && this.unitData.aoeImg2) ? this.unitData.aoeImg2 : this.unitData.aoeImg;
+                            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, isTransformed: this.isTransformed, customImg: customAoeImg });
+                        } else {
+                            ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                            ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                        }
+                    }
+                }
+                return false;
+            }
+
+            // 2. 【修改】：攻擊敵方主堡邏輯 (降級至部隊之後)
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((enemyBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (enemyBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
@@ -1978,21 +2147,46 @@ update(targetEnemy) {
 
                     if (this.id === 'g5') {
                         playSound('shoot');
-                        // 【新增】：機甲專屬，發射飛彈
-                        projectiles.push({
-                            x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 10,
-                            tx: impactX, ty: impactY,
-                            damage: finalDamage, aoeRadius: 80, speed: 12, type: 'missile'
+                        projectiles.push({ x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 10, tx: impactX, ty: impactY, damage: finalDamage, aoeRadius: 80, speed: 12, type: 'missile' });
+                    } else if (this.id === 'g6') {
+                        playSound('shoot');
+                        let arrowDmg = this.isUlt ? this.damage * 2 : this.damage;
+                        slashWaves.push(new SlashWave(arrowDmg, this.x, this.y, impactX, impactY, 'arrow', this.isUlt, true, this.unitData.slashImg));
+                    } else if (this.id === 'g7') {
+                        playSound('shoot');
+                        let aoeRadius = this.isUlt ? 120 : 80;
+                        enemies.forEach(e => {
+                            if (Math.hypot(e.x - impactX, e.y - impactY) <= aoeRadius) {
+                                let dmgDealt = (e.defDebuffTimer > 0) ? finalDamage * 1.5 : finalDamage;
+                                e.hp -= dmgDealt;
+                                if (this.isUlt) { e.rootTimer = 600; } 
+                                else { e.defDebuffTimer = 240; e.speedDebuffTimer = 240; } 
+                            }
                         });
+                        combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 30, maxTimer: 30, frames: 4, customImg: this.unitData.aoeImg });
+                    } else if (this.id === 'g8') {
+                        playSound('melee');
+                        if (this.isUlt) {
+                            slashWaves.push(new SlashWave(this.damage * 2.5, this.x, this.y, impactX, impactY, 'slash', true, true, this.unitData.slashImg));
+                        } else {
+                            let targets = enemies.filter(e => !e.isDying && Math.hypot(e.x - this.x, e.y - this.y) <= this.range).slice(0, 5);
+                            targets.forEach(t => {
+                                let dmgDealt = (t.defDebuffTimer > 0) ? this.damage * 1.5 : this.damage;
+                                t.hp -= dmgDealt;
+                                ctx.strokeStyle = this.unitData.color; ctx.lineWidth = 2;
+                                ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                                ctx.lineTo(t.x, t.y); ctx.stroke();
+                            });
+                        }
                     } else {
-                        // 一般武將即時傷害
                         enemyBase.hp -= finalDamage; 
                         if (this.unitData.hasAoE) {
                             let aoeRadius = this.isTransformed ? 120 : 60; 
                             enemies.forEach(e => {
                                 if (Math.hypot(e.x - impactX, e.y - impactY) <= aoeRadius) e.hp -= finalDamage;
                             });
-                            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, isTransformed: this.isTransformed });
+                            let customAoeImg = (this.isTransformed && this.unitData.aoeImg2) ? this.unitData.aoeImg2 : this.unitData.aoeImg;
+                            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, isTransformed: this.isTransformed, customImg: customAoeImg });
                         } else {
                             ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
                             ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
@@ -2003,121 +2197,71 @@ update(targetEnemy) {
                 return false;
             }
 
-            // ============================================
-            // 4. 攻擊敵軍部隊邏輯
-            // ============================================
-            if (targetEnemy && Math.hypot((targetEnemy.x + targetEnemy.drawOffsetX) - (this.x + this.drawOffsetX), (targetEnemy.y + targetEnemy.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
-                if (this.cooldown <= 0) { 
-                    this.cooldown = this.fireRate; this.hasDealtDamage = false; 
-                    let baseChance = this.unitData.ultChance || 0.05;
-                    let ultChance = Math.min(0.60, baseChance + (this.level - 1) * 0.02);
-                    this.isUlt = Math.random() < ultChance;
-                }
-                this.state = this.isUlt ? 2 : 1;
-                this.facingLeft = targetEnemy.x < this.x;
-                
-                let attackProgress = 1 - (this.cooldown / this.fireRate);
-                if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                    let finalDamage = this.isUlt ? this.damage * 2.5 : this.damage;
-                    this.hasDealtDamage = true;
+            // 3. 移動與透明穿透
+            if (!hasValidTarget) { this.state = 0; return true; }
+            const dx = tx - this.x, dy = ty - this.y;
+            const dist = Math.hypot(dx, dy);
+
+            const isLaneBlocked = (testLane) => {
+                return playerUnits.some(p => {
+                    if (p === this || p.lane !== testLane || p.isDying || p.range > this.range + 10) return false;
+                    if (this.pathIndex < 0 && p.pathIndex < 0) return false;
                     
-                    let impactX = targetEnemy.x + targetEnemy.drawOffsetX;
-                    let impactY = targetEnemy.y + targetEnemy.drawOffsetY;
+                    // 【新增】：如果前方的隊友中了減速或定身，直接當作透明穿過去！(預留給未來敵人控場技能)
+                    if (p.speedDebuffTimer > 0 || p.rootTimer > 0) return false;
+                    
+                    if (this.speed > p.speed) return false;
 
-                    if (this.id === 'g5') {
-                        // 【新增】：機甲專屬，發射飛彈
-                        projectiles.push({
-                            x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 10,
-                            tx: impactX, ty: impactY,
-                            damage: finalDamage, aoeRadius: 80, speed: 12, type: 'missile'
-                        });
-                    } else {
-                        // 一般武將即時傷害
-                        targetEnemy.hp -= finalDamage; 
-                        if (this.unitData.hasAoE) {
-                            let aoeRadius = this.isTransformed ? 120 : 60; 
-                            enemies.forEach(e => {
-                                if (e !== targetEnemy && Math.hypot((e.x + e.drawOffsetX) - impactX, (e.y + e.drawOffsetY) - impactY) <= aoeRadius) {
-                                    e.hp -= finalDamage;
-                                }
-                            });
-                            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, type: this.isTransformed ? 'transformed' : 'normal', isTransformed: this.isTransformed });
+                    if (Math.hypot(p.x - this.x, p.y - this.y) < 24) { 
+                        if (p.pathIndex < this.pathIndex) return true; 
+                        if (p.pathIndex === this.pathIndex) {
+                            let myDist = Math.hypot(tx - this.x, ty - this.y), pDist = Math.hypot(tx - p.x, ty - p.y);
+                            if (pDist < myDist - 0.1) return true;
+                            if (Math.abs(pDist - myDist) <= 0.1) return playerUnits.indexOf(p) < playerUnits.indexOf(this);
+                        }
+                    }
+                    return false;
+                });
+            };
+            
+            if (!isDefender && isLaneBlocked(this.lane)) {
+                let possibleLanes = this.lane === 0 ? [-1, 1] : [0];
+                possibleLanes.sort(() => Math.random() - 0.5);
+                let switched = false;
+                for (let l of possibleLanes) { if (!isLaneBlocked(l)) { this.lane = l; this.laneOffset = this.lane * 12; switched = true; break; } }
+                if (!switched) { this.state = 4; return false; }
+            }
+
+            this.state = 0; 
+            if (dist < this.speed) { 
+                this.x = tx; this.y = ty; 
+                if (targetNode) {
+                    if (!isDefender && this.pathIndex >= 0) this.pathIndex--;
+                    else if (isDefender) {
+                        let threat = enemies.find(e => !e.isDying && (
+                            towers.some(t => { let s = BUILDINGS[t.id].size || 1; return Math.hypot(e.x - (t.x*TILE_SIZE+(TILE_SIZE*s)/2), e.y - (t.y*TILE_SIZE+(TILE_SIZE*s)/2)) < 180; }) ||
+                            Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250
+                        ));
+                        if (threat) {
+                            let thIdx = threat.pathIndex >= 0 ? threat.pathIndex : pathCoords.length - 1;
+                            if (this.pathIndex > thIdx) this.pathIndex--; else if (this.pathIndex < thIdx) this.pathIndex++;
                         } else {
-                            ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
-                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                            ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
-                        }
-                    }
-                }
-            } else {
-                // ============================================
-                // 5. 執行移動與路線修正
-                // ============================================
-                if (!hasValidTarget) { this.state = 0; return true; }
-                
-                const dx = tx - this.x, dy = ty - this.y;
-                const dist = Math.hypot(dx, dy);
-
-                const isLaneBlocked = (testLane) => {
-                    return playerUnits.some(p => {
-                        if (p === this || p.lane !== testLane || p.isDying || p.range > this.range + 10) return false;
-                        if (this.pathIndex < 0 && p.pathIndex < 0) return false;
-                        
-                        // 【新增】：如果自己行得快過前面個隊友（例如騎兵快過步兵），就無視阻擋，直接爬頭穿過去！
-                        if (this.speed > p.speed) return false;
-
-                        if (Math.hypot(p.x - this.x, p.y - this.y) < 24) { 
-
-                            if (p.pathIndex < this.pathIndex) return true; 
-                            if (p.pathIndex === this.pathIndex) {
-                                let myDist = Math.hypot(tx - this.x, ty - this.y), pDist = Math.hypot(tx - p.x, ty - p.y);
-                                if (pDist < myDist - 0.1) return true;
-                                if (Math.abs(pDist - myDist) <= 0.1) return playerUnits.indexOf(p) < playerUnits.indexOf(this);
-                            }
-                        }
-                        return false;
-                    });
-                };
-                
-                if (!isDefender && isLaneBlocked(this.lane)) {
-                    let possibleLanes = this.lane === 0 ? [-1, 1] : [0];
-                    possibleLanes.sort(() => Math.random() - 0.5);
-                    let switched = false;
-                    for (let l of possibleLanes) { if (!isLaneBlocked(l)) { this.lane = l; this.laneOffset = this.lane * 12; switched = true; break; } }
-                    if (!switched) { this.state = 4; return false; }
-                }
-
-                this.state = 0; 
-                if (dist < this.speed) { 
-                    this.x = tx; this.y = ty; 
-                    if (targetNode) {
-                        if (!isDefender && this.pathIndex >= 0) this.pathIndex--;
-                        else if (isDefender) {
-                            let threat = enemies.find(e => !e.isDying && (
-                                towers.some(t => { let s = BUILDINGS[t.id].size || 1; return Math.hypot(e.x - (t.x*TILE_SIZE+(TILE_SIZE*s)/2), e.y - (t.y*TILE_SIZE+(TILE_SIZE*s)/2)) < 180; }) ||
-                                Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250
-                            ));
-                            if (threat) {
-                                let thIdx = threat.pathIndex >= 0 ? threat.pathIndex : pathCoords.length - 1;
-                                if (this.pathIndex > thIdx) this.pathIndex--; else if (this.pathIndex < thIdx) this.pathIndex++;
-                            } else {
-                                let tents = towers.filter(t => t.id === 'tent');
-                                if (tents.length > 0) {
-                                    let tentIdx = getNearestPathIndex(tents[0].x, tents[0].y);
-                                    if (this.pathIndex > tentIdx) this.pathIndex--; else if (this.pathIndex < tentIdx) this.pathIndex++;
-                                }
+                            let tents = towers.filter(t => t.id === 'tent');
+                            if (tents.length > 0) {
+                                let tentIdx = getNearestPathIndex(tents[0].x, tents[0].y);
+                                if (this.pathIndex > tentIdx) this.pathIndex--; else if (this.pathIndex < tentIdx) this.pathIndex++;
                             }
                         }
                     }
-                } else { 
-                    this.x += (dx / dist) * this.speed; 
-                    this.y += (dy / dist) * this.speed; 
                 }
+            } else { 
+                this.x += (dx / dist) * this.speed; 
+                this.y += (dy / dist) * this.speed; 
             }
             return false;
         }
         
-draw() {
+        draw() {
             // 【核心修正】：如果是安全撤退，強制覆蓋為「行走狀態(0)」，不播「死亡狀態(3)」
             if (this.isRetreating) this.state = 0; 
 
@@ -2301,70 +2445,63 @@ draw() {
     // 【新增】：狂王羅侯專屬穿透性刀氣類別 (SlashWave)
     // 功能：飛行時對路徑上所有玩家實體造成穿透性傷害
     // ==========================================
-// ==========================================
-    // 【修改】：狂王羅侯專屬穿透性刀氣類別 (SlashWave)
-    // 功能：沿著發射角度飛出畫面外，沿途擊中所有物體各一次
-    // ==========================================
+
     class SlashWave {
-        constructor(dmg, x, y, tx, ty, type, isRahuUlting) {
+        // 【修改】：加入 customImg 參數，讓每個人都能傳入自己的專屬圖片
+        constructor(dmg, x, y, tx, ty, type, isUlt, isPlayer = false, customImg = null) {
             this.x = x; this.y = y; 
             this.dmg = dmg; this.speed = 12; this.type = type; 
             this.frame = 0; this.animOffset = Math.floor(Math.random() * 60); 
             
-            // 【核心修正】：將目標點轉化為飛行角度與 X/Y 速度向量，讓它能無限延伸
             let angle = Math.atan2(ty - y, tx - x);
             this.vx = Math.cos(angle) * this.speed;
             this.vy = Math.sin(angle) * this.speed;
             this.facingLeft = this.vx < 0;
             
-            this.width = 120; // 刀氣寬度
-            this.isRahuUlting = isRahuUlting; 
-            this.img = EFFECT_IMGS.aoe_slash;
-            
-            // 【新增】：用 Set 紀錄已經擊中過的目標，確保每個目標只會受傷一次
+            this.width = type === 'arrow' ? 60 : 120; 
+            this.isUlt = isUlt; 
+            this.isPlayer = isPlayer; 
+            // 【修改】：優先使用傳入的專屬圖，如果沒有才退回使用羅侯的預設刀氣
+            this.img = customImg || EFFECT_IMGS.aoe_slash; 
             this.hitTargets = new Set();
         }
 
-update() {
-            // 1. 邊界判定：如果飛出地圖外 200px 距離，才徹底消失
-            if (this.x < -200 || this.x > 1000 || this.y < -200 || this.y > 1000) {
-                return true;
-            }
-
-            // 2. 繼續飛行
-            this.x += this.vx;
-            this.y += this.vy;
+        update() {
+            if (this.x < -200 || this.x > 1000 || this.y < -200 || this.y > 1000) return true;
+            this.x += this.vx; this.y += this.vy;
             
-            // 3. 沿途穿透傷害判定
             let checkCollision = (targetArr) => {
                 for (let i = targetArr.length - 1; i >= 0; i--) {
                     let target = targetArr[i];
                     if (target.isDying) continue;
-                    
-                    // 圓形碰撞判定
                     if (Math.hypot((target.x + (target.drawOffsetX||0)) - this.x, (target.y + (target.drawOffsetY||0)) - this.y) <= (this.width / 2 + TILE_SIZE / 2)) {
-                        // 如果該目標還沒被這發刀氣砍過，就扣血並加入已命中清單
                         if (!this.hitTargets.has(target)) {
-                            target.hp -= this.dmg;
+                            // 【新增】：判定敵軍降防 DEBUFF，受到的傷害增加 50%
+                            let finalDmg = (target.defDebuffTimer && target.defDebuffTimer > 0) ? this.dmg * 1.5 : this.dmg;
+                            target.hp -= finalDmg;
                             this.hitTargets.add(target);
-                            playSound('melee'); // 【新增刀氣擊中音效】
+                            playSound('melee');
                         }
                     }
                 }
             };
             
-            checkCollision(playerUnits);
-            checkCollision(towers);
-            
-            // 4. 獨立判定玩家主堡
-            let baseHitDist = Math.hypot((playerBase.x*TILE_SIZE+TILE_SIZE/2) - this.x, (playerBase.y*TILE_SIZE+TILE_SIZE/2) - this.y);
-            if (baseHitDist <= (this.width / 2 + TILE_SIZE) && !this.hitTargets.has(playerBase)) {
-                playerBase.hp -= this.dmg;
-                this.hitTargets.add(playerBase);
-                // 【已移除】：命中主堡時的 aoe_normal 爆炸特效
+            // 【修改】：根據發射者決定要判定砍誰
+            if (this.isPlayer) {
+                checkCollision(enemies);
+                let baseHitDist = Math.hypot((enemyBase.x*TILE_SIZE+TILE_SIZE/2) - this.x, (enemyBase.y*TILE_SIZE+TILE_SIZE/2) - this.y);
+                if (baseHitDist <= (this.width / 2 + TILE_SIZE) && !this.hitTargets.has(enemyBase)) {
+                    enemyBase.hp -= this.dmg; this.hitTargets.add(enemyBase);
+                }
+            } else {
+                checkCollision(playerUnits);
+                checkCollision(towers);
+                let baseHitDist = Math.hypot((playerBase.x*TILE_SIZE+TILE_SIZE/2) - this.x, (playerBase.y*TILE_SIZE+TILE_SIZE/2) - this.y);
+                if (baseHitDist <= (this.width / 2 + TILE_SIZE) && !this.hitTargets.has(playerBase)) {
+                    playerBase.hp -= this.dmg; this.hitTargets.add(playerBase);
+                }
             }
-            
-            return false; // 回傳 false 讓刀氣繼續飛行
+            return false;
         }
         
         draw() {
@@ -2454,16 +2591,21 @@ update() {
                     
                     if (tents.length > 0 && !g.isDeployed && g.deathCooldown <= 0) {
                         let shouldDeploy = false;
-                        if (gId === 'g1' || gId === 'g3') { 
+                        if (gId === 'g1' || gId === 'g3' || gId === 'g7') { // 【新增】：諸葛亮與關羽條件相同
                             shouldDeploy = enemies.some(e => {
                                 let nearTower = towers.some(t => { let s = BUILDINGS[t.id].size || 1; return Math.hypot(e.x - (t.x*TILE_SIZE+(TILE_SIZE*s)/2), e.y - (t.y*TILE_SIZE+(TILE_SIZE*s)/2)) < 180; });
                                 let nearBase = Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250;
                                 return nearTower || nearBase;
                             });
-                        } else if (gId === 'g2') { shouldDeploy = (playerUnits.filter(p => p.id === 'b6' && !p.isDying).length >= 4); } 
-                          else if (gId === 'g4') { shouldDeploy = enemies.some(e => (e.id === 'boss' || e.id === 'black_dragon') && !e.isDying); }
-                          // 【新增】：g5 (未來上將) 的出陣條件：場上盾兵 (b5) 達到 4 個或以上
-                          else if (gId === 'g5') { shouldDeploy = (playerUnits.filter(p => p.id === 'b5' && !p.isDying).length >= 4); }
+                        } 
+                        else if (gId === 'g2' || gId === 'g8') { // 【新增】：燎原火與趙雲一樣，看騎兵數量
+                            shouldDeploy = (playerUnits.filter(p => p.id === 'b6' && !p.isDying).length >= 4); 
+                        } 
+                        else if (gId === 'g4') { shouldDeploy = enemies.some(e => (e.id === 'boss' || e.id === 'black_dragon') && !e.isDying); }
+                        else if (gId === 'g5') { shouldDeploy = (playerUnits.filter(p => p.id === 'b5' && !p.isDying).length >= 4); }
+                        else if (gId === 'g6') { // 【新增】：小孟看弓兵數量
+                            shouldDeploy = (playerUnits.filter(p => p.id === 'b7' && !p.isDying).length >= 4); 
+                        }
 
                         if (shouldDeploy) {
                             g.isDeployed = true;
@@ -2768,8 +2910,18 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 if (e.deathTimer <= 0) enemies.splice(i, 1);
             } else {
                 if (isPlaying) {
-                    let closestPlayer = playerUnits.find(p => !p.isDying && !p.isTransforming && Math.hypot((p.x + p.drawOffsetX) - (e.x + e.drawOffsetX), (p.y + p.drawOffsetY) - (e.y + e.drawOffsetY)) <= e.range);
+                    // 【修改】：掃描所有玩家部隊，找出絕對距離最近的目標
+                    let closestPlayer = null;
+                    let minDist = Infinity;
+                    playerUnits.forEach(p => {
+                        if (!p.isDying && !p.isTransforming) {
+                            let d = Math.hypot((p.x + p.drawOffsetX) - (e.x + e.drawOffsetX), (p.y + p.drawOffsetY) - (e.y + e.drawOffsetY));
+                            if (d <= e.range && d < minDist) { minDist = d; closestPlayer = p; }
+                        }
+                    });
+                    
                     e.update(closestPlayer);
+                    // ... (下方的 Game Over 判定保持不變)
                     if (playerBase.hp <= 0 && !gameOver) { 
                         gameOver = true;
                         playSound('lose'); // 【新增戰敗音效】
@@ -2783,10 +2935,12 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             }
         }
 
-        // 我軍更新 (包含關羽精準護駕撤退)
+        // 我軍更新 (包含精準護駕撤退)
         for (let i = playerUnits.length - 1; i >= 0; i--) {
             let pUnit = playerUnits[i];
-            if (pUnit.id === 'g1' && !pUnit.isDying) {
+            
+            // 【修改】：讓關羽(g1)、如來(g3)、諸葛亮(g7) 在沒有敵人時都會自動撤退
+            if ((pUnit.id === 'g1' || pUnit.id === 'g3' || pUnit.id === 'g7') && !pUnit.isDying) {
                 let buildingInDanger = enemies.some(e => {
                     let nearTower = towers.some(t => {
                         let s = BUILDINGS[t.id].size || 1;
@@ -2804,12 +2958,56 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 } else { pUnit.retreatTimer = 0; }
             }
             // 【核心修正】：攔截致命傷！如果是可變身且未變身的武將 (如來)，強制鎖血 1 滴，免除死亡！
+// 【核心修正】：攔截致命傷！
             if (pUnit.hp <= 0 && !pUnit.isDying) { 
-                if (pUnit.unitData.isTransformable && !pUnit.isTransformed && !pUnit.isTransforming) {
-                    pUnit.hp = 1; // 鎖血！交給 update() 函數去觸發變身
-                } else {
+                // 1. 如果鎖血計時器還在跑，強制把血量拉回 1，無視任何死亡判定！
+                if (pUnit.immortalTimer > 0) {
+                    pUnit.hp = 1;
+                }
+                // 2. 燎原火無痛覺被動 (第一次致死觸發)
+                else if (pUnit.id === 'g8' && !pUnit.immortalTriggered) {
+                    pUnit.hp = 1;
+                    pUnit.immortalTriggered = true;
+                    pUnit.immortalTimer = 480; // 鎖血 8 秒 (8 * 60)
+                    pUnit.damage *= 2.0; // 攻擊力大增
+                    pUnit.fireRate = Math.max(5, pUnit.fireRate * 0.4); // 攻速極限提升
+                    
+                    let feedback = document.getElementById('feedback');
+                    feedback.innerText = `🔥 燎原火發動【無痛覺】：鎖血 8 秒，攻速極限突破！`; 
+                    feedback.style.color = "#e74c3c";
+                }
+                // 3. 如來變身 (原有)
+                else if (pUnit.unitData.isTransformable && !pUnit.isTransformed && !pUnit.isTransforming) {
+                    pUnit.hp = 1; 
+                } 
+                // 4. 其他所有狀況：真的陣亡
+                else {
                     pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; 
-                    playSound('death'); // 【新增】：我軍陣亡音效
+                    playSound('death'); 
+                }
+            }
+
+            // 【新增】：監控燎原火的鎖血計時器
+            if (pUnit.immortalTimer > 0) {
+                pUnit.immortalTimer--;
+                pUnit.hp = 1; // 每一幀都確保鎖死血量
+                if (pUnit.immortalTimer <= 0 && !pUnit.isDying) {
+                    pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; pUnit.isRetreating = true;
+                    let feedback = document.getElementById('feedback');
+                    feedback.innerText = `💨 殘兵之首撤退！`; 
+                    feedback.style.color = "#f1c40f";
+                }
+            }
+
+            // 【新增】：監控燎原火的鎖血計時器
+            if (pUnit.immortalTimer > 0) {
+                pUnit.immortalTimer--;
+                pUnit.hp = 1; // 鎖死血量
+                if (pUnit.immortalTimer <= 0 && !pUnit.isDying) {
+                    pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; pUnit.isRetreating = true;
+                    let feedback = document.getElementById('feedback');
+                    feedback.innerText = `💨 殘兵之首撤退！`; 
+                    feedback.style.color = "#f1c40f";
                 }
             }
             if (pUnit.isDying) {
@@ -2824,7 +3022,15 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 }
             } else {
                 if (isPlaying) {
-                    let targetEnemy = enemies.find(e => !e.isDying && Math.hypot((e.x + e.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (e.y + e.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY)) <= pUnit.range);
+                    // 【修改】：掃描所有敵軍部隊，找出絕對距離最近的目標
+                    let targetEnemy = null;
+                    let minDist = Infinity;
+                    enemies.forEach(e => {
+                        if (!e.isDying) {
+                            let d = Math.hypot((e.x + e.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (e.y + e.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY));
+                            if (d <= pUnit.range && d < minDist) { minDist = d; targetEnemy = e; }
+                        }
+                    });
                     pUnit.update(targetEnemy);
                     if (enemyBase.hp <= 0 && !gameWon) {
                         gameWon = true; 
@@ -3056,27 +3262,29 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 continue; 
             }
             
-            // 一般 AoE 爆炸與飛彈爆炸
+// 一般 AoE 爆炸、飛彈爆炸與客製化法術特效
             let effType = eff.type || 'normal';
-            let img = (effType === 'missile') ? EFFECT_IMGS.aoe_missile : 
-                      ((effType === 'transformed') ? EFFECT_IMGS.aoe_transformed : EFFECT_IMGS.aoe_normal);
+            // 【核心修改】：優先使用傳入的 customImg，如果沒有再套用飛彈等預設圖片
+            let img = eff.customImg || null;
+            if (!img) {
+                if (effType === 'missile') img = EFFECT_IMGS.aoe_missile;
+                else if (effType === 'transformed') img = EFFECT_IMGS.aoe_transformed;
+                else img = EFFECT_IMGS.aoe_normal;
+            }
                       
             if (img && img.complete && !img.isFailed && img.naturalWidth > 0) {
-                let fw = img.naturalWidth / 4; let fh = img.naturalHeight;
-                let sx = 0; let sy = 0; let frame = 0;
+                // 【全動態運算】：根據傳入的總幀數與存活時間，自動計算動畫播放進度
+                let totalFrames = eff.frames || (effType === 'missile' ? 5 : 4);
+                let maxTimer = eff.maxTimer || (effType === 'missile' ? 30 : 20);
                 
-                // 根據特效類型處理動畫
-                if (effType === 'missile') {
-                    // 假設飛彈爆炸是 5 幀 (5x1)
-                    frame = Math.floor((30 - eff.timer) / 6); if (frame > 4) frame = 4;
-                    fw = img.naturalWidth / 5; fh = img.naturalHeight;
-                    sx = frame * fw; sy = 0; 
-                } else {
-                    // 原有如來的 4 幀動畫
-                    fw = img.naturalWidth / 4; fh = img.naturalHeight;
-                    frame = Math.floor((20 - eff.timer) / 5); if (frame > 3) frame = 3;
-                    sx = frame * fw; sy = 0; 
-                }
+                let fw = img.naturalWidth / totalFrames; 
+                let fh = img.naturalHeight;
+                
+                let frame = Math.floor((maxTimer - eff.timer) / (maxTimer / totalFrames));
+                if (frame >= totalFrames) frame = totalFrames - 1; // 防溢出
+                
+                let sx = frame * fw; 
+                let sy = 0; 
                 
                 let drawSize = eff.radius * 2.5; 
                 ctx.save();
@@ -3085,7 +3293,11 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 ctx.restore();
             } else {
                 ctx.beginPath(); ctx.arc(eff.x, eff.y, eff.radius, 0, Math.PI * 2);
-                ctx.fillStyle = eff.isTransformed ? 'rgba(241, 196, 15, 0.3)' : (effType === 'missile' ? 'rgba(255, 165, 0, 0.4)' : 'rgba(231, 76, 60, 0.3)');
+                let fallbackColor = 'rgba(231, 76, 60, 0.3)';
+                if (eff.isTransformed) fallbackColor = 'rgba(241, 196, 15, 0.3)';
+                else if (effType === 'missile') fallbackColor = 'rgba(255, 165, 0, 0.4)';
+                else if (eff.customImg) fallbackColor = 'rgba(52, 152, 219, 0.4)'; // 有自訂圖但未讀完，顯示藍光
+                ctx.fillStyle = fallbackColor;
                 ctx.fill();
             }
         }
