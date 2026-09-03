@@ -348,8 +348,13 @@
             aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png",
             aoeImgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Attack(如來).png"
         },
-        "g4": { id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, dmg: 4, range: 1.2, moveSpd: 1.5, atkSpd: 1.0, hpMult: 2.5, drawScale: 1.8, desc: "進攻：戰神降臨", ultChance: 0.30, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布5x5.png" },
-        
+        "g4": { 
+            id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, 
+            dmg: 5, range: 1.5, moveSpd: 1.6, atkSpd: 1.5, hpMult: 3.5, drawScale: 1.9, 
+            desc: "戰神：擊退敵人、自回血、免疫控場", ultChance: 0.30, hasAoE: true, 
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布5x5.png",
+            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布戟氣.png" // 替換為大絕圖
+        },        
         // 【新增】：未來戰士（機甲）將領
         "g5": { 
             id: "g5", name: "未來上將", symbol: "甲", color: "#6b8e23", price: 200, isGeneral: true, 
@@ -382,6 +387,13 @@
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/燎原火.png", // <--- 替換成你的 URL
             // 【新增】：燎原火的專屬大絕刀氣 (預留連結位置)
             slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/燎原火槍氣.png"
+        },
+        "g9": { 
+            id: "g9", name: "荀彧", symbol: "荀", color: "#f1c40f", price: 400, isGeneral: true, 
+            dmg: 0.5, range: 4, moveSpd: 0.8, atkSpd: 0.6, hpMult: 1.5, drawScale: 1.6, 
+            desc: "輔助：養兵千日，範圍提升我軍攻擊力", ultChance: 0.20, hasAoE: true,
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/荀彧.png", // 替換為荀彧精靈圖
+            aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/養兵千日特效.png" // 替換為特效圖
         }
     };
     
@@ -1945,6 +1957,21 @@ update(targetPlayer) {
                     ctx.font = '16px Arial'; ctx.fillText('❄️', cx, cy - hpOffset - 25);
                 }
             }
+            if (!this.isDying && !this.isTransforming) {
+                let hpOffset = this.currentScale * 15; 
+                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
+                ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20, 3);
+                ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20 * (this.hp / this.maxHp), 3);
+                
+                // ==========================================
+                // 【新增】：顯示攻擊力 Buff 的光環與頭頂圖示
+                // ==========================================
+                if (this.atkBuffTimer > 0) {
+                    ctx.font = '16px Arial'; ctx.fillText('⚔️', cx + 15, cy - hpOffset - 25);
+                    ctx.fillStyle = 'rgba(241, 196, 15, 0.4)'; // 黃金聖光環
+                    ctx.beginPath(); ctx.ellipse(cx, cy + 10, 25, 12, 0, 0, Math.PI * 2); ctx.fill();
+                }
+            }
         }
     }
 
@@ -1975,6 +2002,9 @@ class PlayerUnit {
         // 【新增修復】：明確宣告燎原火專用的屬性，避免 undefined 錯誤
             this.immortalTriggered = false;
             this.immortalTimer = 0;
+        // 【新增】：攻擊力增益 Buff 系統
+            this.atkBuffTimer = 0;
+            this.atkBuffMult = 1.0;    
         }
 
 update(targetEnemy) {
@@ -1992,9 +2022,24 @@ update(targetEnemy) {
                 return false; 
             }
 
+            // 【新增】：呂布 (g4) 被動 - 恐怖生命力 (每幀回復 0.1% 最大血量) 與 霸體 (免疫降速/定身)
+            if (this.id === 'g4') {
+                if (this.hp > 0 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + (this.maxHp * 0.001));
+                this.speedDebuffTimer = 0; 
+                this.defDebuffTimer = 0;   
+                this.rootTimer = 0;        
+            }
+
+            // 【新增】：攻擊力 Buff 結算
+            if (this.atkBuffTimer > 0) {
+                this.atkBuffTimer--;
+                if (this.atkBuffTimer <= 0) this.atkBuffMult = 1.0;
+            }
+
             if (this.cooldown > 0) this.cooldown--;
 
             let isDefender = (this.id === 'g1' || this.id === 'g3' || this.id === 'g7');
+            let isBuffer = (this.id === 'g9'); // 【新增】：純輔助大腦           
             let tx = this.x, ty = this.y; 
             let hasValidTarget = false;
             let targetNode = null; 
@@ -2033,6 +2078,32 @@ update(targetEnemy) {
                         this.isDying = true; this.state = 3; this.deathTimer = 45; this.isRetreating = true;
                     }
                 }
+            } 
+            // =====================================
+            // 【新增】：荀彧專屬大腦 (自動跟隨前線隊友)
+            // =====================================
+            else if (isBuffer) {
+                let ally = playerUnits.find(p => !p.isDying && p !== this);
+                if (ally) {
+                    hasValidTarget = true;
+                    let thIdx = ally.pathIndex >= 0 ? ally.pathIndex : pathCoords.length - 1;
+                    if (this.pathIndex >= 0 && this.pathIndex < pathCoords.length && Math.abs(this.pathIndex - thIdx) > 1) {
+                        targetNode = pathCoords[this.pathIndex];
+                    } else {
+                        tx = ally.x; ty = ally.y; 
+                        this.drawOffsetX = 0; this.drawOffsetY = 0;
+                    }
+                } else {
+                    let tents = towers.filter(t => t.id === 'tent');
+                    if (tents.length > 0) {
+                        let tentIdx = getNearestPathIndex(tents[0].x, tents[0].y);
+                        if (this.pathIndex !== tentIdx) {
+                            hasValidTarget = true; targetNode = pathCoords[this.pathIndex]; 
+                        } else {
+                            tx = this.x; ty = this.y; 
+                        }
+                    }
+                }
             } else {
                 targetNode = this.pathIndex >= 0 ? pathCoords[this.pathIndex] : this.ringTarget;
                 hasValidTarget = true;
@@ -2063,8 +2134,9 @@ update(targetEnemy) {
                 
                 let attackProgress = 1 - (this.cooldown / this.fireRate);
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                    let finalDamage = this.isUlt ? this.damage * 2.5 : this.damage;
-                    this.hasDealtDamage = true;
+                // 【修改】：將最終傷害乘上 Buff 倍率
+                let finalDamage = (this.isUlt ? this.damage * 2.5 : this.damage) * (this.atkBuffMult || 1.0);
+                this.hasDealtDamage = true;
                     
                     let impactX = targetEnemy.x + targetEnemy.drawOffsetX;
                     let impactY = targetEnemy.y + targetEnemy.drawOffsetY;
@@ -2072,7 +2144,64 @@ update(targetEnemy) {
                     if (this.id === 'g5') {
                         playSound('shoot');
                         projectiles.push({ x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 10, tx: impactX, ty: impactY, damage: finalDamage, aoeRadius: 80, speed: 12, type: 'missile' });
-                    } else if (this.id === 'g6') {
+                    } 
+                    // =====================================
+                    // 【新增】：呂布 (擊退與方天畫戟)
+                    // =====================================
+                    else if (this.id === 'g4') {
+                        playSound('melee');
+                        let aoeRadius = 80;
+                        let knockbackDist = this.isUlt ? 60 : 30; // 擊退距離
+                        
+                        // 對目標及周圍敵人造成傷害與擊退
+                        enemies.forEach(e => {
+                            if (!e.isDying && Math.hypot((e.x + e.drawOffsetX) - impactX, (e.y + e.drawOffsetY) - impactY) <= aoeRadius) {
+                                let dmgDealt = (e.defDebuffTimer > 0) ? finalDamage * 1.5 : finalDamage;
+                                e.hp -= dmgDealt;
+                                
+                                // 物理擊退判定 (根據角度往後推)
+                                let angle = Math.atan2(e.y - this.y, e.x - this.x);
+                                e.x += Math.cos(angle) * knockbackDist;
+                                e.y += Math.sin(angle) * knockbackDist;
+                            }
+                        });
+                        
+                        if (this.isUlt && this.unitData.slashImg) {
+                            slashWaves.push(new SlashWave(finalDamage * 1.5, this.x, this.y, impactX, impactY, 'slash', true, true, this.unitData.slashImg));
+                        } else {
+                            ctx.strokeStyle = '#000000'; ctx.lineWidth = 6;
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                            ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                        }
+                    }
+                    // =====================================
+                    // 【新增】：荀彧 (養兵千日 Buff)
+                    // =====================================
+                    else if (this.id === 'g9') {
+                        playSound('shoot');
+                        let aoeRadius = this.isUlt ? 150 : 100;
+                        let buffMult = this.isUlt ? 2.5 : 1.5; // 大絕增加150%攻擊力，普攻增加50%
+                        let duration = 480; // 持續 8 秒
+                        
+                        // 1. Buff 範圍內的所有我軍部隊
+                        playerUnits.forEach(p => {
+                            if (!p.isDying && Math.hypot((p.x + p.drawOffsetX) - impactX, (p.y + p.drawOffsetY) - impactY) <= aoeRadius) {
+                                p.atkBuffTimer = duration; p.atkBuffMult = buffMult;
+                            }
+                        });
+                        // 2. Buff 範圍內的防禦塔
+                        towers.forEach(t => {
+                            let s = BUILDINGS[t.id].size || 1;
+                            let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
+                            let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
+                            if (Math.hypot(centerX - impactX, centerY - impactY) <= aoeRadius) {
+                                t.atkBuffTimer = duration; t.atkBuffMult = buffMult;
+                            }
+                        });
+                        
+                        combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 30, maxTimer: 30, frames: 4, customImg: this.unitData.aoeImg });
+                    }
+                    else if (this.id === 'g6') {
                         playSound('shoot');
                         let arrowDmg = this.isUlt ? this.damage * 2 : this.damage;
                         slashWaves.push(new SlashWave(arrowDmg, this.x, this.y, impactX, impactY, 'arrow', this.isUlt, true, this.unitData.slashImg));
@@ -2127,8 +2256,9 @@ update(targetEnemy) {
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((enemyBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (enemyBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
-            if (ringDist <= 10 || (this.range > 50 && baseDist <= this.range + TILE_SIZE/2)) {
-                if (this.cooldown <= 0) { 
+            // 【修改】：荀彧不會對敵方主堡發動攻擊
+            if (this.id !== 'g9' && (ringDist <= 10 || (this.range > 50 && baseDist <= this.range + TILE_SIZE/2))) {
+                if (this.cooldown <= 0) {
                     this.cooldown = this.fireRate; this.hasDealtDamage = false; 
                     let baseChance = this.unitData.ultChance || 0.05;
                     let ultChance = Math.min(0.60, baseChance + (this.level - 1) * 0.02);
@@ -2139,8 +2269,10 @@ update(targetEnemy) {
                 
                 let attackProgress = 1 - (this.cooldown / this.fireRate);
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                    let finalDamage = this.isUlt ? this.damage * 2.5 : this.damage;
-                    this.hasDealtDamage = true;
+                // 【修改】：將最終傷害乘上 Buff 倍率
+                let finalDamage = (this.isUlt ? this.damage * 2.5 : this.damage) * (this.atkBuffMult || 1.0);
+                this.hasDealtDamage = true;
+
                     
                     let impactX = enemyBase.x * TILE_SIZE + TILE_SIZE/2;
                     let impactY = enemyBase.y * TILE_SIZE + TILE_SIZE/2;
@@ -2224,7 +2356,8 @@ update(targetEnemy) {
                 });
             };
             
-            if (!isDefender && isLaneBlocked(this.lane)) {
+            // 【修改】：讓 isBuffer (荀彧) 也不受一般士兵阻擋機制影響，自由穿梭
+            if (!isDefender && !isBuffer && isLaneBlocked(this.lane)) {
                 let possibleLanes = this.lane === 0 ? [-1, 1] : [0];
                 possibleLanes.sort(() => Math.random() - 0.5);
                 let switched = false;
@@ -2606,6 +2739,12 @@ update(targetEnemy) {
                         else if (gId === 'g6') { // 【新增】：小孟看弓兵數量
                             shouldDeploy = (playerUnits.filter(p => p.id === 'b7' && !p.isDying).length >= 4); 
                         }
+                        // =====================================
+                        // 【修改】：荀彧 (g9) 專屬出戰條件
+                        // =====================================
+                        else if (gId === 'g9') {
+                            shouldDeploy = (playerUnits.filter(p => !p.isDying).length >= 10);
+                        }
 
                         if (shouldDeploy) {
                             g.isDeployed = true;
@@ -2730,9 +2869,11 @@ update(targetEnemy) {
                 document.getElementById('timer-display').innerText = "⏱️ 清理殘軍中...";
             }
 
-// 主堡互射
-            [playerBase, enemyBase].forEach((base, idx) => {
+                // 主堡互射
+                [playerBase, enemyBase].forEach((base, idx) => {
                 let isPlayer = idx === 0;
+                // 【新增】：主堡 Buff 結算
+                if (base.atkBuffTimer > 0) { base.atkBuffTimer--; if (base.atkBuffTimer <= 0) base.atkBuffMult = 1.0; }
                 if (globalAnimTick % 60 === 0 && base.hp < base.maxHp) base.hp = Math.min(base.maxHp, base.hp + base.healRate);
                 if (base.cooldown > 0) base.cooldown--;
                 else {
@@ -2752,7 +2893,8 @@ update(targetEnemy) {
                     if (targetsToAttack.length > 0) {
                         playSound('shoot'); // 播放主城射擊音效
                         targetsToAttack.forEach(target => {
-                            target.hp -= base.damage; 
+                            // 【修改】：套用 Buff
+                            target.hp -= base.damage * (base.atkBuffMult || 1.0);
                             ctx.strokeStyle = isPlayer ? '#f1c40f' : '#e74c3c'; 
                             ctx.lineWidth = 4;
                             ctx.beginPath(); 
@@ -2957,8 +3099,17 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                     if (pUnit.retreatTimer > 180) { pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; pUnit.isRetreating = true; }
                 } else { pUnit.retreatTimer = 0; }
             }
+            // =====================================
+            // 【新增】：荀彧撤退邏輯 (場上我軍 <= 2 人時撤退)
+            // =====================================
+            if (pUnit.id === 'g9' && !pUnit.isDying) {
+                let aliveAllies = playerUnits.filter(p => !p.isDying).length;
+                if (aliveAllies <= 2) {
+                    pUnit.retreatTimer = (pUnit.retreatTimer || 0) + 1;
+                    if (pUnit.retreatTimer > 180) { pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; pUnit.isRetreating = true; }
+                } else { pUnit.retreatTimer = 0; }
+            }
             // 【核心修正】：攔截致命傷！如果是可變身且未變身的武將 (如來)，強制鎖血 1 滴，免除死亡！
-// 【核心修正】：攔截致命傷！
             if (pUnit.hp <= 0 && !pUnit.isDying) { 
                 // 1. 如果鎖血計時器還在跑，強制把血量拉回 1，無視任何死亡判定！
                 if (pUnit.immortalTimer > 0) {
@@ -3025,13 +3176,26 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                     // 【修改】：掃描所有敵軍部隊，找出絕對距離最近的目標
                     let targetEnemy = null;
                     let minDist = Infinity;
-                    enemies.forEach(e => {
-                        if (!e.isDying) {
-                            let d = Math.hypot((e.x + e.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (e.y + e.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY));
-                            if (d <= pUnit.range && d < minDist) { minDist = d; targetEnemy = e; }
-                        }
-                    });
-                    pUnit.update(targetEnemy);
+                    // =====================================
+                    // 【修改】：荀彧的目標是「找隊友」，其他武將是「找敵人」
+                    // =====================================
+                    if (pUnit.id === 'g9') {
+                        playerUnits.forEach(p => {
+                            if (!p.isDying && p !== pUnit) { // 不算自己
+                                let d = Math.hypot((p.x + p.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (p.y + p.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY));
+                                if (d <= pUnit.range && d < minDist) { minDist = d; targetTarget = p; }
+                            }
+                        });
+                    } else {
+                        enemies.forEach(e => {
+                            if (!e.isDying) {
+                                let d = Math.hypot((e.x + e.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (e.y + e.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY));
+                                if (d <= pUnit.range && d < minDist) { minDist = d; targetTarget = e; }
+                            }
+                        });
+                    }
+                    
+                    pUnit.update(targetTarget);
                     if (enemyBase.hp <= 0 && !gameWon) {
                         gameWon = true; 
                         playerGold += 200; localStorage.setItem('tdGameGold_v2', playerGold);
@@ -3060,10 +3224,12 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             }
 
             if (!tower.isDestroyed) {
+                // 【新增】：防禦塔 Buff 結算
+                if (tower.atkBuffTimer > 0) { tower.atkBuffTimer--; if (tower.atkBuffTimer <= 0) tower.atkBuffMult = 1.0; }
                 if (isPlaying && bData.type === 'attack') {
                     const range = 60 + (bData.range * 30) + (tower.level * 10);
-                    const damage = 10 * bData.dmg * tower.level;
-                    const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
+                    // 【修改】：套用 Buff
+                    const damage = 10 * bData.dmg * tower.level * (tower.atkBuffMult || 1.0);                    const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
                     if (tower.cooldown > 0) { tower.cooldown--; tower.state = (tower.cooldown > fireRate - 15) ? 1 : 0; } 
                     else {
                         const target = enemies.find(e => !e.isDying && Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
