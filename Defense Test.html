@@ -254,7 +254,17 @@
         shoot: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Shoot.mp3"), // 射箭/主堡雷射
         slash: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Slash.mp3"), // 狂王刀氣
         explosion: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/explosion.mp3"), // 飛彈/大絕爆炸
-        death: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/death.mp3"), // 死亡音效
+        
+        // 【修改】：將死亡音效改為陣列，支援隨機播放多種聲音
+        death: [
+            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/death.mp3"),
+            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death2.mp3"), // <--- 請替換為你的第二個死亡音效網址
+            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death3.mp3"), // <--- 請替換為你的第二個死亡音效網址
+            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death4.mp3"), // <--- 請替換為你的第二個死亡音效網址
+            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death5.mp3"), // <--- 請替換為你的第二個死亡音效網址
+            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death6.mp3")  // <--- 請替換為你的第三個死亡音效網址
+        ],
+        
         win: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/win.mp3"), // 勝利
         lose: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/lose.mp3") // 戰敗
     };
@@ -273,12 +283,18 @@
 
     function playSound(key) {
         if (SOUNDS[key]) {
-            let soundClone = SOUNDS[key].cloneNode();
+            let targetSound = SOUNDS[key];
+            
+            // 【新增】：如果這個音效是陣列（設定了多個聲音），就隨機抽一個出來播
+            if (Array.isArray(targetSound)) {
+                targetSound = targetSound[Math.floor(Math.random() * targetSound.length)];
+            }
+            
+            let soundClone = targetSound.cloneNode();
             soundClone.volume = 0.6; 
             soundClone.play().catch(e => console.log("瀏覽器擋住了自動播放:", e));
         }
     }
-
     document.body.addEventListener('click', function startLobbyBgm() {
         if (document.getElementById('setup-screen').style.display !== 'none') {
             SOUNDS.bgm_lobby.play().catch(e => console.log(e));
@@ -1321,6 +1337,17 @@ window.startBattlePhase = function() {
                 feedback.innerText = `⚠️ 升級城鎮中心需要 ${cost} 金幣！`; feedback.style.color = "#e74c3c";
             }
         } else if (currentSelectedType === 'tower') {
+            
+            // ==========================================
+            // 【新增】：檢查建築等級是否大於等於主城等級
+            // ==========================================
+            if (currentSelectedTarget.level >= playerBase.level) {
+                playSound('error'); // 播放錯誤音效
+                feedback.innerText = `⚠️ 建築物等級 (Lv.${currentSelectedTarget.level}) 不可超過主城等級 (Lv.${playerBase.level})！請先升級主城。`; 
+                feedback.style.color = "#e74c3c";
+                return; // 直接中斷，不扣資源也不升級
+            }
+
             let bData = BUILDINGS[currentSelectedTarget.id];
             
             // 【修改】：使用新的階梯式費用公式
@@ -2079,11 +2106,25 @@ update(targetEnemy) {
                     }
                 }
             } 
-            // =====================================
-            // 【新增】：荀彧專屬大腦 (自動跟隨前線隊友)
+// =====================================
+            // 【修改】：荀彧專屬大腦 (優先找沒 Buff 的人，並往最前線走)
             // =====================================
             else if (isBuffer) {
-                let ally = playerUnits.find(p => !p.isDying && p !== this);
+                let ally = null;
+                // 1. 篩選出所有還活著的隊友 (不含自己)
+                let validAllies = playerUnits.filter(p => !p.isDying && p !== this);
+                
+                if (validAllies.length > 0) {
+                    // 2. 優先找「沒有 Buff」的隊友
+                    let alliesNoBuff = validAllies.filter(p => !p.atkBuffTimer || p.atkBuffTimer <= 0);
+                    
+                    // 3. 判斷目標群體：有人沒 Buff 就找他們，大家都有就帶領推進
+                    let targetGroup = alliesNoBuff.length > 0 ? alliesNoBuff : validAllies;
+                    
+                    // 4. 在目標群體中，找出離敵軍主堡最近的 (pathIndex 越小越靠近敵軍)
+                    ally = targetGroup.reduce((prev, curr) => (curr.pathIndex < prev.pathIndex ? curr : prev));
+                }
+
                 if (ally) {
                     hasValidTarget = true;
                     let thIdx = ally.pathIndex >= 0 ? ally.pathIndex : pathCoords.length - 1;
@@ -3192,11 +3233,15 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                     // 荀彧的目標是「找隊友」，其他武將是「找敵人」
                     // =====================================
                     if (pUnit.id === 'g9') {
-                        playerUnits.forEach(p => {
-                            if (!p.isDying && p !== pUnit) { // 不算自己
-                                let d = Math.hypot((p.x + p.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (p.y + p.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY));
-                                if (d <= pUnit.range && d < minDist) { minDist = d; targetTarget = p; }
-                            }
+                        let validAllies = playerUnits.filter(p => !p.isDying && p !== pUnit);
+                        let alliesNoBuff = validAllies.filter(p => !p.atkBuffTimer || p.atkBuffTimer <= 0);
+                        
+                        // 優先將施法目標鎖定在「沒有 Buff」的隊友身上，若大家都有就單純刷新前線 Buff
+                        let targetGroup = alliesNoBuff.length > 0 ? alliesNoBuff : validAllies;
+                        
+                        targetGroup.forEach(p => {
+                            let d = Math.hypot((p.x + p.drawOffsetX) - (pUnit.x + pUnit.drawOffsetX), (p.y + p.drawOffsetY) - (pUnit.y + pUnit.drawOffsetY));
+                            if (d <= pUnit.range && d < minDist) { minDist = d; targetTarget = p; }
                         });
                     } else {
                         enemies.forEach(e => {
