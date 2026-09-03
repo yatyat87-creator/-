@@ -915,20 +915,22 @@ window.startBattlePhase = function() {
                 towers.forEach(t => {
                     let bData = BUILDINGS[t.id];
                     
-                    // 【新增】：判斷同類建築是否相鄰 (十字方向)
+                    // 【新增】：判斷同類建築是否相鄰 (放寬為九宮格，包含斜角)
                     let adjacentCount = 0;
                     if (bData.type === 'resource' || bData.id === 'market') {
                         towers.forEach(other => {
                             if (other !== t && other.id === t.id) {
-                                // 絕對距離為 1 代表上下左右相連
-                                if (Math.abs(t.x - other.x) + Math.abs(t.y - other.y) === 1) {
+                                // X 與 Y 的絕對距離都在 1 以內，代表在周圍 8 格之內
+                                let dx = Math.abs(t.x - other.x);
+                                let dy = Math.abs(t.y - other.y);
+                                if (dx <= 1 && dy <= 1) {
                                     adjacentCount++;
                                 }
                             }
                         });
                     }
                     
-                    // 【新增】：每個相連的同類建築，產量額外加成 50%
+                    // 每個相連的同類建築，產量額外加成 50%
                     let bonusMult = 1 + (adjacentCount * 0.5);
                     let amount = Math.floor(10 * t.level * comboMultiplier * bonusMult);
                     
@@ -942,9 +944,19 @@ window.startBattlePhase = function() {
                     
                     if (valid) {
                         let sizeMult = bData.size || 1;
-                        // 如果有連鎖加成，旁邊會多出一個 🔗 符號讓玩家知道策略奏效了
-                        let extraText = adjacentCount > 0 ? "🔗" : ""; 
-                        floatingTexts.push({ x: t.x * TILE_SIZE + (TILE_SIZE * sizeMult)/2 + (Math.random()*20-10), y: t.y * TILE_SIZE - 10 + (Math.random()*20-10), text: `${resSymbol}+${amount}${extraText}`, color: resColor, timer: 90, vx: (Math.random()-0.5)*2, vy: -1-Math.random(), font: 'bold 16px Arial' });
+                        // 【修改】：使用更明顯的文字與閃亮符號，並放大字體
+                        let extraText = adjacentCount > 0 ? " ✨連鎖" : ""; 
+                        
+                        floatingTexts.push({ 
+                            x: t.x * TILE_SIZE + (TILE_SIZE * sizeMult)/2 + (Math.random()*20-10), 
+                            y: t.y * TILE_SIZE - 10 + (Math.random()*20-10), 
+                            text: `${resSymbol}+${amount}${extraText}`, 
+                            color: resColor, 
+                            timer: 90, 
+                            vx: (Math.random()-0.5)*2, 
+                            vy: -1-Math.random(), 
+                            font: adjacentCount > 0 ? 'bold 20px Arial' : 'bold 16px Arial' // 連鎖時字體放大
+                        });
                     }
                 });
                 
@@ -1960,21 +1972,6 @@ update(targetPlayer) {
                     ctx.font = '16px Arial'; ctx.fillText('❄️', cx, cy - hpOffset - 25);
                 }
             }
-            if (!this.isDying && !this.isTransforming) {
-                let hpOffset = this.currentScale * 15; 
-                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
-                ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20, 3);
-                ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20 * (this.hp / this.maxHp), 3);
-                
-                // ==========================================
-                // 【新增】：顯示攻擊力 Buff 的光環與頭頂圖示
-                // ==========================================
-                if (this.atkBuffTimer > 0) {
-                    ctx.font = '16px Arial'; ctx.fillText('⚔️', cx + 15, cy - hpOffset - 25);
-                    ctx.fillStyle = 'rgba(241, 196, 15, 0.4)'; // 黃金聖光環
-                    ctx.beginPath(); ctx.ellipse(cx, cy + 10, 25, 12, 0, 0, Math.PI * 2); ctx.fill();
-                }
-            }
         }
     }
 
@@ -2137,9 +2134,9 @@ update(targetEnemy) {
                 
                 let attackProgress = 1 - (this.cooldown / this.fireRate);
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                // 【修改】：將最終傷害乘上 Buff 倍率
-                let finalDamage = (this.isUlt ? this.damage * 2.5 : this.damage) * (this.atkBuffMult || 1.0);
-                this.hasDealtDamage = true;
+                    // 【修改】：將最終傷害乘上 Buff 倍率
+                    let finalDamage = (this.isUlt ? this.damage * 2.5 : this.damage) * (this.atkBuffMult || 1.0);
+                    this.hasDealtDamage = true;
                     
                     let impactX = targetEnemy.x + targetEnemy.drawOffsetX;
                     let impactY = targetEnemy.y + targetEnemy.drawOffsetY;
@@ -2148,9 +2145,6 @@ update(targetEnemy) {
                         playSound('shoot');
                         projectiles.push({ x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 10, tx: impactX, ty: impactY, damage: finalDamage, aoeRadius: 80, speed: 12, type: 'missile' });
                     } 
-                    // =====================================
-                    // 【新增】：呂布 (擊退與方天畫戟)
-                    // =====================================
                     else if (this.id === 'g4') {
                         playSound('melee');
                         let aoeRadius = 80;
@@ -2178,21 +2172,21 @@ update(targetEnemy) {
                         }
                     }
                     // =====================================
-                    // 【新增】：荀彧 (養兵千日 Buff)
+                    // 【核心修正】：荀彧 (g9) 專屬純輔助邏輯
+                    // 確保絕對不對 targetEnemy 扣血
                     // =====================================
                     else if (this.id === 'g9') {
                         playSound('shoot');
                         let aoeRadius = this.isUlt ? 150 : 100;
-                        let buffMult = this.isUlt ? 2.5 : 1.5; // 大絕增加150%攻擊力，普攻增加50%
-                        let duration = 480; // 持續 8 秒
+                        let buffMult = this.isUlt ? 2.5 : 1.5; 
+                        let duration = 480; 
                         
-                        // 1. Buff 範圍內的所有我軍部隊
+                        // 只發放 Buff，不扣減 targetEnemy.hp
                         playerUnits.forEach(p => {
                             if (!p.isDying && Math.hypot((p.x + p.drawOffsetX) - impactX, (p.y + p.drawOffsetY) - impactY) <= aoeRadius) {
                                 p.atkBuffTimer = duration; p.atkBuffMult = buffMult;
                             }
                         });
-                        // 2. Buff 範圍內的防禦塔
                         towers.forEach(t => {
                             let s = BUILDINGS[t.id].size || 1;
                             let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
@@ -2235,6 +2229,7 @@ update(targetEnemy) {
                             });
                         }
                     } else {
+                        // 【核心修正】：其他武將正常攻擊敵軍
                         targetEnemy.hp -= finalDamage; 
                         if (this.unitData.hasAoE) {
                             let aoeRadius = this.isTransformed ? 120 : 60; 
@@ -2484,6 +2479,19 @@ update(targetEnemy) {
                 ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
                 ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20, 3);
                 ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20 * (this.hp / this.maxHp), 3);
+            }
+            if (!this.isDying && !this.isTransforming) {
+                let hpOffset = this.currentScale * 15; 
+                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
+                ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20, 3);
+                ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20 * (this.hp / this.maxHp), 3);
+
+                // 將 Buff 特效邏輯正確加回我方單位
+                if (this.atkBuffTimer > 0) {
+                    ctx.font = '16px Arial'; ctx.fillText('⚔️', cx + 15, cy - hpOffset - 25);
+                    ctx.fillStyle = 'rgba(241, 196, 15, 0.4)'; // 黃金聖光環
+                    ctx.beginPath(); ctx.ellipse(cx, cy + 10, 25, 12, 0, 0, Math.PI * 2); ctx.fill();
+                }
             }
         }
     }
@@ -3176,11 +3184,12 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 }
             } else {
                 if (isPlaying) {
-                    // 【修改】：掃描所有敵軍部隊，找出絕對距離最近的目標
-                    let targetEnemy = null;
+                    // 【核心修復】：將變數名稱統一為 targetTarget，徹底解決全域變數污染導致的「痛擊我的隊友」Bug！
+                    let targetTarget = null;
                     let minDist = Infinity;
+                    
                     // =====================================
-                    // 【修改】：荀彧的目標是「找隊友」，其他武將是「找敵人」
+                    // 荀彧的目標是「找隊友」，其他武將是「找敵人」
                     // =====================================
                     if (pUnit.id === 'g9') {
                         playerUnits.forEach(p => {
