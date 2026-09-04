@@ -499,10 +499,12 @@
         aoe_missile: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Missle exposion.png"),
         missile_body: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Flying Misscle.png"),
         aoe_slash: loadSprite(ENEMY_TYPES['rahu'] ? ENEMY_TYPES['rahu'].slashImgSrc : null),
+        aoe_magic: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/八陣圖特效.png"),
         
-        // 【新增】：諸葛亮專屬的八陣圖/法術特效 (請將網址替換為你上傳的 PNG)
-        aoe_magic: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/八陣圖特效.png") 
+        // 【新增】：建築損毀時的黑煙特效 (預設橫向 4 影格)
+        smoke: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/smoke.png") 
     };
+
    
     // 【新增】：靜態環境裝飾物設定 (預留 imgSrc 供日後填入 PNG 網址)
     const DECORATION_TYPES = {
@@ -3515,14 +3517,28 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 if (tower.maxHp > 0) {
                     if (!tower.isDestroyed) {
                         ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE * sizeMult, 4); 
-                        // 【修改】：玩家建築顯示綠血，敵軍建築顯示紫血
                         ctx.fillStyle = tower.owner === 'enemy' ? '#9b59b6' : '#2ecc71'; 
                         ctx.fillRect(cx, cy - 8, (TILE_SIZE * sizeMult) * (tower.hp / tower.maxHp), 4);
                     } else {
-                        ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center';
-                        ctx.fillText('❌ 損毀', cx + (TILE_SIZE * sizeMult)/2, cy + (TILE_SIZE * sizeMult)/2);
+                        // 【修改】：移除紅色文字，改為播放黑煙動畫
+                        let smokeImg = EFFECT_IMGS.smoke;
+                        if (smokeImg && smokeImg.complete && !smokeImg.isFailed && smokeImg.naturalWidth > 0) {
+                            let fw = smokeImg.naturalWidth / 4; // 讀取橫向 4 個影格
+                            let fh = smokeImg.naturalHeight;
+                            let frame = Math.floor(globalAnimTick / 15) % 4; // 動畫播放速度
+                            
+                            let smokeSize = TILE_SIZE * sizeMult * 0.9;
+                            let sx = cx + (TILE_SIZE * sizeMult) / 2 - smokeSize / 2;
+                            let sy = cy + (TILE_SIZE * sizeMult) / 2 - smokeSize / 2 - 15; // 稍微往上偏移
+                            
+                            ctx.save();
+                            ctx.globalAlpha = 0.8; // 讓煙霧帶有微微透明感
+                            ctx.drawImage(smokeImg, frame * fw, 0, fw, fh, sx, sy, smokeSize, smokeSize);
+                            ctx.restore();
+                        }
                     }
                 }
+
                 
                 // 畫移動選取框
                 if (typeof buildingToMove !== 'undefined' && tower === buildingToMove) {
