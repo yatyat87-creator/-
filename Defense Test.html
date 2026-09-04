@@ -816,12 +816,14 @@
         let aiBuiltCount = 0;
         let attempts = 30; // 嘗試 30 次尋找適合的空地
         
-// 只要還有資源就繼續嘗試起樓
+        // 只要還有資源就繼續嘗試起樓
         while (attempts > 0) {
             attempts--;
             let rx = Math.floor(Math.random() * 8) + 2; 
             let ry = Math.floor(Math.random() * 7);      
-            if (rx === 2 && ry === 2) continue; 
+            
+            // 【修改】：徹底禁止敵軍在主堡及其周圍 8 格 (3x3 陣地範圍) 建造任何建築！
+            if (Math.abs(rx - 2) <= 1 && Math.abs(ry - 2) <= 1) continue; 
             
             let buildOptions = [];
             if (window.enemyRes.stone >= 100) buildOptions.push('gate', 'tower');
