@@ -366,8 +366,8 @@
         },
         "g4": { 
             id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, 
-            dmg: 5, range: 1.5, moveSpd: 1.6, atkSpd: 1.5, hpMult: 3.5, drawScale: 1.9, 
-            desc: "戰神：擊退敵人、自回血、免疫控場", ultChance: 0.30, hasAoE: true, 
+            dmg: 3, range: 1.5, moveSpd: 1.6, atkSpd: 1.5, hpMult: 2.5, drawScale: 1.9, 
+            desc: "戰神：擊退敵人、自回血、免疫控場", ultChance: 0.35, hasAoE: true, 
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布.png",
             slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布戟氣.png", // 替換為大絕圖
             // 【新增】：呂布專屬的範圍爆破特效圖 (請替換為你上傳的特效圖)
@@ -2039,7 +2039,7 @@ update(targetEnemy) {
 
             // 【新增】：呂布 (g4) 被動 - 恐怖生命力 (每幀回復 0.1% 最大血量) 與 霸體 (免疫降速/定身)
             if (this.id === 'g4') {
-                if (this.hp > 0 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + (this.maxHp * 0.001));
+                if (this.hp > 0 && this.hp < this.maxHp) this.hp = Math.min(this.maxHp, this.hp + (this.maxHp * 0.0003));
                 this.speedDebuffTimer = 0; 
                 this.defDebuffTimer = 0;   
                 this.rootTimer = 0;        
