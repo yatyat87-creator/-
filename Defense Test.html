@@ -3549,7 +3549,13 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             ctx.save(); 
             ctx.globalAlpha = 0.55; 
             ctx.globalCompositeOperation = 'multiply'; 
-            let pattern = ctx.createPattern(TERRAIN_IMGS.clouds, 'repeat'); ctx.fillStyle = pattern;
+            
+            // 【效能優化 1】：把 pattern 快取起來，絕對不能每 16 毫秒重複創造！
+            if (!window.cachedCloudPattern) {
+                window.cachedCloudPattern = ctx.createPattern(TERRAIN_IMGS.clouds, 'repeat');
+            }
+            ctx.fillStyle = window.cachedCloudPattern;
+            
             ctx.translate(cloudOffsetX, cloudOffsetY); ctx.scale(scaleSize, scaleSize); 
             let startX = -cloudOffsetX / scaleSize; let startY = -cloudOffsetY / scaleSize; let drawW = 800 / scaleSize; let drawH = 800 / scaleSize;
             ctx.fillRect(startX, startY, drawW, drawH); ctx.restore();
