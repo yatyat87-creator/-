@@ -368,9 +368,11 @@
             id: "g4", name: "呂布", symbol: "呂", color: "#000000", price: 200, isGeneral: true, 
             dmg: 5, range: 1.5, moveSpd: 1.6, atkSpd: 1.5, hpMult: 3.5, drawScale: 1.9, 
             desc: "戰神：擊退敵人、自回血、免疫控場", ultChance: 0.30, hasAoE: true, 
-            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布5x5.png",
-            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布戟氣.png" // 替換為大絕圖
-        },        
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布.png",
+            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布戟氣.png", // 替換為大絕圖
+            // 【新增】：呂布專屬的範圍爆破特效圖 (請替換為你上傳的特效圖)
+            aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布特效.png" 
+        },  
         // 【新增】：未來戰士（機甲）將領
         "g5": { 
             id: "g5", name: "未來上將", symbol: "甲", color: "#6b8e23", price: 200, isGeneral: true, 
@@ -788,19 +790,16 @@
         document.getElementById('btn-start-battle').style.display = 'block';
         document.getElementById('timer-display').innerText = "⏱️ 佈陣中"; // 建築期停頓
         
-        // 1. 取得目前軍營與大帳的最高等級
-        let barracksLvl = 1, tentLvl = 1;
-        let bList = towers.filter(t => t.id === 'barracks');
-        let tList = towers.filter(t => t.id === 'tent');
-        if (bList.length > 0) barracksLvl = Math.max(...bList.map(t => t.level));
-        if (tList.length > 0) tentLvl = Math.max(...tList.map(t => t.level));
+        // ==========================================
+        // 【修改】：改以我方主城等級作為敵軍強度的參照
+        // ==========================================
+        let baseLevel = playerBase.level || 1;
         
-        // 2. 計算平均等級，扣除難度偏移，最低保底 1 級，最高不超過難度上限
-        let avgLevel = Math.floor((barracksLvl + tentLvl) / 2);
-        difficultyLevel = Math.max(1, Math.min(maxDifficultyLevel, avgLevel - window.diffOffset));
+        // 計算敵軍等級，扣除難度偏移，最低保底 1 級，最高不超過難度上限
+        difficultyLevel = Math.max(1, Math.min(maxDifficultyLevel, baseLevel - (window.diffOffset || 0)));
         
         // 3. 重置本波特殊 Boss 生成標記
-        window.bossSpawned = false; 
+        window.bossSpawned = false;
 
         waveEnemiesToSpawn = 5 + currentWave * 4; 
         spawnTimer = 60; 
@@ -1332,6 +1331,24 @@ window.startBattlePhase = function() {
                 playSound('build'); // 【新增升級音效】
                 feedback.innerText = `✨ 城鎮中心升級為 Lv.${currentSelectedTarget.level}！`; feedback.style.color = "#f1c40f";
                 showUpgradeUI('城鎮中心', currentSelectedTarget.level, `${300 * currentSelectedTarget.level}金`);
+                
+                // ==========================================
+                // 【新增】：主城升級時，即時更新敵軍難度與敵方主堡狀態
+                // ==========================================
+                difficultyLevel = Math.max(1, Math.min(maxDifficultyLevel, currentSelectedTarget.level - (window.diffOffset || 0)));
+                let newLevel = Math.floor(difficultyLevel);
+                
+                // 如果目前是戰鬥階段，即時更新 UI 標籤與敵軍主堡強度
+                if (gamePhase === 2) {
+                    document.getElementById('wave-display').innerText = `強度: Lv.${newLevel} (第${currentWave}波)`;
+                    if (newLevel > enemyBase.level) {
+                        enemyBase.level = newLevel;
+                        enemyBase.maxHp = 2000 + (enemyBase.level - 1) * 1000;
+                        enemyBase.hp = enemyBase.maxHp; 
+                        enemyBase.damage = 20 + (enemyBase.level - 1) * 10;
+                    }
+                }
+                
             } else {
                 playSound('error'); // 【新增錯誤音效】
                 feedback.innerText = `⚠️ 升級城鎮中心需要 ${cost} 金幣！`; feedback.style.color = "#e74c3c";
@@ -1371,35 +1388,6 @@ window.startBattlePhase = function() {
                 // 【修改】：升級後，重新計算並顯示下一級的費用
                 let nextCost = window.getTowerUpgradeCost(currentSelectedTarget);
                 showUpgradeUI(bData.name, currentSelectedTarget.level, `${nextCost}${resUnit}`);
-
-                // ==========================================
-                // 【新增】：即時更新難度邏輯 (不需等下一波)
-                // ==========================================
-                if (currentSelectedTarget.id === 'barracks' || currentSelectedTarget.id === 'tent') {
-                    let barracksLvl = 1, tentLvl = 1;
-                    let bList = towers.filter(t => t.id === 'barracks');
-                    let tList = towers.filter(t => t.id === 'tent');
-                    if (bList.length > 0) barracksLvl = Math.max(...bList.map(t => t.level));
-                    if (tList.length > 0) tentLvl = Math.max(...tList.map(t => t.level));
-                    
-                    // 重新計算平均等級並套用難度偏移
-                    let avgLevel = Math.floor((barracksLvl + tentLvl) / 2);
-                    difficultyLevel = Math.max(1, Math.min(maxDifficultyLevel, avgLevel - (window.diffOffset || 0)));
-                    
-                    let newLevel = Math.floor(difficultyLevel);
-                    
-                    // 如果目前是戰鬥階段，即時更新 UI 標籤與敵軍主堡強度
-                    if (gamePhase === 2) {
-                        document.getElementById('wave-display').innerText = `強度: Lv.${newLevel} (第${currentWave}波)`;
-                        if (newLevel > enemyBase.level) {
-                            enemyBase.level = newLevel;
-                            enemyBase.maxHp = 2000 + (enemyBase.level - 1) * 1000;
-                            enemyBase.hp = enemyBase.maxHp; 
-                            enemyBase.damage = 20 + (enemyBase.level - 1) * 10;
-                        }
-                    }
-                }
-                // ==========================================
 
             } else {
                 feedback.innerText = `⚠️ 升級需要 ${cost} ${resName}！資源不足。`; feedback.style.color = "#e74c3c";
@@ -2112,16 +2100,14 @@ update(targetEnemy) {
             else if (isBuffer) {
                 let ally = null;
                 let validAllies = playerUnits.filter(p => !p.isDying && p !== this);
-                let isAllBuffed = false; // 新增標記：是否大家都已經有 Buff 了
+                let isAllBuffed = false; 
                 
                 if (validAllies.length > 0) {
                     let alliesNoBuff = validAllies.filter(p => !p.atkBuffTimer || p.atkBuffTimer <= 0);
                     
                     if (alliesNoBuff.length > 0) {
-                        // 狀態 1：有人缺 Buff -> 勇敢往前線走，尋找最前方的那個需要 Buff 的人
                         ally = alliesNoBuff.reduce((prev, curr) => (curr.pathIndex < prev.pathIndex ? curr : prev));
                     } else {
-                        // 狀態 2：大家都有 Buff -> 標記為滿狀態，並找距離自己「絕對距離最近」的隊友當作掩體
                         isAllBuffed = true;
                         ally = validAllies.reduce((prev, curr) => {
                             let dCurr = Math.hypot(curr.x - this.x, curr.y - this.y);
@@ -2134,9 +2120,9 @@ update(targetEnemy) {
                 if (ally) {
                     hasValidTarget = true;
                     let thIdx = ally.pathIndex >= 0 ? ally.pathIndex : pathCoords.length - 1;
+                    this.bufferTargetIdx = thIdx; // 【新增】：大腦記下目標的道路節點，方便雙腳判斷方向
                     let distToAlly = Math.hypot(ally.x - this.x, ally.y - this.y);
                     
-                    // 【關鍵防護】：如果大家都滿 Buff，而且荀彧已經在隊友附近 (距離小於 100)，就「原地待命」不要再往前擠！
                     if (isAllBuffed && distToAlly < 100) {
                         tx = this.x; ty = this.y; 
                         this.drawOffsetX = 0; this.drawOffsetY = 0;
@@ -2148,11 +2134,10 @@ update(targetEnemy) {
                         this.drawOffsetX = 0; this.drawOffsetY = 0;
                     }
                 } else {
-
-
                     let tents = towers.filter(t => t.id === 'tent');
                     if (tents.length > 0) {
                         let tentIdx = getNearestPathIndex(tents[0].x, tents[0].y);
+                        this.bufferTargetIdx = tentIdx; // 【新增】：沒隊友時，目標設為大帳
                         if (this.pathIndex !== tentIdx) {
                             hasValidTarget = true; targetNode = pathCoords[this.pathIndex]; 
                         } else {
@@ -2218,6 +2203,11 @@ update(targetEnemy) {
                                 e.y += Math.sin(angle) * knockbackDist;
                             }
                         });
+
+                        // 【新增】：觸發普攻範圍爆炸特效
+                        if (this.unitData.aoeImg) {
+                            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg });
+                        }
                         
                         if (this.isUlt && this.unitData.slashImg) {
                             slashWaves.push(new SlashWave(finalDamage * 1.5, this.x, this.y, impactX, impactY, 'slash', true, true, this.unitData.slashImg));
@@ -2364,7 +2354,28 @@ update(targetEnemy) {
                                 ctx.lineTo(t.x, t.y); ctx.stroke();
                             });
                         }
-                    } else {
+                    } 
+                    // =====================================
+                    // 【新增】：補上呂布 (g4) 打主堡時的專屬邏輯
+                    // =====================================
+                    else if (this.id === 'g4') {
+                        playSound('melee');
+                        enemyBase.hp -= finalDamage;
+                        
+                        // 【新增】：打主堡時也觸發範圍爆炸特效
+                        if (this.unitData.aoeImg) {
+                            combatEffects.push({ x: impactX, y: impactY, radius: 80, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg });
+                        }
+
+                        if (this.isUlt && this.unitData.slashImg) {
+                            slashWaves.push(new SlashWave(finalDamage * 1.5, this.x, this.y, impactX, impactY, 'slash', true, true, this.unitData.slashImg));
+                        } else {
+                            ctx.strokeStyle = '#000000'; ctx.lineWidth = 6;
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                            ctx.lineTo(impactX, impactY); ctx.stroke();
+                        }
+                    } 
+                    else {
                         enemyBase.hp -= finalDamage; 
                         if (this.unitData.hasAoE) {
                             let aoeRadius = this.isTransformed ? 120 : 60; 
@@ -2423,7 +2434,15 @@ update(targetEnemy) {
             if (dist < this.speed) { 
                 this.x = tx; this.y = ty; 
                 if (targetNode) {
-                    if (!isDefender && this.pathIndex >= 0) this.pathIndex--;
+                    // 【修改】：解開輔助只會往前衝的限制
+                    if (!isDefender && !isBuffer && this.pathIndex >= 0) {
+                        this.pathIndex--; // 一般士兵依然像喪屍一樣只能往前
+                    }
+                    else if (isBuffer && this.bufferTargetIdx !== undefined) {
+                        // 輔助可以根據目標位置，自由決定往前 (--) 還是往後 (++)
+                        if (this.pathIndex > this.bufferTargetIdx) this.pathIndex--;
+                        else if (this.pathIndex < this.bufferTargetIdx) this.pathIndex++;
+                    }
                     else if (isDefender) {
                         let threat = enemies.find(e => !e.isDying && (
                             towers.some(t => { let s = BUILDINGS[t.id].size || 1; return Math.hypot(e.x - (t.x*TILE_SIZE+(TILE_SIZE*s)/2), e.y - (t.y*TILE_SIZE+(TILE_SIZE*s)/2)) < 180; }) ||
@@ -2798,10 +2817,16 @@ update(targetEnemy) {
                                 return nearTower || nearBase;
                             });
                         } 
-                        else if (gId === 'g2' || gId === 'g8') { // 【新增】：燎原火與趙雲一樣，看騎兵數量
+                         else if (gId === 'g2' || gId === 'g8') { // 【新增】：燎原火與趙雲一樣，看騎兵數量
                             shouldDeploy = (playerUnits.filter(p => p.id === 'b6' && !p.isDying).length >= 4); 
                         } 
-                        else if (gId === 'g4') { shouldDeploy = enemies.some(e => (e.id === 'boss' || e.id === 'black_dragon') && !e.isDying); }
+                        // =====================================
+                        // 【修改】：呂布 (戰神) 出戰條件 - 敵方有巨屍/王級以上，或者敵軍數量滿 8 隻 (一騎當千)
+                        // =====================================
+                        else if (gId === 'g4') { 
+                            let aliveEnemies = enemies.filter(e => !e.isDying);
+                            shouldDeploy = aliveEnemies.length >= 8 || aliveEnemies.some(e => ['tank', 'boss', 'rahu', 'black_dragon'].includes(e.id)); 
+                        }
                         else if (gId === 'g5') { shouldDeploy = (playerUnits.filter(p => p.id === 'b5' && !p.isDying).length >= 4); }
                         else if (gId === 'g6') { // 【新增】：小孟看弓兵數量
                             shouldDeploy = (playerUnits.filter(p => p.id === 'b7' && !p.isDying).length >= 4); 
