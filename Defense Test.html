@@ -2825,7 +2825,7 @@ update(targetEnemy) {
                         // =====================================
                         else if (gId === 'g4') { 
                             let aliveEnemies = enemies.filter(e => !e.isDying);
-                            shouldDeploy = aliveEnemies.length >= 8 || aliveEnemies.some(e => ['tank', 'boss', 'rahu', 'black_dragon'].includes(e.id)); 
+                            shouldDeploy = aliveEnemies.length >= 30 || aliveEnemies.some(e => ['tank', 'boss', 'rahu', 'black_dragon'].includes(e.id)); 
                         }
                         else if (gId === 'g5') { shouldDeploy = (playerUnits.filter(p => p.id === 'b5' && !p.isDying).length >= 4); }
                         else if (gId === 'g6') { // 【新增】：小孟看弓兵數量
