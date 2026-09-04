@@ -799,10 +799,76 @@
         difficultyLevel = Math.max(1, Math.min(maxDifficultyLevel, baseLevel - (window.diffOffset || 0)));
         
         // 3. 重置本波特殊 Boss 生成標記
-        window.bossSpawned = false;
+        window.bossSpawned = false; 
 
         waveEnemiesToSpawn = 5 + currentWave * 4; 
         spawnTimer = 60; 
+
+        // ==========================================
+        // 【修改】：執行敵軍 AI 建築階段 (有木/石資源限制與區域限制)
+        // ==========================================
+        if (!window.enemyRes) window.enemyRes = { stone: 0, wood: 0 };
+        
+        // 敵軍每波獲得基礎發放資源
+        window.enemyRes.stone += 100 + (currentWave * 40 * difficultyLevel);
+        window.enemyRes.wood += 100 + (currentWave * 40 * difficultyLevel);
+        
+        let aiBuiltCount = 0;
+        let attempts = 30; // 嘗試 30 次尋找適合的空地
+        
+// 只要還有資源就繼續嘗試起樓
+        while (attempts > 0) {
+            attempts--;
+            let rx = Math.floor(Math.random() * 8) + 2; 
+            let ry = Math.floor(Math.random() * 7);      
+            if (rx === 2 && ry === 2) continue; 
+            
+            let buildOptions = [];
+            if (window.enemyRes.stone >= 100) buildOptions.push('gate', 'tower');
+            if (window.enemyRes.wood >= 50) buildOptions.push('farm', 'lumber', 'quarry');
+            if (buildOptions.length === 0) break; 
+            
+            let buildId = buildOptions[Math.floor(Math.random() * buildOptions.length)];
+            let bData = BUILDINGS[buildId];
+            let onPath = isPath(rx, ry);
+            
+            if (buildId === 'gate' && !onPath) continue; // 城門必在路上
+            
+            // 【新增】：箭塔必須蓋在道路「旁邊」(九宮格內有道路)
+            if (buildId === 'tower') {
+                if (onPath) continue; 
+                let nearPath = false;
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        if (isPath(rx + dx, ry + dy)) nearPath = true;
+                    }
+                }
+                if (!nearPath) continue; // 不在路邊就重新找位置
+            }
+            
+            // 【新增】：資源建築退居後方，不會蓋在路上
+            if (buildId !== 'gate' && buildId !== 'tower') {
+                if (onPath || ry > 3) continue; // ry > 3 代表不允許往前線蓋
+            }
+            
+            if (getTowerAt(rx, ry)) continue; 
+            
+            if (bData.costType === 'stone') window.enemyRes.stone -= bData.cost;
+            else if (bData.costType === 'wood') window.enemyRes.wood -= bData.cost;
+
+            let dir = buildId === 'gate' ? calculateGateDir(rx, ry) : 0;
+            let eLevel = Math.floor(difficultyLevel);
+            let eHp = (bData.hp || 800) * (1 + (eLevel - 1) * 0.5); 
+            
+            towers.push({ x: rx, y: ry, id: buildId, level: eLevel, cooldown: 0, hp: eHp, maxHp: eHp, state: 0, frame: 0, dir: dir, owner: 'enemy' });
+            aiBuiltCount++;
+        }
+        
+        if (aiBuiltCount > 0) {
+            let bx = enemyBase.x * TILE_SIZE + TILE_SIZE / 2;
+            let by = enemyBase.y * TILE_SIZE - 20;
+            floatingTexts.push({ x: bx, y: by, text: `⚠️ 敵軍消耗資源，增建了 ${aiBuiltCount} 座建築！`, color: "#9b59b6", timer: 150, vx: 0, vy: -0.5, font: 'bold 18px Arial' });
+        }
     };
 
 window.startBattlePhase = function() {
@@ -1507,7 +1573,8 @@ window.startBattlePhase = function() {
         // 【核心修復】：全建築連通性檢查 (BFS)
         // 確保所有建築必須形成一個整體，並連接著主堡，防止「過河拆橋 / 左腳踩右腳」Bug！
         // ==========================================
-        let tempTowers = towers.filter(t => t !== towerToIgnore);
+        // 【修正】：只檢查玩家的建築，絕對不可把敵方建築算進連通網絡裡！
+        let tempTowers = towers.filter(t => t !== towerToIgnore && (!t.owner || t.owner === 'player'));
         tempTowers.push({ x: tx, y: ty, id: bData.id });
 
         let connected = new Set();
@@ -1667,7 +1734,8 @@ window.startBattlePhase = function() {
                 }
                 updateResourcesUI(); 
                 let newDir = bData.id === 'gate' ? calculateGateDir(bestGx, bestGy) : 0;
-                towers.push({ x: bestGx, y: bestGy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0, state: 0, frame: 0, dir: newDir });
+                // 【修改】：明確標記這是玩家的建築 (owner: 'player')
+                towers.push({ x: bestGx, y: bestGy, id: selectedBuilding, level: 1, cooldown: 0, hp: bData.hp||0, maxHp: bData.hp||0, state: 0, frame: 0, dir: newDir, owner: 'player' });
                 playSound('build'); // 【新增建造成功音效】
                 feedback.innerText = `🏗️ 成功建造 ${bData.name}！可繼續點擊空地建造。`; feedback.style.color = "#2ecc71";
                 return; 
@@ -1792,8 +1860,8 @@ update(targetPlayer) {
             }
 
             // 1. 攻擊城門 (阻擋道路，優先度最高)
-            let gate = towers.find(t => t.id === 'gate' && t.x === (targetNode ? Math.floor(targetNode.x) : -1) && t.y === (targetNode ? Math.floor(targetNode.y) : -1));
-            if (gate) {
+            // 【修改】：確保敵軍只會攻擊玩家的城門，不會拆自己的城門！
+            let gate = towers.find(t => t.id === 'gate' && (!t.owner || t.owner === 'player') && t.x === (targetNode ? Math.floor(targetNode.x) : -1) && t.y === (targetNode ? Math.floor(targetNode.y) : -1));            if (gate) {
                 if (this.cooldown <= 0) { 
                     this.cooldown = this.fireRate; this.hasDealtDamage = false; 
                     let baseChance = this.unitData.ultChance || 0.05;
@@ -2062,6 +2130,7 @@ update(targetEnemy) {
             if (isDefender) {
                 let threat = enemies.find(e => !e.isDying && (
                     towers.some(t => {
+                        if (t.owner === 'enemy') return false; // 【修正】：移動雷達只保護我方建築
                         let s = BUILDINGS[t.id].size || 1;
                         let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
                         let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
@@ -2191,7 +2260,10 @@ update(targetEnemy) {
                         let aoeRadius = 80;
                         let knockbackDist = this.isUlt ? 60 : 30; // 擊退距離
                         
-                        // 對目標及周圍敵人造成傷害與擊退
+                        // 【修正】：必須先對目標本身造成傷害 (防止打塔時0傷害卡死)
+                        targetEnemy.hp -= finalDamage; 
+                        
+                        // 對周圍敵人造成傷害與擊退
                         enemies.forEach(e => {
                             if (!e.isDying && Math.hypot((e.x + e.drawOffsetX) - impactX, (e.y + e.drawOffsetY) - impactY) <= aoeRadius) {
                                 let dmgDealt = (e.defDebuffTimer > 0) ? finalDamage * 1.5 : finalDamage;
@@ -2801,44 +2873,40 @@ update(targetEnemy) {
         if (isCombatActive) {
             // 武將自動大腦
             if (globalAnimTick % 30 === 0) {
-                let tents = towers.filter(t => t.id === 'tent');
+                let tents = towers.filter(t => t.id === 'tent' && (!t.owner || t.owner === 'player'));
                 selectedGenerals.forEach(gId => {
                     let g = GENERALS[gId];
                     if (!g) return; 
                     g.deathCooldown = g.deathCooldown || 0; 
                     if (g.deathCooldown > 0) g.deathCooldown -= 30; 
                     
-                    if (tents.length > 0 && !g.isDeployed && g.deathCooldown <= 0) {
+                    if (tents.length > 0 && g.deathCooldown <= 0) {
                         let shouldDeploy = false;
-                        if (gId === 'g1' || gId === 'g3' || gId === 'g7') { // 【新增】：諸葛亮與關羽條件相同
+                        if (gId === 'g1' || gId === 'g3' || gId === 'g7') { 
                             shouldDeploy = enemies.some(e => {
-                                let nearTower = towers.some(t => { let s = BUILDINGS[t.id].size || 1; return Math.hypot(e.x - (t.x*TILE_SIZE+(TILE_SIZE*s)/2), e.y - (t.y*TILE_SIZE+(TILE_SIZE*s)/2)) < 180; });
+                                let nearTower = towers.some(t => { 
+                                    if (t.owner === 'enemy') return false; // 【修正】：只監控我方的建築
+                                    let s = BUILDINGS[t.id].size || 1; return Math.hypot(e.x - (t.x*TILE_SIZE+(TILE_SIZE*s)/2), e.y - (t.y*TILE_SIZE+(TILE_SIZE*s)/2)) < 180; 
+                                });
                                 let nearBase = Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250;
                                 return nearTower || nearBase;
                             });
                         } 
-                         else if (gId === 'g2' || gId === 'g8') { // 【新增】：燎原火與趙雲一樣，看騎兵數量
+                        else if (gId === 'g2' || gId === 'g8') { 
                             shouldDeploy = (playerUnits.filter(p => p.id === 'b6' && !p.isDying).length >= 4); 
                         } 
-                        // =====================================
-                        // 【修改】：呂布 (戰神) 出戰條件 - 敵方有巨屍/王級以上，或者敵軍數量滿 8 隻 (一騎當千)
-                        // =====================================
                         else if (gId === 'g4') { 
                             let aliveEnemies = enemies.filter(e => !e.isDying);
-                            shouldDeploy = aliveEnemies.length >= 30 || aliveEnemies.some(e => ['tank', 'boss', 'rahu', 'black_dragon'].includes(e.id)); 
+                            shouldDeploy = aliveEnemies.length >= 8 || aliveEnemies.some(e => ['tank', 'boss', 'rahu', 'black_dragon'].includes(e.id)); 
                         }
                         else if (gId === 'g5') { shouldDeploy = (playerUnits.filter(p => p.id === 'b5' && !p.isDying).length >= 4); }
-                        else if (gId === 'g6') { // 【新增】：小孟看弓兵數量
-                            shouldDeploy = (playerUnits.filter(p => p.id === 'b7' && !p.isDying).length >= 4); 
-                        }
-                        // =====================================
-                        // 【修改】：荀彧 (g9) 專屬出戰條件
-                        // =====================================
-                        else if (gId === 'g9') {
-                            shouldDeploy = (playerUnits.filter(p => !p.isDying).length >= 10);
-                        }
+                        else if (gId === 'g6') { shouldDeploy = (playerUnits.filter(p => p.id === 'b7' && !p.isDying).length >= 4); }
+                        else if (gId === 'g9') { shouldDeploy = (playerUnits.filter(p => !p.isDying).length >= 10); }
 
-                        if (shouldDeploy) {
+                        // 【終極防呆】：不管狀態怎樣，親眼確認場上與佇列中沒有這個人，才允許出陣！
+                        let alreadyOnField = playerUnits.some(p => p.id === gId && !p.isDying) || deployQueue.some(u => u.id === gId);
+                        
+                        if (shouldDeploy && !alreadyOnField) {
                             g.isDeployed = true;
                             deployQueue.push({ id: gId, level: tents[0].level, spawnIndex: getNearestPathIndex(tents[0].x, tents[0].y) });
                             let feedback = document.getElementById('feedback');
@@ -2887,7 +2955,6 @@ update(targetEnemy) {
 
                     for (let i = 0; i < squadSize; i++) {
                         let memberType = leaderType;
-                        // 確保小兵不會全是王
                         if (i > 0 && (leaderType === 'boss' || leaderType === 'tank') && Math.random() < 0.6) {
                             memberType = Math.random() < 0.5 ? 'normal' : 'fast';
                         }
@@ -2896,6 +2963,8 @@ update(targetEnemy) {
                         e.x += (Math.random() - 0.5) * 50;
                         e.y += (Math.random() - 0.5) * 50;
                         enemies.push(e);
+                        // 【致命修復】：每次產怪必須扣除剩餘配額，否則戰鬥永遠不會結束！
+                        waveEnemiesToSpawn--; 
                     }
                     
                     // 根據目前等級微調出怪速度
@@ -2915,12 +2984,21 @@ update(targetEnemy) {
                 // 【時間到 且 畫面再無敵人】：戰鬥階段真正結束，士兵撤退回兵營
                 document.getElementById('timer-display').innerText = "⏱️ 戰鬥勝利！";
                 
+                let refundedMeat = 0; // 【致命修復】：重新宣告這行退還肉量的變數！
+                
                 // 戰鬥後建築物自動修復並滿血！
                 towers.forEach(t => {
                     if (t.maxHp > 0) { t.hp = t.maxHp; t.isDestroyed = false; }
+                    
+                    // 【新增】：敵軍資源建築產出額外資源 (下回合可用來蓋更多樓)
+                    if (t.owner === 'enemy') {
+                        if (!window.enemyRes) window.enemyRes = { stone: 0, wood: 0 };
+                        let bData = BUILDINGS[t.id];
+                        let amount = 30 * t.level; // 每棟資源塔提供額外資源
+                        if (bData.id === 'lumber') window.enemyRes.wood += amount;
+                        if (bData.id === 'quarry') window.enemyRes.stone += amount;
+                    }
                 });
-                
-                let refundedMeat = 0; // 記錄退回的肉量
                 
                 playerUnits.forEach(p => {
                     if (p.isDying) return;
@@ -3177,6 +3255,7 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             if ((pUnit.id === 'g1' || pUnit.id === 'g3' || pUnit.id === 'g7') && !pUnit.isDying) {
                 let buildingInDanger = enemies.some(e => {
                     let nearTower = towers.some(t => {
+                        if (t.owner === 'enemy') return false; // 【修正】：撤退雷達只看我方的建築
                         let s = BUILDINGS[t.id].size || 1;
                         let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
                         let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
@@ -3290,6 +3369,28 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                                 if (d <= pUnit.range && d < minDist) { minDist = d; targetTarget = e; }
                             }
                         });
+                        
+                        // ==========================================
+                        // 【修改】：讓士兵會自動鎖定並攻擊敵方的「防禦工事」，忽略資源建築
+                        // ==========================================
+                        towers.forEach(t => {
+                            if (t.owner === 'enemy' && !t.isDestroyed && (t.id === 'gate' || t.id === 'tower')) {
+                                let tx = t.x * TILE_SIZE + TILE_SIZE / 2;
+                                let ty = t.y * TILE_SIZE + TILE_SIZE / 2;
+                                let d = Math.hypot(tx - (pUnit.x + pUnit.drawOffsetX), ty - (pUnit.y + pUnit.drawOffsetY));
+                                if (d <= pUnit.range && d < minDist) { 
+                                    minDist = d; 
+                                    // 巧妙封裝，讓 PlayerUnit 的傷害邏輯無需大改就能扣除塔的 HP
+                                    targetTarget = {
+                                        isTower: true, ref: t,
+                                        x: tx, y: ty, drawOffsetX: 0, drawOffsetY: 0,
+                                        get hp() { return this.ref.hp; },
+                                        set hp(v) { this.ref.hp = v; },
+                                        defDebuffTimer: 0 
+                                    };
+                                }
+                            }
+                        });
                     }
                     
                     pUnit.update(targetTarget);
@@ -3325,11 +3426,14 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 if (tower.atkBuffTimer > 0) { tower.atkBuffTimer--; if (tower.atkBuffTimer <= 0) tower.atkBuffMult = 1.0; }
                 if (isPlaying && bData.type === 'attack') {
                     const range = 60 + (bData.range * 30) + (tower.level * 10);
-                    // 【修改】：套用 Buff
-                    const damage = 10 * bData.dmg * tower.level * (tower.atkBuffMult || 1.0);                    const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
+                    const damage = 10 * bData.dmg * tower.level * (tower.atkBuffMult || 1.0);                    
+                    const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
+                    
                     if (tower.cooldown > 0) { tower.cooldown--; tower.state = (tower.cooldown > fireRate - 15) ? 1 : 0; } 
                     else {
-                        const target = enemies.find(e => !e.isDying && Math.hypot(e.x - (cx + TILE_SIZE/2), e.y - (cy + TILE_SIZE/2)) < range);
+                        // 【修改】：根據塔的所有權決定射擊目標 (敵軍塔射玩家，玩家塔射敵軍)
+                        let targetPool = tower.owner === 'enemy' ? playerUnits : enemies;
+                        const target = targetPool.find(e => !e.isDying && Math.hypot(e.x + (e.drawOffsetX||0) - (cx + TILE_SIZE/2), e.y + (e.drawOffsetY||0) - (cy + TILE_SIZE/2)) < range);
                         if (target) {
                             target.hp -= damage; tower.cooldown = fireRate; tower.state = 1; tower.facingLeft = target.x < cx + TILE_SIZE / 2;
                             ctx.strokeStyle = bData.color; ctx.lineWidth = 3;
@@ -3409,7 +3513,9 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 if (tower.maxHp > 0) {
                     if (!tower.isDestroyed) {
                         ctx.fillStyle = 'red'; ctx.fillRect(cx, cy - 8, TILE_SIZE * sizeMult, 4); 
-                        ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx, cy - 8, (TILE_SIZE * sizeMult) * (tower.hp / tower.maxHp), 4);
+                        // 【修改】：玩家建築顯示綠血，敵軍建築顯示紫血
+                        ctx.fillStyle = tower.owner === 'enemy' ? '#9b59b6' : '#2ecc71'; 
+                        ctx.fillRect(cx, cy - 8, (TILE_SIZE * sizeMult) * (tower.hp / tower.maxHp), 4);
                     } else {
                         ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center';
                         ctx.fillText('❌ 損毀', cx + (TILE_SIZE * sizeMult)/2, cy + (TILE_SIZE * sizeMult)/2);
