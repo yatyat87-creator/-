@@ -337,6 +337,16 @@
             // 使用生成的專屬刀氣精靈圖 (image_1.png 底部 1x5)
             slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Slash 1.png", // <--- 填入生成的刀氣精靈圖 URL
             isSlashWaveable: true // 開啟刀氣大絕機制
+        },
+        // =====================================
+        // 【新增】：傳奇海賊 - 洛克斯·D·吉貝克
+        // =====================================
+        'rocks': { 
+            id: 'rocks', name: "洛克斯", symbol: "洛", color: '#4a235a', // 深紫色霸氣
+            dmg: 12.0, range: 1.8, moveSpd: 0.5, atkSpd: 0.6, hpMult: 45.0, 
+            drawScale: 2.2, // 體型龐大
+            ultChance: 0.30, // 30% 機率觸發大絕「蝕」的炮擊震波
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/洛克斯.png" // 替換為你的圖片網址
         }
     };
 
@@ -504,7 +514,6 @@
         // 【新增】：建築損毀時的黑煙特效 (預設橫向 4 影格)
         smoke: loadSprite("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/smoke.png") 
     };
-
    
     // 【新增】：靜態環境裝飾物設定 (預留 imgSrc 供日後填入 PNG 網址)
     const DECORATION_TYPES = {
@@ -818,14 +827,12 @@
         let aiBuiltCount = 0;
         let attempts = 30; // 嘗試 30 次尋找適合的空地
         
-        // 只要還有資源就繼續嘗試起樓
+// 只要還有資源就繼續嘗試起樓
         while (attempts > 0) {
             attempts--;
             let rx = Math.floor(Math.random() * 8) + 2; 
             let ry = Math.floor(Math.random() * 7);      
-            
-            // 【修改】：徹底禁止敵軍在主堡及其周圍 8 格 (3x3 陣地範圍) 建造任何建築！
-            if (Math.abs(rx - 2) <= 1 && Math.abs(ry - 2) <= 1) continue; 
+            if (rx === 2 && ry === 2) continue; 
             
             let buildOptions = [];
             if (window.enemyRes.stone >= 100) buildOptions.push('gate', 'tower');
@@ -1836,6 +1843,57 @@ class Enemy {
                 feedback.style.color = "#ff3333"; 
             }
         }
+        // ==========================================
+        // 【新增】：洛克斯專屬大絕 - 西洋劍「蝕」
+        // 功能：宛如重錘炮擊，超高傷害並附帶極大擊退力
+        // ==========================================
+        triggerRocksStrike(targetObj, impactX, impactY) {
+            playSound('melee');
+            let finalDmg = this.isUlt ? this.damage * 3.0 : this.damage;
+            
+            // 對主目標造成直接傷害
+            targetObj.hp -= finalDmg;
+            
+            if (this.isUlt) {
+                playSound('explosion'); // 播放炮擊爆炸音效
+                let aoeRadius = 150;    // 極大波及範圍
+                let knockbackDist = 120; // 足以轟飛巨人的物理擊退力
+                
+                // 1. 轟飛周圍的我方士兵
+                playerUnits.forEach(p => {
+                    if (!p.isDying && Math.hypot((p.x + (p.drawOffsetX||0)) - impactX, (p.y + (p.drawOffsetY||0)) - impactY) <= aoeRadius) {
+                        if (p !== targetObj) p.hp -= finalDmg * 0.8; // 震波傷害
+                        
+                        // 物理擊退判定 (根據圓心向外炸飛)
+                        let angle = Math.atan2(p.y - this.y, p.x - this.x);
+                        p.x += Math.cos(angle) * knockbackDist;
+                        p.y += Math.sin(angle) * knockbackDist;
+                    }
+                });
+                
+                // 2. 順便對範圍內的防禦工事造成波及破壞
+                towers.forEach(t => {
+                    let s = BUILDINGS[t.id].size || 1;
+                    let centerX = t.x * TILE_SIZE + (TILE_SIZE * s) / 2;
+                    let centerY = t.y * TILE_SIZE + (TILE_SIZE * s) / 2;
+                    if (Math.hypot(centerX - impactX, centerY - impactY) <= aoeRadius) {
+                        if (t !== targetObj) t.hp -= finalDmg * 0.5;
+                    }
+                });
+
+                // 畫出爆炸震波
+                combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 30, maxTimer: 30, frames: 4 });
+                
+                let feedback = document.getElementById('feedback');
+                feedback.innerText = `⚔️ 洛克斯發動【西洋劍·蝕】！宛如重炮的斬擊轟飛一切！`;
+                feedback.style.color = "#4a235a"; 
+            } else {
+                // 普攻：畫出深紫色的沉重斬擊線
+                ctx.strokeStyle = '#4a235a'; ctx.lineWidth = 6;
+                ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                ctx.lineTo(impactX, impactY); ctx.stroke();
+            }
+        }
 
 update(targetPlayer) {
             if (this.rootTimer > 0) {
@@ -1876,7 +1934,8 @@ update(targetPlayer) {
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
                     this.hasDealtDamage = true;
                     if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
-                    else if (this.id === 'rahu' && this.isUlt) { this.triggerRahuSlashWave(); } 
+                    else if (this.id === 'rahu' && this.isUlt) { this.triggerRahuSlashWave(gate.x * TILE_SIZE + TILE_SIZE/2, gate.y * TILE_SIZE + TILE_SIZE/2); } 
+                    else if (this.id === 'rocks') { this.triggerRocksStrike(gate, gate.x * TILE_SIZE + TILE_SIZE/2, gate.y * TILE_SIZE + TILE_SIZE/2); }
                     else { gate.hp -= this.isUlt ? this.damage * 2.0 : this.damage; }
                 }
                 if (gate.hp <= 0) towers = towers.filter(t => t !== gate);
@@ -1898,6 +1957,7 @@ update(targetPlayer) {
                     this.hasDealtDamage = true;
                     if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
                     else if (this.id === 'rahu') { this.triggerRahuSlashWave(targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); } 
+                    else if (this.id === 'rocks') { this.triggerRocksStrike(targetPlayer, targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); }
                     else {
                         targetPlayer.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
                         ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
@@ -1926,6 +1986,7 @@ update(targetPlayer) {
                     this.hasDealtDamage = true;
                     if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
                     else if (this.id === 'rahu') { this.triggerRahuSlashWave(playerBase.x * TILE_SIZE + TILE_SIZE/2, playerBase.y * TILE_SIZE + TILE_SIZE/2); } 
+                    else if (this.id === 'rocks') { this.triggerRocksStrike(playerBase, playerBase.x * TILE_SIZE + TILE_SIZE/2, playerBase.y * TILE_SIZE + TILE_SIZE/2); }
                     else {
                         playerBase.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
                         ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
@@ -2901,7 +2962,7 @@ update(targetEnemy) {
                         } 
                         else if (gId === 'g4') { 
                             let aliveEnemies = enemies.filter(e => !e.isDying);
-                            shouldDeploy = aliveEnemies.length >= 30 || aliveEnemies.some(e => ['tank', 'boss', 'rahu', 'black_dragon'].includes(e.id)); 
+                            shouldDeploy = aliveEnemies.length >= 8 || aliveEnemies.some(e => ['tank', 'boss', 'rahu', 'black_dragon'].includes(e.id)); 
                         }
                         else if (gId === 'g5') { shouldDeploy = (playerUnits.filter(p => p.id === 'b5' && !p.isDying).length >= 4); }
                         else if (gId === 'g6') { shouldDeploy = (playerUnits.filter(p => p.id === 'b7' && !p.isDying).length >= 4); }
@@ -2953,8 +3014,12 @@ update(targetEnemy) {
                         leaderType = 'rahu'; squadSize = 1; window.bossSpawned = true;
                     }
                     // 【修改】：第 9 波固定生成一次黑天龍
-                    else if (currentWave === 9 && !window.bossSpawned && window.battleTimeRemaining < 150) {
+                    else if (currentWave === 9 && !window.bossSpawned && window.battleTimeRemaining < 100) {
                         leaderType = 'black_dragon'; squadSize = 1; window.bossSpawned = true;
+                    }
+                    // 【新增】：第 1 波傳奇海賊洛克斯降臨
+                    else if (currentWave === 1 && !window.bossSpawned && window.battleTimeRemaining < 100) {
+                        leaderType = 'rocks'; squadSize = 1; window.bossSpawned = true;
                     }
 
                     for (let i = 0; i < squadSize; i++) {
@@ -3538,7 +3603,6 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                         }
                     }
                 }
-
                 
                 // 畫移動選取框
                 if (typeof buildingToMove !== 'undefined' && tower === buildingToMove) {
