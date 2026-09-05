@@ -343,9 +343,9 @@
         // =====================================
         'rocks': { 
             id: 'rocks', name: "洛克斯", symbol: "洛", color: '#4a235a', // 深紫色霸氣
-            dmg: 12.0, range: 1.8, moveSpd: 0.5, atkSpd: 0.6, hpMult: 45.0, 
-            drawScale: 2.2, // 體型龐大
-            ultChance: 0.30, // 30% 機率觸發大絕「蝕」的炮擊震波
+            dmg: 5.0, range: 1.8, moveSpd: 0.5, atkSpd: 0.6, hpMult: 18.0, 
+            drawScale: 1.8, // 體型龐大
+            ultChance: 0.39, // 30% 機率觸發大絕「蝕」的炮擊震波
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/洛克斯.png" // 替換為你的圖片網址
         }
     };
@@ -2962,7 +2962,7 @@ update(targetEnemy) {
                         } 
                         else if (gId === 'g4') { 
                             let aliveEnemies = enemies.filter(e => !e.isDying);
-                            shouldDeploy = aliveEnemies.length >= 8 || aliveEnemies.some(e => ['tank', 'boss', 'rahu', 'black_dragon'].includes(e.id)); 
+                            shouldDeploy = aliveEnemies.length >= 30 || aliveEnemies.some(e => ['tank', 'boss', 'rahu', 'black_dragon'].includes(e.id)); 
                         }
                         else if (gId === 'g5') { shouldDeploy = (playerUnits.filter(p => p.id === 'b5' && !p.isDying).length >= 4); }
                         else if (gId === 'g6') { shouldDeploy = (playerUnits.filter(p => p.id === 'b7' && !p.isDying).length >= 4); }
