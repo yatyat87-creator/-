@@ -3227,17 +3227,20 @@ update(targetEnemy) {
                 // 【時間到 且 畫面再無敵人】：戰鬥階段真正結束，士兵撤退回兵營
                 document.getElementById('timer-display').innerText = "⏱️ 戰鬥勝利！";
                 
-                let refundedMeat = 0; // 【致命修復】：重新宣告這行退還肉量的變數！
+let refundedMeat = 0; 
+                let refundedWood = 0; // 【新增】：準備退還的木
+                let refundedStone = 0; // 【新增】：準備退還的石
+                let refundedGold = 0; // 【新增】：準備退還的金
                 
                 // 戰鬥後建築物自動修復並滿血！
                 towers.forEach(t => {
                     if (t.maxHp > 0) { t.hp = t.maxHp; t.isDestroyed = false; }
                     
-                    // 【新增】：敵軍資源建築產出額外資源 (下回合可用來蓋更多樓)
+                    // 敵軍資源建築產出額外資源 (下回合可用來蓋更多樓)
                     if (t.owner === 'enemy') {
                         if (!window.enemyRes) window.enemyRes = { stone: 0, wood: 0 };
                         let bData = BUILDINGS[t.id];
-                        let amount = 30 * t.level; // 每棟資源塔提供額外資源
+                        let amount = 30 * t.level; 
                         if (bData.id === 'lumber') window.enemyRes.wood += amount;
                         if (bData.id === 'quarry') window.enemyRes.stone += amount;
                     }
@@ -3249,10 +3252,14 @@ update(targetEnemy) {
                     if (p.unitData.isGeneral) {
                         GENERALS[p.id].isDeployed = false; 
                     } else if (p.unitData.isSiege) {
-                        // 【修復】：攻城武器獨立退回攻城廠的車庫
                         let emptyIdx = siegeCamp.indexOf(null);
                         if (emptyIdx !== -1) {
                             siegeCamp[emptyIdx] = { id: p.id, level: p.level };
+                        } else {
+                            // 【新增】：攻城廠無位，將攻城車拆解並退回 100% 資源
+                            if (p.unitData.cost.wood) refundedWood += p.unitData.cost.wood;
+                            if (p.unitData.cost.stone) refundedStone += p.unitData.cost.stone;
+                            if (p.unitData.cost.gold) refundedGold += p.unitData.cost.gold;
                         }
                     } else {
                         // 一般士兵退回軍營
@@ -3260,27 +3267,34 @@ update(targetEnemy) {
                         if (emptyIdx !== -1) {
                             offenseCamp[emptyIdx] = { id: p.id, level: p.level }; 
                         } else {
-                            // 兵營無位，多餘士兵解散，變回 50 肉
                             refundedMeat += 50;
                         }
                     }
                 });
                 
                 // 顯示退兵回饋
-                if (refundedMeat > 0) {
+                if (refundedMeat > 0 || refundedWood > 0 || refundedStone > 0 || refundedGold > 0) {
                     gameMeat += refundedMeat;
+                    gameWood += refundedWood;
+                    gameStone += refundedStone;
+                    gameGold += refundedGold;
+                    
                     let bx = playerBase.x * TILE_SIZE + TILE_SIZE / 2;
                     let by = playerBase.y * TILE_SIZE - 20;
-                    floatingTexts.push({ x: bx, y: by, text: `🍖退兵 +${refundedMeat}`, color: "#e74c3c", timer: 90, vx: 0, vy: -1, font: 'bold 16px Arial' });
+                    
+                    if (refundedMeat > 0) floatingTexts.push({ x: bx, y: by, text: `🍖退兵 +${refundedMeat}`, color: "#e74c3c", timer: 90, vx: 0, vy: -1, font: 'bold 16px Arial' });
+                    if (refundedWood > 0) floatingTexts.push({ x: bx, y: by-15, text: `🪵拆解 +${refundedWood}`, color: "#e67e22", timer: 90, vx: 0, vy: -1.2, font: 'bold 16px Arial' });
+                    if (refundedStone > 0) floatingTexts.push({ x: bx, y: by-30, text: `🪨拆解 +${refundedStone}`, color: "#95a5a6", timer: 90, vx: 0, vy: -1.4, font: 'bold 16px Arial' });
+                    if (refundedGold > 0) floatingTexts.push({ x: bx, y: by-45, text: `💰拆解 +${refundedGold}`, color: "#f1c40f", timer: 90, vx: 0, vy: -1.6, font: 'bold 16px Arial' });
                 }
                 
                 playerUnits = []; 
                 deployQueue = [];
-                // 【新增】：清理所有刀氣
                 slashWaves = []; 
                 updateCampsUI();  
                 updateGeneralsUI();
-                updateResourcesUI(); // 更新介面數字
+                updateSiegeUI(); // 【核心修復】：確保戰鬥結束後更新攻城廠的 UI 畫面！
+                updateResourcesUI();
                 
                 currentWave++;
                 startQuizPhase();
