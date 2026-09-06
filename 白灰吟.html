@@ -211,8 +211,8 @@
             <!-- 攻城廠介面 -->
             <div class="camp-row" id="siege-ui-row" style="display: none; background: #fae5d3; padding: 8px; border-radius: 5px; border: 2px solid #d35400; margin-bottom: 8px;">
                 <span class="camp-label" style="color: #d35400;">⚙️ 攻城廠</span>
-                <button style="font-size:11px; background:#e67e22; color:white; border:none; padding:4px; border-radius:3px; cursor:pointer; margin-right:5px;" onclick="buySiege('trebuchet')">投石車<br>100木50石</button>
-                <button style="font-size:11px; background:#a04000; color:white; border:none; padding:4px; border-radius:3px; cursor:pointer;" onclick="buySiege('siege_tower')">井欄<br>150木50金</button>
+                <button style="font-size:11px; background:#e67e22; color:white; border:none; padding:4px; border-radius:3px; cursor:pointer; margin-right:5px;" onclick="buySiege('trebuchet')">投石車<br>10木40石</button>
+                <button style="font-size:11px; background:#a04000; color:white; border:none; padding:4px; border-radius:3px; cursor:pointer;" onclick="buySiege('siege_tower')">井欄<br>10木40金</button>
                 
                 <div id="siege-camp" class="camp-slots" style="margin-left:10px;">
                     <div class="slot" onclick="selectSiegeSlot(0)"></div>
@@ -819,6 +819,7 @@ const EFFECT_IMGS = {
         document.getElementById('btn-delete').style.display = 'block';
         document.getElementById('barracks-ui-row').style.display = 'none';
         document.getElementById('generals-deploy-container').style.display = 'none';
+        document.getElementById('siege-ui-row').style.display = 'none'; // 【修復】：確保戰鬥結束時，攻城選單會收起
         document.getElementById('btn-start-battle').style.display = 'block';
         document.getElementById('timer-display').innerText = "⏱️ 佈陣中"; // 建築期停頓
         
@@ -1201,7 +1202,8 @@ window.startBattlePhase = function() {
         updateResourcesUI();
 
         // 6. 批次將隨機士兵加入剛剛找到的兵營空位中
-        let pool = Object.keys(BASIC_UNITS); 
+        // 【修正】：過濾掉 isSiege (攻城武器)，只讓一般士兵加入隨機池
+        let pool = Object.keys(BASIC_UNITS).filter(key => !BASIC_UNITS[key].isSiege); 
         for (let i = 0; i < recruitCount; i++) {
             let targetIndex = emptyIndices[i];
             let randomUnitId = pool[Math.floor(Math.random() * pool.length)];
@@ -1396,9 +1398,9 @@ window.startBattlePhase = function() {
         
         // 【修改】：配合新價格，檢查 stone 與 gold 並扣除
         if (siegeId === 'trebuchet' && (gameWood < 10 || gameStone < 40)) {
-            feedback.innerText = "⚠️ 資源不足！投石車需要 100 木與 50 石。"; return;
+            feedback.innerText = "⚠️ 資源不足！投石車需要 10 木與 40 石。"; return;
         } else if (siegeId === 'siege_tower' && (gameWood < 10 || gameGold < 40)) {
-            feedback.innerText = "⚠️ 資源不足！井欄需要 150 木與 50 金。"; return;
+            feedback.innerText = "⚠️ 資源不足！井欄需要 10 木與 40 金。"; return;
         }
 
         let emptyIdx = siegeCamp.indexOf(null);
@@ -1767,9 +1769,11 @@ window.startBattlePhase = function() {
         const upgradeUI = document.getElementById('upgrade-ui-row');
         const barracksUI = document.getElementById('barracks-ui-row');
         const generalsUI = document.getElementById('generals-deploy-container');
+        const siegeUI = document.getElementById('siege-ui-row'); // 【新增】取得攻城介面
         if (upgradeUI) upgradeUI.style.display = 'none';
         if (barracksUI) barracksUI.style.display = 'none';
         if (generalsUI) generalsUI.style.display = 'none';
+        if (siegeUI) siegeUI.style.display = 'none'; // 【修復】：點擊時一併隱藏攻城廠介面
         currentSelectedTarget = null;
         currentSelectedType = null;
 
@@ -3241,14 +3245,22 @@ update(targetEnemy) {
                 
                 playerUnits.forEach(p => {
                     if (p.isDying) return;
+                    
                     if (p.unitData.isGeneral) {
                         GENERALS[p.id].isDeployed = false; 
+                    } else if (p.unitData.isSiege) {
+                        // 【修復】：攻城武器獨立退回攻城廠的車庫
+                        let emptyIdx = siegeCamp.indexOf(null);
+                        if (emptyIdx !== -1) {
+                            siegeCamp[emptyIdx] = { id: p.id, level: p.level };
+                        }
                     } else {
+                        // 一般士兵退回軍營
                         let emptyIdx = offenseCamp.indexOf(null);
                         if (emptyIdx !== -1) {
                             offenseCamp[emptyIdx] = { id: p.id, level: p.level }; 
                         } else {
-                            // 【新增】：兵營無位，多餘士兵解散，變回 50 肉
+                            // 兵營無位，多餘士兵解散，變回 50 肉
                             refundedMeat += 50;
                         }
                     }
