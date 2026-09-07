@@ -559,9 +559,9 @@ const EFFECT_IMGS = {
     let offenseCamp = new Array(10).fill(null);
     let siegeCamp = [null, null]; // 攻城廠專用兩格位
     
-// 【新增】：將雙方城鎮中心實體化為物件 (含等級、攻防、回血屬性)
-    let playerBase = { x: 17, y: 17, hp: 25000, maxHp: 2000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
-    // 【修改】：將敵方主堡初始血量巨幅提升至 25000，確保遊戲能打到中後期
+    // 【新增】：將雙方城鎮中心實體化為物件 (含等級、攻防、回血屬性)
+    // 【修改】：我方主堡初始血量同步提升至 25000
+    let playerBase = { x: 17, y: 17, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
     let enemyBase = { x: 2, y: 2, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
     
     let difficultyLevel = 1, frameCount = 0, spawnTimer = 0;
@@ -719,9 +719,9 @@ const EFFECT_IMGS = {
 
         if (typeof offenseCamp !== 'undefined') offenseCamp.fill(null);
 
-// 4. 重置雙方主堡 (血量恢復滿血)
-        playerBase = { x: 17, y: 17, hp: 2000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
-        // 【修改】：重置時也要保持 25000 血量
+        // 4. 重置雙方主堡 (血量恢復滿血)
+        // 【修改】：重置時我方也要保持 25000 血量
+        playerBase = { x: 17, y: 17, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
         enemyBase = { x: 2, y: 2, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
 
         // 5. 重置遊戲狀態與資源
