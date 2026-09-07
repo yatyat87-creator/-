@@ -856,25 +856,36 @@ const EFFECT_IMGS = {
         // 只要還有資源就繼續嘗試起樓
         while (attempts > 0) {
             attempts--;
-            // 【修改】：限制敵方只能在偏左上方的基地周圍起樓，不再蔓延到太遠的地方
-            let rx = Math.floor(Math.random() * 12) + 2; // X 範圍縮小至 2~13
-            let ry = Math.floor(Math.random() * 10);     // Y 範圍縮小至 0~9
-            
-            // 【核心修正】：徹底禁止敵軍在主堡 (2,2) 及其周圍 8 格 (即 X:1~3, Y:1~3) 建造任何建築！
-            if (Math.abs(rx - 2) <= 1 && Math.abs(ry - 2) <= 1) continue; 
             
             let buildOptions = [];
             if (window.enemyRes.stone >= 100) buildOptions.push('gate', 'tower');
             if (window.enemyRes.wood >= 50) buildOptions.push('farm', 'lumber', 'quarry');
             if (buildOptions.length === 0) break; 
             
+            // 1. 先決定要蓋什麼建築
             let buildId = buildOptions[Math.floor(Math.random() * buildOptions.length)];
             let bData = BUILDINGS[buildId];
+            
+            // 2. 再根據建築種類，智能縮小隨機範圍
+            let rx, ry;
+            if (buildId === 'gate' || buildId === 'tower') {
+                // 防禦設施：守衛在主堡前方與道路沿線
+                rx = Math.floor(Math.random() * 11) + 2; // X: 2~12
+                ry = Math.floor(Math.random() * 9);      // Y: 0~8
+            } else {
+                // 資源設施：極致壓縮在主堡周圍，形成緊密村落
+                rx = Math.floor(Math.random() * 6) + 1;  // X: 1~6
+                ry = Math.floor(Math.random() * 6);      // Y: 0~5
+            }
+            
+            // 徹底禁止敵軍在主堡 (2,2) 及其周圍 8 格 (即 X:1~3, Y:1~3) 建造任何建築！
+            if (Math.abs(rx - 2) <= 1 && Math.abs(ry - 2) <= 1) continue; 
+            
             let onPath = isPath(rx, ry);
             
             if (buildId === 'gate' && !onPath) continue; // 城門必在路上
             
-            // 【新增】：箭塔必須蓋在道路「旁邊」(九宮格內有道路)
+            // 箭塔必須蓋在道路「旁邊」(九宮格內有道路)
             if (buildId === 'tower') {
                 if (onPath) continue; 
                 let nearPath = false;
@@ -886,12 +897,12 @@ const EFFECT_IMGS = {
                 if (!nearPath) continue; // 不在路邊就重新找位置
             }
             
-            // 【修改】：資源建築必須緊貼主堡後方，絕對不往前線蓋
+            // 資源建築不可以在路上
             if (buildId !== 'gate' && buildId !== 'tower') {
-                if (onPath || ry > 5) continue; // 資源塔只允許在 Y: 0~5 的絕對安全區
+                if (onPath) continue; 
             }
             
-            if (getTowerAt(rx, ry)) continue; 
+            if (getTowerAt(rx, ry)) continue;
             
             if (bData.costType === 'stone') window.enemyRes.stone -= bData.cost;
             else if (bData.costType === 'wood') window.enemyRes.wood -= bData.cost;
