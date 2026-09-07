@@ -2080,7 +2080,8 @@ update(targetPlayer) {
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((playerBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (playerBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
-            if (ringDist <= 10 || (this.range > 50 && baseDist <= this.range + TILE_SIZE/2)) {
+            // 【修復】：移除近戰單位的射程限制，放寬攻擊判定距離
+            if (ringDist <= 30 || baseDist <= this.range + TILE_SIZE * 1.8) {
                 if (this.cooldown <= 0) { 
                     this.cooldown = this.fireRate; this.hasDealtDamage = false; 
                     let baseChance = this.unitData.ultChance || 0.05;
@@ -2604,8 +2605,8 @@ update(targetEnemy) {
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((enemyBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (enemyBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
-            // 【修改】：荀彧不會對敵方主堡發動攻擊
-            if (this.id !== 'g9' && (ringDist <= 10 || (this.range > 50 && baseDist <= this.range + TILE_SIZE/2))) {
+            // 【修復】：移除近戰單位的射程限制，放寬圍城判定距離，避免軍隊卡死在城外
+            if (this.id !== 'g9' && (ringDist <= 30 || baseDist <= this.range + TILE_SIZE * 1.8)) {
                 if (this.cooldown <= 0) {
                     this.cooldown = this.fireRate; this.hasDealtDamage = false; 
                     let baseChance = this.unitData.ultChance || 0.05;
