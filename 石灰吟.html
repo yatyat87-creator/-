@@ -2098,12 +2098,22 @@ update(targetPlayer) {
                 return false;
             }
 
-            // 3. 【修改】：攻擊主堡邏輯 (降級至部隊之後)
+            // 3. 攻擊主堡邏輯
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((playerBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (playerBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
-            // 【修復】：移除近戰單位的射程限制，放寬攻擊判定距離
-            if (ringDist <= 30 || baseDist <= this.range + TILE_SIZE * 1.8) {
+            let isMelee = this.range <= 50;
+            let canAttackBase = false;
+            
+            if (isMelee) {
+                // 近戰部隊：必須抵達專屬圍城點 (ringDist <= 20) 或者被擠到主堡旁邊 (baseDist <= 90)
+                canAttackBase = (ringDist <= 20 || baseDist <= 90);
+            } else {
+                // 遠程部隊：射程覆蓋主堡邊緣即可
+                canAttackBase = (baseDist <= this.range + TILE_SIZE);
+            }
+
+            if (canAttackBase) {
                 if (this.cooldown <= 0) { 
                     this.cooldown = this.fireRate; this.hasDealtDamage = false; 
                     let baseChance = this.unitData.ultChance || 0.05;
@@ -2623,12 +2633,24 @@ update(targetEnemy) {
                 return false;
             }
 
-            // 2. 【修改】：攻擊敵方主堡邏輯 (降級至部隊之後)
+            // 2. 攻擊敵方主堡邏輯
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((enemyBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (enemyBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
-            // 【修復】：移除近戰單位的射程限制，放寬圍城判定距離，避免軍隊卡死在城外
-            if (this.id !== 'g9' && (ringDist <= 30 || baseDist <= this.range + TILE_SIZE * 1.8)) {
+            let isMelee = this.range <= 50;
+            let canAttackBase = false;
+            
+            if (this.id !== 'g9') {
+                if (isMelee) {
+                    // 近戰部隊：必須抵達專屬圍城點 (ringDist <= 20) 或者被擠到主堡旁邊 (baseDist <= 90)
+                    canAttackBase = (ringDist <= 20 || baseDist <= 90);
+                } else {
+                    // 遠程部隊：射程覆蓋主堡邊緣即可
+                    canAttackBase = (baseDist <= this.range + TILE_SIZE);
+                }
+            }
+
+            if (canAttackBase) {
                 if (this.cooldown <= 0) {
                     this.cooldown = this.fireRate; this.hasDealtDamage = false; 
                     let baseChance = this.unitData.ultChance || 0.05;
@@ -3166,8 +3188,8 @@ update(targetEnemy) {
                         else if (gId === 'g6') { shouldDeploy = (playerUnits.filter(p => p.id === 'b7' && !p.isDying).length >= 4); }
                         else if (gId === 'g9') { shouldDeploy = (playerUnits.filter(p => !p.isDying).length >= 10); }
 
-                        // 【終極防呆】：不管狀態怎樣，親眼確認場上與佇列中沒有這個人，才允許出陣！
-                        let alreadyOnField = playerUnits.some(p => p.id === gId && !p.isDying) || deployQueue.some(u => u.id === gId);
+                        // 【終極防呆】：只要他還在畫面上 (不論是活著還是正在播放死亡倒下動畫)，都視為已在場上，不准秒派！
+                        let alreadyOnField = playerUnits.some(p => p.id === gId) || deployQueue.some(u => u.id === gId);
                         
                         if (shouldDeploy && !alreadyOnField) {
                             g.isDeployed = true;
