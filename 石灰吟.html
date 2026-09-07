@@ -559,9 +559,10 @@ const EFFECT_IMGS = {
     let offenseCamp = new Array(10).fill(null);
     let siegeCamp = [null, null]; // 攻城廠專用兩格位
     
-    // 【新增】：將雙方城鎮中心實體化為物件 (含等級、攻防、回血屬性)
-    let playerBase = { x: 17, y: 17, hp: 2000, maxHp: 2000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
-    let enemyBase = { x: 2, y: 2, hp: 2000, maxHp: 2000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
+// 【新增】：將雙方城鎮中心實體化為物件 (含等級、攻防、回血屬性)
+    let playerBase = { x: 17, y: 17, hp: 25000, maxHp: 2000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
+    // 【修改】：將敵方主堡初始血量巨幅提升至 25000，確保遊戲能打到中後期
+    let enemyBase = { x: 2, y: 2, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
     
     let difficultyLevel = 1, frameCount = 0, spawnTimer = 0;
     let gameOver = false, gameWon = false;
@@ -718,9 +719,10 @@ const EFFECT_IMGS = {
 
         if (typeof offenseCamp !== 'undefined') offenseCamp.fill(null);
 
-        // 4. 重置雙方主堡 (血量恢復滿血)
-        playerBase = { x: 17, y: 17, hp: 2000, maxHp: 2000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
-        enemyBase = { x: 2, y: 2, hp: 2000, maxHp: 2000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
+// 4. 重置雙方主堡 (血量恢復滿血)
+        playerBase = { x: 17, y: 17, hp: 2000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
+        // 【修改】：重置時也要保持 25000 血量
+        enemyBase = { x: 2, y: 2, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
 
         // 5. 重置遊戲狀態與資源
         gameOver = false;
@@ -925,7 +927,8 @@ window.startBattlePhase = function() {
         document.getElementById('wave-display').innerText = `強度: Lv.${newLevel} (第${currentWave}波)`;
         if (newLevel > enemyBase.level) {
             enemyBase.level = newLevel;
-            enemyBase.maxHp = 2000 + (enemyBase.level - 1) * 1000;
+            // 【修改】：配合初始高血量，升級時血量也相應大幅提升 (每級增加 5000)
+            enemyBase.maxHp = 25000 + (enemyBase.level - 1) * 5000;
             enemyBase.hp = enemyBase.maxHp; 
             enemyBase.damage = 20 + (enemyBase.level - 1) * 10;
         }
@@ -1504,7 +1507,8 @@ window.startBattlePhase = function() {
             let cost = 300 * currentSelectedTarget.level;
             if (gameGold >= cost) {
                 gameGold -= cost; currentSelectedTarget.level++;
-                currentSelectedTarget.maxHp += 1000; currentSelectedTarget.hp += 1000;
+                // 【修改】：我方主堡升級時，血量巨幅增加 5000，與敵方成長公式對齊
+                currentSelectedTarget.maxHp += 5000; currentSelectedTarget.hp += 5000;
                 currentSelectedTarget.damage += 10; currentSelectedTarget.healRate += 2;
                 updateResourcesUI();
                 playSound('build'); // 【新增升級音效】
@@ -1522,7 +1526,8 @@ window.startBattlePhase = function() {
                     document.getElementById('wave-display').innerText = `強度: Lv.${newLevel} (第${currentWave}波)`;
                     if (newLevel > enemyBase.level) {
                         enemyBase.level = newLevel;
-                        enemyBase.maxHp = 2000 + (enemyBase.level - 1) * 1000;
+                        // 【修改】：同樣套用新的 25000 + 5000 血量成長公式
+                        enemyBase.maxHp = 25000 + (enemyBase.level - 1) * 5000;
                         enemyBase.hp = enemyBase.maxHp; 
                         enemyBase.damage = 20 + (enemyBase.level - 1) * 10;
                     }
