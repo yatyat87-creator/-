@@ -3088,7 +3088,7 @@ update(targetEnemy) {
         window._realLastTime = now; 
 
         // --- 遊戲邏輯開始 ---
-        ctx.clearRect(0, 0, 800, 800);
+        ctx.clearRect(0, 0, 800, 1600);
         globalAnimTick++;
 
         let isPlaying = !gameOver && !gameWon;
@@ -3368,14 +3368,14 @@ let refundedMeat = 0;
             ctx.drawImage(img, sx, 0, frameWidth, frameHeight, dx, dy, TILE_SIZE, TILE_SIZE);
         };
 
-        for (let r = 0; r < 20; r++) {
+        for (let r = 0; r < 40; r++) { // 總行數變成 40
             for (let c = 0; c < 20; c++) {
                 let dx = c * TILE_SIZE, dy = r * TILE_SIZE;
                 if (isPath(c, r)) { 
                     if (TERRAIN_IMGS.path && TERRAIN_IMGS.path.complete && !TERRAIN_IMGS.path.isFailed && TERRAIN_IMGS.path.naturalWidth > 0) { 
                         drawAnimatedTerrain(TERRAIN_IMGS.path, dx, dy); 
                     } else { ctx.fillStyle = '#c49f81'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); }
-                } else if (r < 6) {
+                } else if (r < 20) { // 山地與草地的交界移至中線 20
                     let validMntImgs = TERRAIN_IMGS.mountain.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
                     if (validMntImgs.length > 0) { 
                         let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
@@ -3432,7 +3432,7 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             ctx.shadowBlur = 20; 
             
             ctx.beginPath();
-            for(let r=6; r<20; r++){
+            for(let r=20; r<40; r++){ // 玩家建造區改為 20~39
                 for(let c=0; c<20; c++){
                     let inRange = false;
                     
@@ -3446,7 +3446,7 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                             return c >= t.x - 1 && c <= t.x + s && r >= t.y - 1 && r <= t.y + s;
                         });
                     }
-                    let isEmpty = !isPath(c, r) && !getTowerAt(c, r) && !(c===17 && r===17) && !(c===2 && r===2);
+                    let isEmpty = !isPath(c, r) && !getTowerAt(c, r) && !(c===17 && r===37) && !(c===2 && r===2);
                     if (inRange && isEmpty) {
                         ctx.rect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                     }
@@ -3995,7 +3995,7 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             ctx.fillStyle = window.cachedCloudPattern;
             
             ctx.translate(cloudOffsetX, cloudOffsetY); ctx.scale(scaleSize, scaleSize); 
-            let startX = -cloudOffsetX / scaleSize; let startY = -cloudOffsetY / scaleSize; let drawW = 800 / scaleSize; let drawH = 800 / scaleSize;
+            let startX = -cloudOffsetX / scaleSize; let startY = -cloudOffsetY / scaleSize; let drawW = 800 / scaleSize; let drawH = 1600 / scaleSize;
             ctx.fillRect(startX, startY, drawW, drawH); ctx.restore();
         }
 
