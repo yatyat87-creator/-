@@ -561,7 +561,7 @@ const EFFECT_IMGS = {
     
     // 【新增】：將雙方城鎮中心實體化為物件 (含等級、攻防、回血屬性)
     // 【修改】：我方主堡初始血量同步提升至 25000
-    let playerBase = { x: 17, y: 17, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
+    let playerBase = { x: 17, y: 37, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
     let enemyBase = { x: 2, y: 2, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
     
     let difficultyLevel = 1, frameCount = 0, spawnTimer = 0;
@@ -855,7 +855,7 @@ const EFFECT_IMGS = {
         while (attempts > 0) {
             attempts--;
             let rx = Math.floor(Math.random() * 8) + 2; 
-            let ry = Math.floor(Math.random() * 7);      
+            let ry = Math.floor(Math.random() * 19); // 讓 AI 能在 0~18 格內發展                 
             
             // 【核心修正】：徹底禁止敵軍在主堡 (2,2) 及其周圍 8 格 (即 X:1~3, Y:1~3) 建造任何建築！
             if (Math.abs(rx - 2) <= 1 && Math.abs(ry - 2) <= 1) continue; 
@@ -885,7 +885,7 @@ const EFFECT_IMGS = {
             
             // 【新增】：資源建築退居後方，不會蓋在路上
             if (buildId !== 'gate' && buildId !== 'tower') {
-                if (onPath || ry > 3) continue; // ry > 3 代表不允許往前線蓋
+                if (onPath || ry > 14) continue; // 資源塔往後方蓋，避免太貼近中線
             }
             
             if (getTowerAt(rx, ry)) continue; 
@@ -1585,28 +1585,33 @@ window.startBattlePhase = function() {
     // 【效能優化】：限制手機最高只用 1.5 倍渲染，畫質依然清晰，但能大幅減輕 GPU 負擔與發熱！
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5); 
     
-    // 【擴大地圖兩倍】：邏輯大小改為 800x800
-    canvas.width = 800 * dpr; canvas.height = 800 * dpr; 
+    // 【修改】：將地圖垂直擴大為原本的兩倍 (800x1600)，總共 20x40 格！
+    canvas.width = 800 * dpr; canvas.height = 1600 * dpr; 
     canvas.style.width = "100%"; canvas.style.maxWidth = "800px"; 
     ctx.scale(dpr, dpr); ctx.imageSmoothingEnabled = true; 
     const TILE_SIZE = 40;
     
-    // 【修改】：設置主堡八格環狀陣地與連接道路
+    // 【修改】：設置主堡八格環狀陣地 (玩家主堡移至最下方 Y:37)
     const enemyRing = [], playerRing = [];
     for(let dx=-1; dx<=1; dx++) {
         for(let dy=-1; dy<=1; dy++) {
             if(dx===0 && dy===0) continue;
             enemyRing.push({x: 2+dx, y: 2+dy});
-            playerRing.push({x: 17+dx, y: 17+dy});
+            playerRing.push({x: 17+dx, y: 37+dy}); 
         }
     }
 
+    // 【修改】：延伸新的 S 型道路，貫穿全地圖 40 格高度
     const pathCoords = [];
     for(let x=4; x<=16; x++) pathCoords.push({x:x, y:2});
-    for(let y=3; y<=8; y++) pathCoords.push({x:16, y:y});
-    for(let x=15; x>=4; x--) pathCoords.push({x:x, y:8});
-    for(let y=9; y<=15; y++) pathCoords.push({x:4, y:y});
-    for(let x=5; x<=16; x++) pathCoords.push({x:x, y:15});
+    for(let y=3; y<=10; y++) pathCoords.push({x:16, y:y});
+    for(let x=15; x>=4; x--) pathCoords.push({x:x, y:10});
+    for(let y=11; y<=20; y++) pathCoords.push({x:4, y:y}); // 跨越中線
+    for(let x=5; x<=16; x++) pathCoords.push({x:x, y:20});
+    for(let y=21; y<=30; y++) pathCoords.push({x:16, y:y});
+    for(let x=15; x>=4; x--) pathCoords.push({x:x, y:30});
+    for(let y=31; y<=37; y++) pathCoords.push({x:4, y:y});
+    for(let x=5; x<=16; x++) pathCoords.push({x:x, y:37}); // 連接玩家主堡
     
     function isPath(gx, gy) { 
         return pathCoords.some(p => p.x === gx && p.y === gy) || 
@@ -1655,9 +1660,9 @@ window.startBattlePhase = function() {
     // 【新增】：智能判定建造是否合法的統一函數
     function validatePlacement(tx, ty, bData, towerToIgnore) {
         let bSize = bData.size || 1;
-        if (tx < 0 || ty < 0 || tx + bSize > 20 || ty + bSize > 20) return "⚠️ 建築範圍超出邊界！";
-        if (ty < 6) return "⚠️ 敵軍前線無法進行建築！";
-
+        if (tx < 0 || ty < 0 || tx + bSize > 20 || ty + bSize > 40) return "⚠️ 建築範圍超出邊界！"; // 修改 Y 邊界
+        if (ty < 20) return "⚠️ 必須建在己方半場 (地圖下半部)！"; // 修改雙方楚河漢界
+        
         if (bData.id === 'gate') {
             let existingGates = towers.filter(t => t.id === 'gate' && t !== towerToIgnore);
             if (!towerToIgnore && existingGates.length >= 3) return "⚠️ 最多只能建造 3 座城門！";
@@ -1681,9 +1686,10 @@ window.startBattlePhase = function() {
                 if (isPath(tx + dx, ty + dy)) overlapPath = true;
                 let tAt = getTowerAt(tx + dx, ty + dy);
                 if (tAt && tAt !== towerToIgnore) overlapBuilding = true;
-                if ((tx + dx === 17 && ty + dy === 17) || (tx + dx === 2 && ty + dy === 2)) overlapBuilding = true;
+                if ((tx + dx === 17 && ty + dy === 37) || (tx + dx === 2 && ty + dy === 2)) overlapBuilding = true; // 修改玩家主堡坐標
             }
         }
+
         if (bData.id !== 'gate' && overlapPath) return "⚠️ 不能蓋在道路上！";
         if (overlapBuilding) return "⚠️ 空間不足，已有建築或主堡！";
 
@@ -1762,11 +1768,11 @@ window.startBattlePhase = function() {
     canvas.addEventListener('click', (e) => {
         if (gameOver || gameWon) return;
         const rect = canvas.getBoundingClientRect(); if (rect.width === 0) return; 
-        const scaleX = 800 / rect.width, scaleY = 800 / rect.height; 
+        const scaleX = 800 / rect.width, scaleY = 1600 / rect.height; // 高度比例尺改為 1600
         const gx = Math.floor(((e.clientX - rect.left) * scaleX) / TILE_SIZE);
         const gy = Math.floor(((e.clientY - rect.top) * scaleY) / TILE_SIZE);
-        if (gx < 0 || gx >= 20 || gy < 0 || gy >= 20) return; 
-
+        if (gx < 0 || gx >= 20 || gy < 0 || gy >= 40) return; // Y 邊界改為 40
+        
         const feedback = document.getElementById('feedback');
         const existingTower = getTowerAt(gx, gy);
 
@@ -1784,8 +1790,7 @@ window.startBattlePhase = function() {
 
         // 1. 拆除模式
         if (isDeleteMode) {
-            if (gx === 17 && gy === 17) { feedback.innerText = "⚠️ 城鎮中心無法拆除！"; feedback.style.color = "#e74c3c"; return; }
-            if (existingTower) { 
+            if (gx === 17 && gy === 37) { feedback.innerText = "⚠️ 城鎮中心無法拆除！"; feedback.style.color = "#e74c3c"; return; }            if (existingTower) { 
                 towers = towers.filter(t => t !== existingTower); 
                 feedback.innerText = "🗑️ 成功拆除建築物！"; feedback.style.color = "#e74c3c";
             } 
@@ -1794,8 +1799,7 @@ window.startBattlePhase = function() {
 
         // 2. 移動模式
         if (isMoveMode) {
-            if (gx === 17 && gy === 17) { feedback.innerText = "⚠️ 城鎮中心無法移動！"; feedback.style.color = "#e74c3c"; return; }
-            if (gx === 2 && gy === 2) return;
+            if (gx === 17 && gy === 37) { feedback.innerText = "⚠️ 城鎮中心無法移動！"; feedback.style.color = "#e74c3c"; return; }            if (gx === 2 && gy === 2) return;
 
             if (!buildingToMove) {
                 if (existingTower) {
@@ -1827,8 +1831,7 @@ window.startBattlePhase = function() {
 
         // 3. 建造模式
         if (selectedBuilding) {
-            if (existingTower || (gx === 17 && gy === 17) || (gx === 2 && gy === 2)) {
-                selectedBuilding = null;
+            if (existingTower || (gx === 17 && gy === 37) || (gx === 2 && gy === 2)) {                selectedBuilding = null;
                 document.querySelectorAll('#build-menu .slot').forEach(btn => btn.style.borderColor = '#7f8c8d');
             } else {
                 let bData = BUILDINGS[selectedBuilding];
@@ -1864,7 +1867,7 @@ window.startBattlePhase = function() {
 
         // 4. 點擊選取與升級模式
         if (gx === 2 && gy === 2) { feedback.innerText = "⚠️ 這是敵方城鎮中心！"; feedback.style.color = "#e74c3c"; return; }
-        if (gx === 17 && gy === 17) {
+        if (gx === 17 && gy === 37) {
             currentSelectedTarget = playerBase; currentSelectedType = 'base';
             showUpgradeUI('城鎮中心', playerBase.level, `${300 * playerBase.level}金`); return;
         }
