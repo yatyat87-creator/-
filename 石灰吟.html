@@ -2098,19 +2098,18 @@ update(targetPlayer) {
                 return false;
             }
 
-            // 3. 攻擊主堡邏輯
+             // 3. 【修改】：攻擊主堡邏輯
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((playerBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (playerBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
-            let isMelee = this.range <= 50;
+            let isMelee = this.range <= 65;
             let canAttackBase = false;
             
             if (isMelee) {
-                // 近戰部隊：必須抵達專屬圍城點 (ringDist <= 20) 或者被擠到主堡旁邊 (baseDist <= 90)
-                canAttackBase = (ringDist <= 20 || baseDist <= 90);
+                // 【核心修復】：近戰部隊必須嚴格走到專屬的「圍城點」才能攻擊
+                canAttackBase = (ringDist <= 10);
             } else {
-                // 遠程部隊：射程覆蓋主堡邊緣即可
-                canAttackBase = (baseDist <= this.range + TILE_SIZE);
+                canAttackBase = (baseDist <= this.range + TILE_SIZE * 0.8);
             }
 
             if (canAttackBase) {
@@ -2633,20 +2632,20 @@ update(targetEnemy) {
                 return false;
             }
 
-            // 2. 攻擊敵方主堡邏輯
+            // 2. 【修改】：攻擊敵方主堡邏輯
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((enemyBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (enemyBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
-            let isMelee = this.range <= 50;
+            let isMelee = this.range <= 65; // 判斷是否為近戰 (涵蓋普通騎兵與步兵)
             let canAttackBase = false;
             
             if (this.id !== 'g9') {
                 if (isMelee) {
-                    // 近戰部隊：必須抵達專屬圍城點 (ringDist <= 20) 或者被擠到主堡旁邊 (baseDist <= 90)
-                    canAttackBase = (ringDist <= 20 || baseDist <= 90);
+                    // 【核心修復】：近戰部隊必須嚴格走到專屬的「圍城點」才能攻擊，強制他們離開馬路散開！
+                    canAttackBase = (ringDist <= 10);
                 } else {
                     // 遠程部隊：射程覆蓋主堡邊緣即可
-                    canAttackBase = (baseDist <= this.range + TILE_SIZE);
+                    canAttackBase = (baseDist <= this.range + TILE_SIZE * 0.8);
                 }
             }
 
