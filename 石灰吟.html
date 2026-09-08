@@ -1719,15 +1719,23 @@ window.startBattlePhase = function() {
     ctx.scale(dpr, dpr); ctx.imageSmoothingEnabled = true; 
     const TILE_SIZE = 40;
     
-    // 【修改】：設置主堡八格環狀陣地 (玩家主堡移至最下方 Y:37)
+    // 【核心修復】：設置 2x2 主堡外圍的「12宮格圍城陣地」，避免士兵走入城牆卡死
     const enemyRing = [], playerRing = [];
-    for(let dx=-1; dx<=1; dx++) {
-        for(let dy=-1; dy<=1; dy++) {
-            if(dx===0 && dy===0) continue;
-            enemyRing.push({x: 2+dx, y: 2+dy});
-            playerRing.push({x: 17+dx, y: 37+dy}); 
+    // 敵方主堡 (2,2) ~ (3,3)，外圍環繞一圈
+    for(let x=1; x<=4; x++) {
+        for(let y=1; y<=4; y++) {
+            if(x>=2 && x<=3 && y>=2 && y<=3) continue; // 避開主堡本身
+            enemyRing.push({x: x, y: y});
         }
     }
+    // 玩家主堡 (17,37) ~ (18,38)，外圍環繞一圈
+    for(let x=16; x<=19; x++) {
+        for(let y=36; y<=39; y++) {
+            if(x>=17 && x<=18 && y>=37 && y<=38) continue; // 避開主堡本身
+            playerRing.push({x: x, y: y});
+        }
+    }
+
 
     // 【修改】：延伸新的 S 型道路，貫穿全地圖 40 格高度
     const pathCoords = [];
@@ -2216,17 +2224,18 @@ update(targetPlayer) {
             }
 
             // 3. 攻擊主堡邏輯
-            let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
-            let baseDist = Math.hypot((playerBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (playerBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
+            let trueBaseX = playerBase.x * TILE_SIZE + TILE_SIZE; 
+            let trueBaseY = playerBase.y * TILE_SIZE + TILE_SIZE; 
+            let distToBaseCenter = Math.hypot(trueBaseX - (this.x + this.drawOffsetX), trueBaseY - (this.y + this.drawOffsetY));
 
             let isMelee = this.range <= 65;
             let canAttackBase = false;
             
             if (isMelee) {
-                // 【核心修復】：判定距離必須極度嚴格 (<= 5)，強迫他們精準踩在專屬的八宮格點上才能揮刀！
-                canAttackBase = (ringDist <= 5);
+                // 近戰部隊：距離主堡中心 90 像素以內才算貼著城牆
+                canAttackBase = (distToBaseCenter <= 90);
             } else {
-                canAttackBase = (baseDist <= this.range + TILE_SIZE * 0.8);
+                canAttackBase = (distToBaseCenter <= this.range + 40);
             }
 
             if (canAttackBase) {
@@ -2236,19 +2245,19 @@ update(targetPlayer) {
                     this.isUlt = Math.random() < Math.min(0.50, baseChance + (this.level - 1) * 0.015);
                 }
                 this.state = this.isUlt ? 2 : 1;
-                this.facingLeft = (playerBase.x * TILE_SIZE + TILE_SIZE/2) < this.x;
+                this.facingLeft = trueBaseX < this.x;
                 
                 let attackProgress = 1 - (this.cooldown / this.fireRate);
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
                     this.hasDealtDamage = true;
                     if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
-                    else if (this.id === 'rahu') { this.triggerRahuSlashWave(playerBase.x * TILE_SIZE + TILE_SIZE/2, playerBase.y * TILE_SIZE + TILE_SIZE/2); } 
-                    else if (this.id === 'rocks') { this.triggerRocksStrike(playerBase, playerBase.x * TILE_SIZE + TILE_SIZE/2, playerBase.y * TILE_SIZE + TILE_SIZE/2); }
+                    else if (this.id === 'rahu' && this.isUlt) { this.triggerRahuSlashWave(trueBaseX, trueBaseY); } 
+                    else if (this.id === 'rocks') { this.triggerRocksStrike(playerBase, trueBaseX, trueBaseY); }
                     else {
                         playerBase.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
                         ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
                         ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                        ctx.lineTo(playerBase.x * TILE_SIZE + TILE_SIZE/2, playerBase.y * TILE_SIZE + TILE_SIZE/2); ctx.stroke();
+                        ctx.lineTo(trueBaseX, trueBaseY); ctx.stroke();
                     }
                 }
                 return false;
@@ -2259,14 +2268,15 @@ update(targetPlayer) {
             const tx = targetNode.x * TILE_SIZE + TILE_SIZE / 2, ty = targetNode.y * TILE_SIZE + TILE_SIZE / 2;
             const dx = tx - this.x, dy = ty - this.y;
 
-            const isLaneBlocked = (testLane) => {
+                const isLaneBlocked = (testLane) => {
                 return enemies.some(e => {
                     if (e === this || e.lane !== testLane || e.isDying || e.range > this.range + 10) return false;
-                    if (this.pathIndex >= pathCoords.length && e.pathIndex >= pathCoords.length) return false;
                     
-                    // 【新增】：如果前方的敵人中了減速或定身，直接當作透明穿過去！
+                    // 【核心修復】：只要前方的隊友已經進入圍城模式，代表他已離開馬路，絕對不再阻擋道路上的部隊！
+                    if (e.pathIndex >= pathCoords.length) return false;
+                    
                     if (e.speedDebuffTimer > 0 || e.rootTimer > 0) return false;
-                    
+                
                     if (this.speed > e.speed) return false;
 
                     if (Math.hypot(e.x - this.x, e.y - this.y) < 24) { 
@@ -2749,20 +2759,22 @@ update(targetEnemy) {
                 return false;
             }
 
-            // 2. 攻擊敵方主堡邏輯
-            let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
-            let baseDist = Math.hypot((enemyBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (enemyBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
+             // 2. 攻擊敵方主堡邏輯
+            // 【核心修復】：使用真正的 2x2 主堡中心點 (120, 120) 來計算距離
+            let trueBaseX = enemyBase.x * TILE_SIZE + TILE_SIZE; 
+            let trueBaseY = enemyBase.y * TILE_SIZE + TILE_SIZE; 
+            let distToBaseCenter = Math.hypot(trueBaseX - (this.x + this.drawOffsetX), trueBaseY - (this.y + this.drawOffsetY));
 
-            let isMelee = this.range <= 65; // 判斷是否為近戰 (涵蓋普通騎兵與步兵)
+            let isMelee = this.range <= 65; 
             let canAttackBase = false;
             
             if (this.id !== 'g9') {
                 if (isMelee) {
-                    // 【核心修復】：判定距離必須極度嚴格 (<= 5)，強迫他們走離馬路，精準踩在專屬的八宮格點上才能揮刀！
-                    canAttackBase = (ringDist <= 5);
+                    // 近戰部隊：距離主堡中心 90 像素以內才算真正貼著城牆，才允許攻擊
+                    canAttackBase = (distToBaseCenter <= 90);
                 } else {
-                    // 遠程部隊：射程覆蓋主堡邊緣即可
-                    canAttackBase = (baseDist <= this.range + TILE_SIZE * 0.8);
+                    // 遠程部隊：主堡半徑(40) + 射程
+                    canAttackBase = (distToBaseCenter <= this.range + 40);
                 }
             }
 
@@ -2774,90 +2786,44 @@ update(targetEnemy) {
                     this.isUlt = Math.random() < ultChance;
                 }
                 this.state = this.isUlt ? 2 : 1; 
-                this.facingLeft = (enemyBase.x * TILE_SIZE + TILE_SIZE/2) < this.x;
+                this.facingLeft = trueBaseX < this.x;
                 
                 let attackProgress = 1 - (this.cooldown / this.fireRate);
                 if (this.cooldown > 0 && !this.hasDealtDamage && attackProgress >= 0.6) {
-                // 【修改】：將最終傷害乘上 Buff 倍率
-                let finalDamage = (this.isUlt ? this.damage * 2.5 : this.damage) * (this.atkBuffMult || 1.0);
-                this.hasDealtDamage = true;
-
+                    let finalDamage = (this.isUlt ? this.damage * 2.5 : this.damage) * (this.atkBuffMult || 1.0);
+                    this.hasDealtDamage = true;
                     
-                    let impactX = enemyBase.x * TILE_SIZE + TILE_SIZE/2;
-                    let impactY = enemyBase.y * TILE_SIZE + TILE_SIZE/2;
-
                     if (this.id === 'g5') {
-                        playSound('shoot');
-                        projectiles.push({ x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 10, tx: impactX, ty: impactY, damage: finalDamage, aoeRadius: 80, speed: 12, type: 'missile' });
+                        playSound('shoot'); projectiles.push({ x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 10, tx: trueBaseX, ty: trueBaseY, damage: finalDamage, aoeRadius: 80, speed: 12, type: 'missile' });
                     } else if (this.id === 'g6') {
-                        playSound('shoot');
-                        let arrowDmg = this.isUlt ? this.damage * 2 : this.damage;
-                        slashWaves.push(new SlashWave(arrowDmg, this.x, this.y, impactX, impactY, 'arrow', this.isUlt, true, this.unitData.slashImg));
+                        playSound('shoot'); slashWaves.push(new SlashWave(this.isUlt ? this.damage * 2 : this.damage, this.x, this.y, trueBaseX, trueBaseY, 'arrow', this.isUlt, true, this.unitData.slashImg));
                     } else if (this.id === 'g7') {
-                        playSound('shoot');
-                        let aoeRadius = this.isUlt ? 120 : 80;
-                        enemies.forEach(e => {
-                            if (Math.hypot(e.x - impactX, e.y - impactY) <= aoeRadius) {
-                                let dmgDealt = (e.defDebuffTimer > 0) ? finalDamage * 1.5 : finalDamage;
-                                e.hp -= dmgDealt;
-                                if (this.isUlt) { e.rootTimer = 600; } 
-                                else { e.defDebuffTimer = 240; e.speedDebuffTimer = 240; } 
-                            }
-                        });
-                        combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 30, maxTimer: 30, frames: 4, customImg: this.unitData.aoeImg });
+                        playSound('shoot'); let aoeRadius = this.isUlt ? 120 : 80;
+                        enemies.forEach(e => { if (Math.hypot(e.x - trueBaseX, e.y - trueBaseY) <= aoeRadius) { e.hp -= (e.defDebuffTimer > 0) ? finalDamage * 1.5 : finalDamage; if (this.isUlt) e.rootTimer = 600; else { e.defDebuffTimer = 240; e.speedDebuffTimer = 240; } }});
+                        combatEffects.push({ x: trueBaseX, y: trueBaseY, radius: aoeRadius, timer: 30, maxTimer: 30, frames: 4, customImg: this.unitData.aoeImg });
                     } else if (this.id === 'g8') {
-                        playSound('melee');
-                        if (this.isUlt) {
-                            slashWaves.push(new SlashWave(this.damage * 2.5, this.x, this.y, impactX, impactY, 'slash', true, true, this.unitData.slashImg));
-                        } else {
-                            let targets = enemies.filter(e => !e.isDying && Math.hypot(e.x - this.x, e.y - this.y) <= this.range).slice(0, 5);
-                            targets.forEach(t => {
-                                let dmgDealt = (t.defDebuffTimer > 0) ? this.damage * 1.5 : this.damage;
-                                t.hp -= dmgDealt;
-                                ctx.strokeStyle = this.unitData.color; ctx.lineWidth = 2;
-                                ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                                ctx.lineTo(t.x, t.y); ctx.stroke();
-                            });
-                        }
-                    } 
-                    // =====================================
-                    // 【新增】：補上呂布 (g4) 打主堡時的專屬邏輯
-                    // =====================================
-                    else if (this.id === 'g4') {
-                        playSound('melee');
-                        enemyBase.hp -= finalDamage;
-                        
-                        // 【新增】：打主堡時也觸發範圍爆炸特效
-                        if (this.unitData.aoeImg) {
-                            combatEffects.push({ x: impactX, y: impactY, radius: 80, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg });
-                        }
-
-                        if (this.isUlt && this.unitData.slashImg) {
-                            slashWaves.push(new SlashWave(finalDamage * 1.5, this.x, this.y, impactX, impactY, 'slash', true, true, this.unitData.slashImg));
-                        } else {
-                            ctx.strokeStyle = '#000000'; ctx.lineWidth = 6;
-                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                            ctx.lineTo(impactX, impactY); ctx.stroke();
-                        }
-                    } 
-                    else {
+                        playSound('melee'); if (this.isUlt) slashWaves.push(new SlashWave(this.damage * 2.5, this.x, this.y, trueBaseX, trueBaseY, 'slash', true, true, this.unitData.slashImg));
+                        else enemies.filter(e => !e.isDying && Math.hypot(e.x - this.x, e.y - this.y) <= this.range).slice(0, 5).forEach(t => { t.hp -= (t.defDebuffTimer > 0) ? this.damage * 1.5 : this.damage; ctx.strokeStyle = this.unitData.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(t.x, t.y); ctx.stroke(); });
+                    } else if (this.id === 'g4') {
+                        playSound('melee'); enemyBase.hp -= finalDamage;
+                        if (this.unitData.aoeImg) combatEffects.push({ x: trueBaseX, y: trueBaseY, radius: 80, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg });
+                        if (this.isUlt && this.unitData.slashImg) slashWaves.push(new SlashWave(finalDamage * 1.5, this.x, this.y, trueBaseX, trueBaseY, 'slash', true, true, this.unitData.slashImg));
+                        else { ctx.strokeStyle = '#000000'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(trueBaseX, trueBaseY); ctx.stroke(); }
+                    } else {
                         enemyBase.hp -= finalDamage; 
                         if (this.unitData.hasAoE) {
                             let aoeRadius = this.isTransformed ? 120 : 60; 
-                            enemies.forEach(e => {
-                                if (Math.hypot(e.x - impactX, e.y - impactY) <= aoeRadius) e.hp -= finalDamage;
-                            });
-                            let customAoeImg = (this.isTransformed && this.unitData.aoeImg2) ? this.unitData.aoeImg2 : this.unitData.aoeImg;
-                            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, isTransformed: this.isTransformed, customImg: customAoeImg });
+                            enemies.forEach(e => { if (Math.hypot(e.x - trueBaseX, e.y - trueBaseY) <= aoeRadius) e.hp -= finalDamage; });
+                            combatEffects.push({ x: trueBaseX, y: trueBaseY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, isTransformed: this.isTransformed, customImg: (this.isTransformed && this.unitData.aoeImg2) ? this.unitData.aoeImg2 : this.unitData.aoeImg });
                         } else {
                             ctx.strokeStyle = this.unitData.color; ctx.lineWidth = this.unitData.isGeneral ? 4 : 2;
-                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                            ctx.lineTo(impactX, impactY); ctx.stroke();
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(trueBaseX, trueBaseY); ctx.stroke();
                         }
                     }
                 }
                 return false;
             }
+
 
             // 3. 移動與透明穿透
             if (!hasValidTarget) { this.state = 0; return true; }
@@ -2867,9 +2833,10 @@ update(targetEnemy) {
             const isLaneBlocked = (testLane) => {
                 return playerUnits.some(p => {
                     if (p === this || p.lane !== testLane || p.isDying || p.range > this.range + 10) return false;
-                    if (this.pathIndex < 0 && p.pathIndex < 0) return false;
                     
-                    // 【新增】：如果前方的隊友中了減速或定身，直接當作透明穿過去！(預留給未來敵人控場技能)
+                    // 【核心修復】：只要前方的隊友已經進入圍城模式 (pathIndex < 0)，代表他已離開馬路，絕對不再阻擋道路上的部隊！
+                    if (p.pathIndex < 0) return false;
+                    
                     if (p.speedDebuffTimer > 0 || p.rootTimer > 0) return false;
                     
                     if (this.speed > p.speed) return false;
