@@ -169,11 +169,12 @@
             <!-- 【新增】：加回拆除按鈕 -->
             <button id="btn-delete" onclick="toggleDeleteMode()" style="margin-bottom: 8px; width: 100%; background: #7f8c8d; color: white; border: none; padding: 6px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.2s;">🛠️ 拆除模式: 關閉</button>
             
-            <!-- 【新增】：獨立的建築資訊與升級介面 -->
+            <!-- 【修改】：加入一鍵全升級按鈕 -->
             <div class="camp-row" id="upgrade-ui-row" style="display: none; background: #dff9fb; padding: 8px; border-radius: 5px; border: 2px solid #3498db; margin-bottom: 8px;">
                 <span class="camp-label" id="selected-building-name" style="color: #2980b9; width: auto; margin-right: 10px;">🏠 建築</span>
                 <span style="flex:1; font-size:14px; color:#2c3e50; font-weight:bold;" id="selected-building-info">Lv.1</span>
-                <button id="btn-upgrade-building" onclick="upgradeSelectedTarget()" style="background:#f39c12; color:white; border:none; padding:6px 12px; border-radius:5px; font-weight:bold; cursor:pointer; font-size:14px;">升級 (50金)</button>
+                <button id="btn-upgrade-building" onclick="upgradeSelectedTarget()" style="background:#f39c12; color:white; border:none; padding:6px 12px; border-radius:5px; font-weight:bold; cursor:pointer; font-size:14px; margin-right:5px;">升級</button>
+                <button id="btn-upgrade-all" onclick="upgradeAllSelectedType()" style="background:#8e44ad; color:white; border:none; padding:6px 12px; border-radius:5px; font-weight:bold; cursor:pointer; font-size:14px; display:none;">全升級</button>
             </div>
 
             <div class="camp-row" id="build-menu-row">
@@ -1503,13 +1504,22 @@ window.startBattlePhase = function() {
         return 50 * tower.level;
     };
 
-    window.showUpgradeUI = function(name, level, costText) {
+// 【修改】：加入 count 參數，並控制「全升級」按鈕的顯示
+    window.showUpgradeUI = function(name, level, costText, count = 1) {
         const upgradeUI = document.getElementById('upgrade-ui-row');
         if (upgradeUI) {
             upgradeUI.style.display = 'flex';
             document.getElementById('selected-building-name').innerText = `🏠 ${name}`;
             document.getElementById('selected-building-info').innerText = `目前: Lv.${level}`;
             document.getElementById('btn-upgrade-building').innerText = `升級 (${costText})`;
+            
+            let btnAll = document.getElementById('btn-upgrade-all');
+            if (currentSelectedType === 'base' || count <= 1) {
+                btnAll.style.display = 'none';
+            } else {
+                btnAll.style.display = 'inline-block';
+                btnAll.innerText = `全升級 x${count}`;
+            }
         }
     };
 
@@ -1583,13 +1593,77 @@ window.startBattlePhase = function() {
                 updateResourcesUI(); 
                 feedback.innerText = `✨ ${bData.name}升級為 Lv.${currentSelectedTarget.level}！`; feedback.style.color = "#f1c40f";
                 
-                // 【修改】：升級後，重新計算並顯示下一級的費用
+                // 【修改】：升級後，重新計算下一級費用與剩餘的同款數量
                 let nextCost = window.getTowerUpgradeCost(currentSelectedTarget);
-                showUpgradeUI(bData.name, currentSelectedTarget.level, `${nextCost}${resUnit}`);
+                let newCount = towers.filter(t => t.id === currentSelectedTarget.id && t.level === currentSelectedTarget.level && (!t.owner || t.owner === 'player')).length;
+                showUpgradeUI(bData.name, currentSelectedTarget.level, `${nextCost}${resUnit}`, newCount);
 
             } else {
                 feedback.innerText = `⚠️ 升級需要 ${cost} ${resName}！資源不足。`; feedback.style.color = "#e74c3c";
             }
+        }
+    };
+
+    // ============================================
+    // 【新增】：一鍵升級所有同款同等級建築
+    // ============================================
+    window.upgradeAllSelectedType = function() {
+        if (!currentSelectedTarget || currentSelectedType !== 'tower') return;
+        const feedback = document.getElementById('feedback');
+        
+        // 檢查是否超過主城等級限制
+        if (currentSelectedTarget.level >= playerBase.level) {
+            playSound('error');
+            feedback.innerText = `⚠️ 建築物等級 (Lv.${currentSelectedTarget.level}) 不可超過主城等級 (Lv.${playerBase.level})！`; 
+            feedback.style.color = "#e74c3c";
+            return;
+        }
+
+        let targetId = currentSelectedTarget.id;
+        let targetLevel = currentSelectedTarget.level;
+        let bData = BUILDINGS[targetId];
+        let resName = bData.upgradeCostType === 'gold' ? '金幣' : (bData.upgradeCostType === 'wood' ? '木材' : '石頭');
+        let resUnit = bData.upgradeCostType === 'gold' ? '金' : (bData.upgradeCostType === 'wood' ? '木' : '石');
+
+        // 找出畫面上所有同款、同等級的玩家建築
+        let identicalTowers = towers.filter(t => t.id === targetId && t.level === targetLevel && (!t.owner || t.owner === 'player'));
+        
+        let upgradeCount = 0;
+        let totalCost = 0;
+
+        for (let i = 0; i < identicalTowers.length; i++) {
+            let t = identicalTowers[i];
+            let cost = window.getTowerUpgradeCost(t);
+            let canAfford = false;
+
+            if (bData.upgradeCostType === 'gold' && gameGold >= cost) { gameGold -= cost; canAfford = true; }
+            else if (bData.upgradeCostType === 'wood' && gameWood >= cost) { gameWood -= cost; canAfford = true; }
+            else if (bData.upgradeCostType === 'stone' && gameStone >= cost) { gameStone -= cost; canAfford = true; }
+            
+            if (canAfford) {
+                t.level++;
+                if (t.id === 'gate') { t.maxHp += 500; t.hp += 500; }
+                upgradeCount++;
+                totalCost += cost;
+            } else {
+                break; // 資源不足就停止後續的升級
+            }
+        }
+
+        if (upgradeCount > 0) {
+            updateResourcesUI();
+            playSound('build');
+            feedback.innerText = `✨ 成功將 ${upgradeCount} 座 ${bData.name} 升級為 Lv.${targetLevel + 1}！消耗 ${totalCost} ${resName}。`; 
+            feedback.style.color = "#f1c40f";
+            
+            // 更新 UI，顯示升級後的新費用與新數量
+            let nextCost = window.getTowerUpgradeCost(currentSelectedTarget);
+            let newCount = towers.filter(t => t.id === targetId && t.level === currentSelectedTarget.level && (!t.owner || t.owner === 'player')).length;
+            showUpgradeUI(bData.name, currentSelectedTarget.level, `${nextCost}${resUnit}`, newCount);
+        } else {
+            playSound('error');
+            feedback.innerText = `⚠️ 資源不足！無法升級任何 ${bData.name}。`; 
+            feedback.style.color = "#e74c3c";
         }
     };
 
@@ -1890,9 +1964,10 @@ window.startBattlePhase = function() {
             let bData = BUILDINGS[existingTower.id];
             let resUnit = bData.upgradeCostType === 'gold' ? '金' : (bData.upgradeCostType === 'wood' ? '木' : '石');
             
-            // 【修改】：選取時使用新的費用公式
             let cost = window.getTowerUpgradeCost(existingTower);
-            showUpgradeUI(bData.name, existingTower.level, `${cost}${resUnit}`);
+            // 【修改】：選取時計算同款同等級數量
+            let count = towers.filter(t => t.id === existingTower.id && t.level === existingTower.level && (!t.owner || t.owner === 'player')).length;
+            showUpgradeUI(bData.name, existingTower.level, `${cost}${resUnit}`, count);
             
         if (existingTower.id === 'barracks' && barracksUI) barracksUI.style.display = 'flex';
         if (existingTower.id === 'tent' && generalsUI) generalsUI.style.display = 'flex';
@@ -2098,7 +2173,7 @@ update(targetPlayer) {
                 return false;
             }
 
-             // 3. 【修改】：攻擊主堡邏輯
+            // 3. 攻擊主堡邏輯
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((playerBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (playerBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
@@ -2106,8 +2181,8 @@ update(targetPlayer) {
             let canAttackBase = false;
             
             if (isMelee) {
-                // 【核心修復】：近戰部隊必須嚴格走到專屬的「圍城點」才能攻擊
-                canAttackBase = (ringDist <= 10);
+                // 【核心修復】：判定距離必須極度嚴格 (<= 5)，強迫他們精準踩在專屬的八宮格點上才能揮刀！
+                canAttackBase = (ringDist <= 5);
             } else {
                 canAttackBase = (baseDist <= this.range + TILE_SIZE * 0.8);
             }
@@ -2632,7 +2707,7 @@ update(targetEnemy) {
                 return false;
             }
 
-            // 2. 【修改】：攻擊敵方主堡邏輯
+            // 2. 攻擊敵方主堡邏輯
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
             let baseDist = Math.hypot((enemyBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (enemyBase.y * TILE_SIZE + TILE_SIZE/2) - this.y);
 
@@ -2641,8 +2716,8 @@ update(targetEnemy) {
             
             if (this.id !== 'g9') {
                 if (isMelee) {
-                    // 【核心修復】：近戰部隊必須嚴格走到專屬的「圍城點」才能攻擊，強制他們離開馬路散開！
-                    canAttackBase = (ringDist <= 10);
+                    // 【核心修復】：判定距離必須極度嚴格 (<= 5)，強迫他們走離馬路，精準踩在專屬的八宮格點上才能揮刀！
+                    canAttackBase = (ringDist <= 5);
                 } else {
                     // 遠程部隊：射程覆蓋主堡邊緣即可
                     canAttackBase = (baseDist <= this.range + TILE_SIZE * 0.8);
