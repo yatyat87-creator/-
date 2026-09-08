@@ -2167,8 +2167,9 @@ update(targetPlayer) {
             }
 
             // 1. 攻擊城門 (阻擋道路，優先度最高)
-            // 【修改】：確保敵軍只會攻擊玩家的城門，不會拆自己的城門！
-            let gate = towers.find(t => t.id === 'gate' && (!t.owner || t.owner === 'player') && t.x === (targetNode ? Math.floor(targetNode.x) : -1) && t.y === (targetNode ? Math.floor(targetNode.y) : -1));            if (gate) {
+            // 【修復】：加入 t.hp > 0 條件，讓敵軍自動無視已經損毀的城門
+            let gate = towers.find(t => t.id === 'gate' && t.hp > 0 && (!t.owner || t.owner === 'player') && t.x === (targetNode ? Math.floor(targetNode.x) : -1) && t.y === (targetNode ? Math.floor(targetNode.y) : -1));            
+            if (gate) {
                 if (this.cooldown <= 0) { 
                     this.cooldown = this.fireRate; this.hasDealtDamage = false; 
                     let baseChance = this.unitData.ultChance || 0.05;
@@ -2183,9 +2184,10 @@ update(targetPlayer) {
                     else if (this.id === 'rocks') { this.triggerRocksStrike(gate, gate.x * TILE_SIZE + TILE_SIZE/2, gate.y * TILE_SIZE + TILE_SIZE/2); }
                     else { gate.hp -= this.isUlt ? this.damage * 2.0 : this.damage; }
                 }
-                if (gate.hp <= 0) towers = towers.filter(t => t !== gate);
+                // 【核心修復】：移除 towers.filter 那行！不要把城門徹底刪除，讓它保留在場上冒煙，戰鬥結束後才會自動滿血復活
                 return false;
             }
+
             
             // 2. 【修改】：優先攻擊玩家部隊邏輯 (移到攻擊主堡上方)
             if (targetPlayer && Math.hypot((targetPlayer.x + targetPlayer.drawOffsetX) - (this.x + this.drawOffsetX), (targetPlayer.y + targetPlayer.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
