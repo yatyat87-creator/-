@@ -880,8 +880,8 @@ const EFFECT_IMGS = {
                 ry = Math.floor(Math.random() * 6);      // Y: 0~5
             }
             
-            // 徹底禁止敵軍在主堡 (2,2) 及其周圍 8 格 (即 X:1~3, Y:1~3) 建造任何建築！
-            if (Math.abs(rx - 2) <= 1 && Math.abs(ry - 2) <= 1) continue; 
+            // 【修復 2】：徹底禁止敵軍在主堡專屬的 4x4 圍城陣地 (X:1~4, Y:1~4) 建造任何建築 (包含城門)！
+            if (rx >= 1 && rx <= 4 && ry >= 1 && ry <= 4) continue;
             
             let onPath = isPath(rx, ry);
             
@@ -1803,31 +1803,26 @@ window.startBattlePhase = function() {
             let existingGates = towers.filter(t => t.id === 'gate' && t !== towerToIgnore);
             if (!towerToIgnore && existingGates.length >= 3) return "⚠️ 最多只能建造 3 座城門！";
             if (existingGates.some(g => Math.abs(g.x - tx) <= 2 && Math.abs(g.y - ty) <= 2)) return "⚠️ 城門不能蓋在另一座城門 2 格內！";
-            if (enemyRing.some(p => p.x === tx && p.y === ty) || playerRing.some(p => p.x === tx && p.y === ty)) return "⚠️ 城門不能蓋在主堡陣地上！";
             if (!isPath(tx, ty)) return "⚠️ 城門必須蓋在一般道路上！";
         }
 
-        if (bData.id === 'barracks') {
-            let existingBarracks = towers.filter(t => t.id === 'barracks' && t !== towerToIgnore);
-            if (existingBarracks.length >= 1) return "⚠️ 軍營只可以起一個！";
-        }
-        if (bData.id === 'tent') {
-            let existingTents = towers.filter(t => t.id === 'tent' && t !== towerToIgnore);
-            if (existingTents.length >= 1) return "⚠️ 大帳只可以起一個！";
-        }
-
-        let overlapPath = false; let overlapBuilding = false;
+        let overlapPath = false; let overlapBuilding = false; let inBaseRing = false;
         for (let dx = 0; dx < bSize; dx++) {
             for (let dy = 0; dy < bSize; dy++) {
-                if (isPath(tx + dx, ty + dy)) overlapPath = true;
-                let tAt = getTowerAt(tx + dx, ty + dy);
+                let cx = tx + dx; let cy = ty + dy;
+                if (isPath(cx, cy)) overlapPath = true;
+                let tAt = getTowerAt(cx, cy);
                 if (tAt && tAt !== towerToIgnore) overlapBuilding = true;
-                if ((tx + dx === 17 && ty + dy === 37) || (tx + dx === 2 && ty + dy === 2)) overlapBuilding = true; // 修改玩家主堡坐標
+                
+                // 【修復 2】：檢查是否踩進雙方主堡專用的 4x4 圍城區 (16格絕對禁建區)
+                if (cx >= 1 && cx <= 4 && cy >= 1 && cy <= 4) inBaseRing = true;
+                if (cx >= 16 && cx <= 19 && cy >= 36 && cy <= 39) inBaseRing = true;
             }
         }
 
+        if (inBaseRing) return "⚠️ 無法在主堡周圍的圍城專用陣地上建造！";
         if (bData.id !== 'gate' && overlapPath) return "⚠️ 不能蓋在道路上！";
-        if (overlapBuilding) return "⚠️ 空間不足，已有建築或主堡！";
+        if (overlapBuilding) return "⚠️ 空間不足，已有建築！";
 
         // ==========================================
         // 【核心修復】：全建築連通性檢查 (BFS)
@@ -2227,13 +2222,15 @@ update(targetPlayer) {
             let trueBaseX = playerBase.x * TILE_SIZE + TILE_SIZE; 
             let trueBaseY = playerBase.y * TILE_SIZE + TILE_SIZE; 
             let distToBaseCenter = Math.hypot(trueBaseX - (this.x + this.drawOffsetX), trueBaseY - (this.y + this.drawOffsetY));
+            // 【新增】：計算自身到專屬「12宮格圍城點」的精準距離
+            let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - (this.x + this.drawOffsetX), (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - (this.y + this.drawOffsetY));
 
             let isMelee = this.range <= 65;
             let canAttackBase = false;
             
             if (isMelee) {
-                // 近戰部隊：距離主堡中心 90 像素以內才算貼著城牆
-                canAttackBase = (distToBaseCenter <= 90);
+                // 【修復 3】：近戰部隊必須精準走到專屬的 12 宮格圍城點 (距離15以內)，強迫離開馬路散開！
+                canAttackBase = (ringDist <= 15);
             } else {
                 canAttackBase = (distToBaseCenter <= this.range + 40);
             }
@@ -2272,8 +2269,8 @@ update(targetPlayer) {
                 return enemies.some(e => {
                     if (e === this || e.lane !== testLane || e.isDying || e.range > this.range + 10) return false;
                     
-                    // 【核心修復】：只要前方的隊友已經進入圍城模式，代表他已離開馬路，絕對不再阻擋道路上的部隊！
-                    if (e.pathIndex >= pathCoords.length) return false;
+                    // 【核心修復】：只要前方的隊友已經抵達馬路盡頭或進入圍城模式，代表他正在散開，不再阻擋後方！
+                    if (e.pathIndex >= pathCoords.length - 1) return false;
                     
                     if (e.speedDebuffTimer > 0 || e.rootTimer > 0) return false;
                 
@@ -2759,19 +2756,20 @@ update(targetEnemy) {
                 return false;
             }
 
-             // 2. 攻擊敵方主堡邏輯
-            // 【核心修復】：使用真正的 2x2 主堡中心點 (120, 120) 來計算距離
+            // 2. 攻擊敵方主堡邏輯
             let trueBaseX = enemyBase.x * TILE_SIZE + TILE_SIZE; 
             let trueBaseY = enemyBase.y * TILE_SIZE + TILE_SIZE; 
             let distToBaseCenter = Math.hypot(trueBaseX - (this.x + this.drawOffsetX), trueBaseY - (this.y + this.drawOffsetY));
+            // 【新增】：計算自身到被分配的專屬「12宮格圍城點」的精準距離
+            let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - (this.x + this.drawOffsetX), (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - (this.y + this.drawOffsetY));
 
             let isMelee = this.range <= 65; 
             let canAttackBase = false;
             
             if (this.id !== 'g9') {
                 if (isMelee) {
-                    // 近戰部隊：距離主堡中心 90 像素以內才算真正貼著城牆，才允許攻擊
-                    canAttackBase = (distToBaseCenter <= 90);
+                    // 【修復 3】：近戰部隊必須精準走到專屬的 12 宮格點 (距離15以內)，強迫離開馬路散開！
+                    canAttackBase = (ringDist <= 15);
                 } else {
                     // 遠程部隊：主堡半徑(40) + 射程
                     canAttackBase = (distToBaseCenter <= this.range + 40);
@@ -2834,8 +2832,8 @@ update(targetEnemy) {
                 return playerUnits.some(p => {
                     if (p === this || p.lane !== testLane || p.isDying || p.range > this.range + 10) return false;
                     
-                    // 【核心修復】：只要前方的隊友已經進入圍城模式 (pathIndex < 0)，代表他已離開馬路，絕對不再阻擋道路上的部隊！
-                    if (p.pathIndex < 0) return false;
+                    // 【核心修復】：只要前方的隊友已經抵達馬路盡頭或進入圍城模式 (pathIndex <= 0)，代表他正在散開，不再阻擋後方！
+                    if (p.pathIndex <= 0) return false;
                     
                     if (p.speedDebuffTimer > 0 || p.rootTimer > 0) return false;
                     
@@ -3882,17 +3880,19 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             let stateIndex = hpRatio > 0.5 ? 0 : (hpRatio > 0 ? 1 : 2);
             let img = imgArray ? imgArray[stateIndex] : null; 
             let drawSize = TILE_SIZE * 2.8; 
-            let drawX = cx + (TILE_SIZE / 2) - (drawSize / 2); let drawY = cy + (TILE_SIZE / 2) - (drawSize / 2) - 15; 
+            // 【修復 1】：將圖片與血條的繪製基準點改為「2x2 的正中心」(加上完整的 TILE_SIZE)
+            let drawX = cx + TILE_SIZE - (drawSize / 2); 
+            let drawY = cy + TILE_SIZE - (drawSize / 2) - 15; 
             if (img && img.complete && !img.isFailed && img.naturalWidth > 0) {
                 let fw = img.naturalWidth / 4; let fh = img.naturalHeight; let frame = Math.floor(globalAnimTick / 15) % 4;
                 ctx.drawImage(img, frame * fw, 0, fw, fh, drawX, drawY, drawSize, drawSize);
             } else {
-                ctx.fillStyle = fallbackColor; ctx.fillRect(cx, cy, TILE_SIZE, TILE_SIZE);
-                ctx.fillStyle = 'white'; ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(symbol, cx + TILE_SIZE/2, cy + TILE_SIZE/2 - 5);
+                ctx.fillStyle = fallbackColor; ctx.fillRect(cx, cy, TILE_SIZE * 2, TILE_SIZE * 2);
+                ctx.fillStyle = 'white'; ctx.font = '24px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(symbol, cx + TILE_SIZE, cy + TILE_SIZE - 5);
             }
             if (stateIndex !== 2) {
-                let barWidth = TILE_SIZE * 1.5; let barX = cx + (TILE_SIZE / 2) - (barWidth / 2); let barY = drawY - 8; 
-                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText('Lv'+baseObj.level, cx + TILE_SIZE/2, barY - 8);
+                let barWidth = TILE_SIZE * 1.5; let barX = cx + TILE_SIZE - (barWidth / 2); let barY = drawY - 8; 
+                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText('Lv'+baseObj.level, cx + TILE_SIZE, barY - 8);
                 ctx.fillStyle = 'red'; ctx.fillRect(barX, barY, barWidth, 4); ctx.fillStyle = '#2ecc71'; ctx.fillRect(barX, barY, barWidth * Math.max(0, Math.min(1, hpRatio)), 4);
             }
         };
