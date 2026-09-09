@@ -2600,8 +2600,14 @@ update(targetEnemy) {
                 if (tx < this.x - 1) this.facingLeft = true; else if (tx > this.x + 1) this.facingLeft = false;
             }
 
-            // 1. 【修改】：優先攻擊敵軍部隊邏輯 (移到攻擊主堡上方)
-            if (targetEnemy && Math.hypot((targetEnemy.x + targetEnemy.drawOffsetX) - (this.x + this.drawOffsetX), (targetEnemy.y + targetEnemy.drawOffsetY) - (this.y + this.drawOffsetY)) <= this.range) {
+            // --- 【新增】：計算最短攻擊距離 (投石車專用) ---
+            let distToEnemy = targetEnemy ? Math.hypot((targetEnemy.x + targetEnemy.drawOffsetX) - (this.x + this.drawOffsetX), (targetEnemy.y + targetEnemy.drawOffsetY) - (this.y + this.drawOffsetY)) : Infinity;
+            // 投石車最短攻擊距離設為 160 像素
+            let isTooCloseToEnemy = this.id === 'trebuchet' && distToEnemy < 160; 
+
+            // 1. 優先攻擊敵軍部隊邏輯
+            // 加入 !isTooCloseToEnemy 條件，太近就不准開火
+            if (targetEnemy && distToEnemy <= this.range && !isTooCloseToEnemy) {
                 if (this.cooldown <= 0) { 
                     this.cooldown = this.fireRate; this.hasDealtDamage = false; 
                     let baseChance = this.unitData.ultChance || 0.05;
@@ -2717,31 +2723,22 @@ update(targetEnemy) {
                                 ctx.lineTo(t.x, t.y); ctx.stroke();
                             });
                         }
-} 
-                    // 【投石車邏輯】：範圍傷害，對建築物傷害 X3
+                    } 
+                    // 【投石車邏輯】：發射拋物線巨石，到達目標後才造成範圍傷害
                     else if (this.id === 'trebuchet') {
-                        playSound('explosion');
-                        let aoeRadius = 80;
-                        let isTargetBuilding = targetEnemy && targetEnemy.isTower; // 若無特別目標視為普通
-                        if (!targetEnemy) {
-                            let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - this.x, (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - this.y);
-                            if (ringDist <= 10 || Math.hypot((enemyBase.x * TILE_SIZE + TILE_SIZE/2) - this.x, (enemyBase.y * TILE_SIZE + TILE_SIZE/2) - this.y) <= this.range) isTargetBuilding = true;
-                        }
+                        playSound('shoot'); // 發射音效
+                        let startX = this.x + this.drawOffsetX;
+                        let startY = this.y + this.drawOffsetY - 30; // 從車體上方發射
                         
-                        let baseDmg = finalDamage * (isTargetBuilding ? 3.0 : 1.0);
-                        
-                        enemies.forEach(e => {
-                            if (!e.isDying && Math.hypot((e.x + (e.drawOffsetX||0)) - impactX, (e.y + (e.drawOffsetY||0)) - impactY) <= aoeRadius) e.hp -= baseDmg;
+                        projectiles.push({ 
+                            x: startX, y: startY, 
+                            startX: startX, startY: startY, // 紀錄起點計算拋物線
+                            tx: impactX, ty: impactY, 
+                            damage: finalDamage, 
+                            aoeRadius: 80, 
+                            speed: 8, // 巨石沉重，飛行速度比飛彈慢
+                            type: 'boulder'
                         });
-                        towers.forEach(t => {
-                            if (t.owner === 'enemy' && !t.isDestroyed) {
-                                let tx = t.x * TILE_SIZE + TILE_SIZE / 2, ty = t.y * TILE_SIZE + TILE_SIZE / 2;
-                                if (Math.hypot(tx - impactX, ty - impactY) <= aoeRadius) t.hp -= baseDmg * 3.0; 
-                            }
-                        });
-                        if (Math.hypot((enemyBase.x*TILE_SIZE+TILE_SIZE/2) - impactX, (enemyBase.y*TILE_SIZE+TILE_SIZE/2) - impactY) <= aoeRadius) enemyBase.hp -= baseDmg * 3.0;
-                        
-                        combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 30, type: 'missile' });
                     }
                     // 【井欄邏輯】：根據內部弓兵數量連射
                     else if (this.id === 'siege_tower') {
@@ -2784,19 +2781,18 @@ update(targetEnemy) {
             let trueBaseX = enemyBase.x * TILE_SIZE + TILE_SIZE; 
             let trueBaseY = enemyBase.y * TILE_SIZE + TILE_SIZE; 
             let distToBaseCenter = Math.hypot(trueBaseX - (this.x + this.drawOffsetX), trueBaseY - (this.y + this.drawOffsetY));
-            // 【新增】：計算自身到被分配的專屬「12宮格圍城點」的精準距離
             let ringDist = Math.hypot((this.ringTarget.x * TILE_SIZE + TILE_SIZE/2) - (this.x + this.drawOffsetX), (this.ringTarget.y * TILE_SIZE + TILE_SIZE/2) - (this.y + this.drawOffsetY));
 
+            let isTooCloseToBase = this.id === 'trebuchet' && distToBaseCenter < 160;
             let isMelee = this.range <= 65; 
             let canAttackBase = false;
             
             if (this.id !== 'g9') {
                 if (isMelee) {
-                    // 【修復 3】：近戰部隊必須精準走到專屬的 12 宮格點 (距離15以內)，強迫離開馬路散開！
                     canAttackBase = (ringDist <= 15);
                 } else {
-                    // 遠程部隊：主堡半徑(40) + 射程
-                    canAttackBase = (distToBaseCenter <= this.range + 40);
+                    // 【修復】：修正原本錯誤的 baseDist 變數，並加入投石車的最短距離限制
+                    canAttackBase = (distToBaseCenter <= this.range + 40) && !isTooCloseToBase;
                 }
             }
 
@@ -2849,6 +2845,21 @@ update(targetEnemy) {
 
             // 3. 移動與透明穿透
             if (!hasValidTarget) { this.state = 0; return true; }
+
+            // --- 【新增】：投石車太近時向後退 (風箏拉扯邏輯) ---
+            if (isTooCloseToEnemy || isTooCloseToBase) {
+                // 強制增加 pathIndex，讓投石車往回走向己方主堡方向
+                if (this.pathIndex < pathCoords.length - 1) {
+                    this.pathIndex += 1;
+                }
+                // 重新定位目標節點為後方的道路
+                let backNode = pathCoords[this.pathIndex];
+                if (backNode) {
+                    tx = backNode.x * TILE_SIZE + TILE_SIZE / 2;
+                    ty = backNode.y * TILE_SIZE + TILE_SIZE / 2;
+                }
+            }
+
             const dx = tx - this.x, dy = ty - this.y;
             const dist = Math.hypot(dx, dy);
 
@@ -4000,7 +4011,7 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
         renderList.sort((a, b) => a.y - b.y).forEach(item => item.draw());
         
         // ============================================
-        // 【新增】：處理飛行中的飛彈 (Projectiles)
+        // 【新增】：處理飛行中的飛彈與投石車巨石 (Projectiles)
         // ============================================
         for (let i = projectiles.length - 1; i >= 0; i--) {
             let p = projectiles[i];
@@ -4009,43 +4020,70 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             let dist = Math.hypot(dx, dy);
 
             if (dist < p.speed) {
-                // 命中目標！造成範圍傷害
-                playSound('explosion'); // 【新增爆炸音效】
-                // 1. 命中目標！造成範圍傷害
-                enemies.forEach(e => {
-                    if (Math.hypot((e.x + e.drawOffsetX) - p.tx, (e.y + e.drawOffsetY) - p.ty) <= p.aoeRadius) {
-                        e.hp -= p.damage;
-                    }
-                });
-                // 順便判定有沒有炸到敵方主堡
-                if (Math.hypot((enemyBase.x*TILE_SIZE+TILE_SIZE/2) - p.tx, (enemyBase.y*TILE_SIZE+TILE_SIZE/2) - p.ty) <= p.aoeRadius) {
-                    enemyBase.hp -= p.damage;
-                }
+                playSound('explosion'); 
                 
-                // 2. 產生爆炸特效 (此處會觸發你在第 4 步改好的飛彈爆炸圖)
-                combatEffects.push({ x: p.tx, y: p.ty, radius: p.aoeRadius, timer: 30, type: p.type });
+                if (p.type === 'boulder') {
+                    // 【巨石落地】：對範圍內的建築物自動造成 3 倍破壞傷害！
+                    enemies.forEach(e => {
+                        if (Math.hypot((e.x + (e.drawOffsetX||0)) - p.tx, (e.y + (e.drawOffsetY||0)) - p.ty) <= p.aoeRadius) e.hp -= p.damage;
+                    });
+                    towers.forEach(t => {
+                        if (t.owner === 'enemy' && !t.isDestroyed) {
+                            let tx = t.x * TILE_SIZE + TILE_SIZE / 2, ty = t.y * TILE_SIZE + TILE_SIZE / 2;
+                            if (Math.hypot(tx - p.tx, ty - p.ty) <= p.aoeRadius) t.hp -= p.damage * 3.0; 
+                        }
+                    });
+                    if (Math.hypot((enemyBase.x*TILE_SIZE+TILE_SIZE/2) - p.tx, (enemyBase.y*TILE_SIZE+TILE_SIZE/2) - p.ty) <= p.aoeRadius) enemyBase.hp -= p.damage * 3.0;
+                    
+                    combatEffects.push({ x: p.tx, y: p.ty, radius: p.aoeRadius, timer: 30, type: 'normal' });
+                } else {
+                    // 【一般飛彈命中】
+                    enemies.forEach(e => {
+                        if (Math.hypot((e.x + e.drawOffsetX) - p.tx, (e.y + e.drawOffsetY) - p.ty) <= p.aoeRadius) e.hp -= p.damage;
+                    });
+                    if (Math.hypot((enemyBase.x*TILE_SIZE+TILE_SIZE/2) - p.tx, (enemyBase.y*TILE_SIZE+TILE_SIZE/2) - p.ty) <= p.aoeRadius) enemyBase.hp -= p.damage;
+                    
+                    combatEffects.push({ x: p.tx, y: p.ty, radius: p.aoeRadius, timer: 30, type: p.type });
+                }
                 projectiles.splice(i, 1);
             } else {
-                // 3. 飛彈尚未抵達，繼續移動
                 p.x += (dx / dist) * p.speed;
                 p.y += (dy / dist) * p.speed;
                 
-                // 4. 畫出飛彈圖片 (自動旋轉朝向目標)
                 ctx.save();
-                ctx.translate(p.x, p.y);
-                ctx.rotate(Math.atan2(dy, dx));
                 
-                let mImg = EFFECT_IMGS.missile_body;
-                if (mImg && mImg.complete && !mImg.isFailed && mImg.naturalWidth > 0) {
-                    // 根據你的圖片比例調整顯示大小，這裡預設為 30x15
-                    let drawW = 30;
-                    let drawH = 15; 
-                    // 將圖片中心點對齊
-                    ctx.drawImage(mImg, -drawW/2, -drawH/2, drawW, drawH);
+                if (p.type === 'boulder') {
+                    // 【巨石飛行特效】：計算拋物線高度與自轉
+                    let traveled = Math.hypot(p.x - p.startX, p.y - p.startY);
+                    let totalDist = Math.hypot(p.tx - p.startX, p.ty - p.startY);
+                    let progress = Math.min(1, traveled / (totalDist || 1));
+                    let arcOffset = 4 * 120 * progress * (1 - progress); // 拋物線高度最高可達 120 像素
+                    
+                    ctx.translate(p.x, p.y - arcOffset); // 根據拋物線拉高 Y 軸
+                    ctx.rotate(globalAnimTick * 0.25);   // 巨石在空中翻滾自轉
+                    
+                    // 利用程式碼畫出一顆堅硬的灰色多邊形岩石
+                    ctx.fillStyle = '#7f8c8d';
+                    ctx.beginPath();
+                    ctx.moveTo(12, 0); ctx.lineTo(16, 12); ctx.lineTo(4, 18); 
+                    ctx.lineTo(-12, 12); ctx.lineTo(-18, 0); ctx.lineTo(-12, -12); 
+                    ctx.lineTo(6, -18); ctx.closePath();
+                    ctx.fill();
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
                 } else {
-                    // 如果圖片未載入，顯示一個簡單的預設白點
-                    ctx.fillStyle = 'white';
-                    ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI*2); ctx.fill();
+                    // 【一般飛彈飛行特效】
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(Math.atan2(dy, dx));
+                    
+                    let mImg = EFFECT_IMGS.missile_body;
+                    if (mImg && mImg.complete && !mImg.isFailed && mImg.naturalWidth > 0) {
+                        ctx.drawImage(mImg, -15, -7.5, 30, 15);
+                    } else {
+                        ctx.fillStyle = 'white';
+                        ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI*2); ctx.fill();
+                    }
                 }
                 ctx.restore();
             }
