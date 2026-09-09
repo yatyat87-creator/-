@@ -1190,7 +1190,10 @@ window.startBattlePhase = function() {
 
 
     function selectBuilding(bId) {
-        if (isDeleteMode) return;
+        // 【修復】：點擊建築按鈕時，強制自動關閉「拆除模式」與「移動模式」，防止系統幽靈狀態並存
+        if (isDeleteMode) toggleDeleteMode();
+        if (isMoveMode) toggleMoveMode();
+
         selectedBuilding = selectedBuilding === bId ? null : bId;
         document.querySelectorAll('#build-menu .slot').forEach(btn => btn.style.borderColor = '#7f8c8d');
         if (selectedBuilding) {
@@ -1804,6 +1807,16 @@ window.startBattlePhase = function() {
             if (!towerToIgnore && existingGates.length >= 3) return "⚠️ 最多只能建造 3 座城門！";
             if (existingGates.some(g => Math.abs(g.x - tx) <= 2 && Math.abs(g.y - ty) <= 2)) return "⚠️ 城門不能蓋在另一座城門 2 格內！";
             if (!isPath(tx, ty)) return "⚠️ 城門必須蓋在一般道路上！";
+        }
+
+        // 【致命 Bug 修復】：補回被誤刪的軍營與大帳唯一性限制！
+        if (bData.id === 'barracks') {
+            let existingBarracks = towers.filter(t => t.id === 'barracks' && t !== towerToIgnore && (!t.owner || t.owner === 'player'));
+            if (existingBarracks.length >= 1) return "⚠️ 軍營只可以起一個！";
+        }
+        if (bData.id === 'tent') {
+            let existingTents = towers.filter(t => t.id === 'tent' && t !== towerToIgnore && (!t.owner || t.owner === 'player'));
+            if (existingTents.length >= 1) return "⚠️ 大帳只可以起一個！";
         }
 
         let overlapPath = false; let overlapBuilding = false; let inBaseRing = false;
@@ -2893,9 +2906,10 @@ update(targetEnemy) {
                         }
                     }
                 }
-                // 【修復 1】：強制鎖死節點索引，絕對不允許荀彧或士兵走出陣列邊界！
+                // 【致命 Bug 修復】：將下限從 0 改為 -1！
+                // 因為 -1 代表「離開馬路進入圍城陣地」，如果鎖死在 0，部隊就會永遠被困在馬路盡頭發呆無法攻擊！
                 if (this.pathIndex !== undefined) {
-                    this.pathIndex = Math.max(0, Math.min(pathCoords.length - 1, this.pathIndex));
+                    this.pathIndex = Math.max(-1, Math.min(pathCoords.length - 1, this.pathIndex));
                 }
             } else { 
                 this.x += (dx / dist) * this.speed;
