@@ -19,7 +19,7 @@
     <!-- 【新增】：讓網頁在 iPhone 上以全螢幕「App 模式」執行，隱藏上下網址列 -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="城池守衛戰">
+    <meta name="apple-mobile-web-app-title" content="石灰吟(終局版)">
 
     <style>
         body { 
@@ -118,7 +118,7 @@
 </div>
 <div id="game-wrapper">
     <div id="setup-screen">
-        <div class="title">城池守衛戰</div>
+        <div class="title">石灰吟(終局版)</div>
         <div class="gold-display">💰 金幣: <span id="gold-count">0</span></div>
         <div class="section-title">🌟 選擇難度 (決定敵軍最高強度與等級差)</div>
         <div style="display:flex; justify-content:center; gap:15px; margin-bottom:15px; font-weight:bold; font-size:14px;">
@@ -896,7 +896,12 @@ const EFFECT_IMGS = {
             
             let onPath = isPath(rx, ry);
             
-            if (buildId === 'gate' && !onPath) continue; // 城門必在路上
+            if (buildId === 'gate') {
+                if (!onPath) continue; // 城門必在路上
+                // 【新增】：公平起見，敵軍 AI 也嚴格遵守 3 座城門的上限
+                let enemyGates = towers.filter(t => t.id === 'gate' && t.owner === 'enemy');
+                if (enemyGates.length >= 3) continue;
+            }
             
             // 箭塔必須蓋在道路「旁邊」(九宮格內有道路)
             if (buildId === 'tower') {
@@ -1814,11 +1819,13 @@ window.startBattlePhase = function() {
         if (ty < 20) return "⚠️ 必須建在己方半場 (地圖下半部)！"; // 修改雙方楚河漢界
         
         if (bData.id === 'gate') {
-            let existingGates = towers.filter(t => t.id === 'gate' && t !== towerToIgnore);
+            // 【核心修復】：過濾條件加入 (!t.owner || t.owner === 'player')，只計算玩家自己的城門
+            let existingGates = towers.filter(t => t.id === 'gate' && t !== towerToIgnore && (!t.owner || t.owner === 'player'));
             if (!towerToIgnore && existingGates.length >= 3) return "⚠️ 最多只能建造 3 座城門！";
             if (existingGates.some(g => Math.abs(g.x - tx) <= 2 && Math.abs(g.y - ty) <= 2)) return "⚠️ 城門不能蓋在另一座城門 2 格內！";
             if (!isPath(tx, ty)) return "⚠️ 城門必須蓋在一般道路上！";
         }
+
 
         // 【致命 Bug 修復】：補回被誤刪的軍營與大帳唯一性限制！
         if (bData.id === 'barracks') {
