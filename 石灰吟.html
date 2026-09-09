@@ -2846,18 +2846,18 @@ update(targetEnemy) {
             // 3. 移動與透明穿透
             if (!hasValidTarget) { this.state = 0; return true; }
 
-            // --- 【新增】：投石車太近時向後退 (風箏拉扯邏輯) ---
+            // --- 【修復】：投石車太近時向後退 (正確沿著 S 型道路倒車) ---
             if (isTooCloseToEnemy || isTooCloseToBase) {
-                // 強制增加 pathIndex，讓投石車往回走向己方主堡方向
-                if (this.pathIndex < pathCoords.length - 1) {
-                    this.pathIndex += 1;
-                }
-                // 重新定位目標節點為後方的道路
-                let backNode = pathCoords[this.pathIndex];
+                this.isKiting = true; // 標記為風箏倒車狀態
+                // 找出道路的「上一格」，但不急著立刻修改 pathIndex
+                let backIdx = this.pathIndex < 0 ? 0 : Math.min(pathCoords.length - 1, this.pathIndex + 1);
+                let backNode = pathCoords[backIdx];
                 if (backNode) {
                     tx = backNode.x * TILE_SIZE + TILE_SIZE / 2;
                     ty = backNode.y * TILE_SIZE + TILE_SIZE / 2;
                 }
+            } else {
+                this.isKiting = false;
             }
 
             const dx = tx - this.x, dy = ty - this.y;
@@ -2899,8 +2899,12 @@ update(targetEnemy) {
             if (dist < this.speed) { 
                 this.x = tx; this.y = ty; 
                 if (targetNode) {
-                    // 【修改】：解開輔助只會往前衝的限制
-                    if (!isDefender && !isBuffer && this.pathIndex >= 0) {
+                    // 【核心修復】：根據狀態決定前進還是倒車
+                    if (this.isKiting) {
+                        // 倒車模式：精準走到上一格後，才更新索引，確保完美順著馬路退
+                        this.pathIndex = this.pathIndex < 0 ? 0 : Math.min(pathCoords.length - 1, this.pathIndex + 1);
+                    }
+                    else if (!isDefender && !isBuffer && this.pathIndex >= 0) {
                         this.pathIndex--; // 一般士兵依然像喪屍一樣只能往前
                     }
                     else if (isBuffer && this.bufferTargetIdx !== undefined) {
