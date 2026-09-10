@@ -2247,7 +2247,7 @@ class Enemy {
 update(targetPlayer) {
 // 【新增】：敵軍 Boss 通用變身系統邏輯
             // (你這裡可以隨意調整觸發血線，例如 this.maxHp * 0.2 或 0.5)
-            if (this.unitData.isTransformable && !this.isTransformed && !this.isTransforming && this.hp <= this.maxHp * 0.5) {
+            if (this.unitData.isTransformable && !this.isTransformed && !this.isTransforming && this.hp <= this.maxHp * 0.2) {
                 this.isTransforming = true; this.transformTimer = 90; this.state = 0; this.cooldown = 0;
                 playSound('explosion'); 
                 
@@ -2269,7 +2269,7 @@ update(targetPlayer) {
                     // 根據不同 Boss 給予專屬的變身數值增幅
                     if (this.id === 'madara') {
                         this.hp = this.maxHp;    // 須佐滿血護盾
-                        this.currentScale = 3.0; // 體型暴增
+                        this.currentScale = 4.0; // 體型暴增
                         this.damage *= 2.0;      // 傷害翻倍
                         this.fireRate = Math.max(30, this.fireRate * 4); // 攻速變慢
                         this.range += 60;        // 武器變長
