@@ -376,6 +376,21 @@
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/洛克斯.png",
             // 【新增】：洛克斯專屬大絕震波圖 (請換成你的圖)
             aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/洛克斯震波.png" 
+        },
+        // =====================================
+        // 【新增】：忍界傳說 - 宇智波斑 (雙形態)
+        // =====================================
+        'madara': { 
+            id: 'madara', name: "宇智波斑", symbol: "斑", color: '#e74c3c', 
+            dmg: 5.0, range: 0.8, moveSpd: 1.2, atkSpd: 3.3, hpMult: 35.0, // 形態一：紅甲 (極限攻速 0.3秒一刀)
+            drawScale: 2.0, 
+            ultChance: 0.20, 
+            isTransformable: true, // 開啟雙形態變身機制
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/斑(紅甲).png", 
+            imgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐能乎.png", 
+            aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/豪火球.png", // 形態一大絕
+            aoeImgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐斬擊特效.png", // 形態二普攻/大絕特效
+            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐斬波.png" // 形態二大絕刀氣
         }
     };
 
@@ -460,9 +475,11 @@
     // 【修改】：讓系統自動載入敵軍的所有精靈圖、刀氣圖與 AOE 特效圖
     for (let key in ENEMY_TYPES) {
         ENEMY_TYPES[key].img = loadSprite(ENEMY_TYPES[key].imgSrc);
+        if (ENEMY_TYPES[key].imgSrc2) ENEMY_TYPES[key].img2 = loadSprite(ENEMY_TYPES[key].imgSrc2); // 載入第二形態
         if (ENEMY_TYPES[key].slashImgSrc) ENEMY_TYPES[key].slashImg = loadSprite(ENEMY_TYPES[key].slashImgSrc);
         if (ENEMY_TYPES[key].aoeImgSrc) ENEMY_TYPES[key].aoeImg = loadSprite(ENEMY_TYPES[key].aoeImgSrc);
-    } 
+        if (ENEMY_TYPES[key].aoeImgSrc2) ENEMY_TYPES[key].aoeImg2 = loadSprite(ENEMY_TYPES[key].aoeImgSrc2);
+    }
     for (let key in BASIC_UNITS) BASIC_UNITS[key].img = loadSprite(BASIC_UNITS[key].imgSrc);
     // 載入建築物精靈圖
     for (let key in BUILDINGS) {
@@ -1950,10 +1967,14 @@ window.startBattlePhase = function() {
         currentSelectedTarget = null;
         currentSelectedType = null;
 
+        // 【新增】：定義雙方主堡完整的 2x2 點擊面積 (四格範圍皆可觸發)
+        let isPlayerBase = gx >= 17 && gx <= 18 && gy >= 37 && gy <= 38;
+        let isEnemyBase = gx >= 2 && gx <= 3 && gy >= 2 && gy <= 3;
+
         // 1. 拆除模式
         if (isDeleteMode) {
-            if (gx === 17 && gy === 37) { feedback.innerText = "⚠️ 城鎮中心無法拆除！"; feedback.style.color = "#e74c3c"; return; }            if (existingTower) { 
-                towers = towers.filter(t => t !== existingTower); 
+            if (isPlayerBase) { feedback.innerText = "⚠️ 城鎮中心無法拆除！"; feedback.style.color = "#e74c3c"; return; }            
+            if (existingTower) {
                 feedback.innerText = "🗑️ 成功拆除建築物！"; feedback.style.color = "#e74c3c";
             } 
             return;
@@ -1961,7 +1982,8 @@ window.startBattlePhase = function() {
 
         // 2. 移動模式
         if (isMoveMode) {
-            if (gx === 17 && gy === 37) { feedback.innerText = "⚠️ 城鎮中心無法移動！"; feedback.style.color = "#e74c3c"; return; }            if (gx === 2 && gy === 2) return;
+            if (isPlayerBase) { feedback.innerText = "⚠️ 城鎮中心無法移動！"; feedback.style.color = "#e74c3c"; return; }            
+            if (isEnemyBase) return;
 
             if (!buildingToMove) {
                 if (existingTower) {
@@ -1993,7 +2015,8 @@ window.startBattlePhase = function() {
 
         // 3. 建造模式
         if (selectedBuilding) {
-            if (existingTower || (gx === 17 && gy === 37) || (gx === 2 && gy === 2)) {                selectedBuilding = null;
+            if (existingTower || isPlayerBase || isEnemyBase) {                
+                selectedBuilding = null;
                 document.querySelectorAll('#build-menu .slot').forEach(btn => btn.style.borderColor = '#7f8c8d');
             } else {
                 let bData = BUILDINGS[selectedBuilding];
@@ -2028,8 +2051,8 @@ window.startBattlePhase = function() {
         }
 
         // 4. 點擊選取與升級模式
-        if (gx === 2 && gy === 2) { feedback.innerText = "⚠️ 這是敵方城鎮中心！"; feedback.style.color = "#e74c3c"; return; }
-        if (gx === 17 && gy === 37) {
+        if (isEnemyBase) { feedback.innerText = "⚠️ 這是敵方城鎮中心！"; feedback.style.color = "#e74c3c"; return; }
+        if (isPlayerBase) {
             currentSelectedTarget = playerBase; currentSelectedType = 'base';
             showUpgradeUI('城鎮中心', playerBase.level, `${300 * playerBase.level}金`); return;
         }
@@ -2078,6 +2101,13 @@ class Enemy {
             this.speedDebuffTimer = 0; // 減速
             this.defDebuffTimer = 0;   // 降防
             this.rootTimer = 0;        // 八陣圖定身
+            
+            // 【新增】：Boss 專用變身系統變數
+            this.isTransformed = false;
+            this.isTransforming = false;
+            this.transformTimer = 0;
+            this.currentImg = this.unitData.img; 
+            this.currentScale = this.unitData.drawScale || 1.3; 
         }
 
 // 【新增】：黑天龍獨立大絕函數
@@ -2120,6 +2150,46 @@ class Enemy {
                 feedback.style.color = "#ff3333"; 
             }
         }
+        // ==========================================
+        // 【新增】：宇智波斑專屬雙形態攻擊
+        // ==========================================
+        triggerMadaraStrike(targetObj, impactX, impactY) {
+            playSound('melee');
+            
+            if (!this.isTransformed) {
+                // 【第一階段：紅甲】極速體術與豪火球
+                let finalDmg = this.damage;
+                targetObj.hp -= finalDmg; 
+                
+                if (this.isUlt) {
+                    playSound('shoot'); // 發射音效
+                    
+                    // 【核心修改】：改為發射不斷變大的穿透性火球，沿途燒毀一切！
+                    slashWaves.push(new SlashWave(finalDmg * 1.5, this.x + this.drawOffsetX, this.y + this.drawOffsetY, impactX, impactY, 'fireball', true, false, this.unitData.aoeImg));
+                    
+                    document.getElementById('feedback').innerText = `🔥 宇智波斑發動【火遁·豪火滅卻】！`; document.getElementById('feedback').style.color = "#e74c3c";
+                } else {
+                    ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(impactX, impactY); ctx.stroke();
+                }
+            } else {
+                // 【第二階段：須佐能乎】巨型順劈斬與毀滅斬波
+                let finalDmg = this.isUlt ? this.damage * 1.5 : this.damage;
+                let aoeRadius = 100; // 普攻自帶範圍順劈
+                
+                playerUnits.forEach(p => { if (!p.isDying && Math.hypot((p.x + (p.drawOffsetX||0)) - impactX, (p.y + (p.drawOffsetY||0)) - impactY) <= aoeRadius) p.hp -= finalDmg; });
+                towers.forEach(t => { let s = BUILDINGS[t.id].size || 1; if (Math.hypot(t.x * TILE_SIZE + (TILE_SIZE * s) / 2 - impactX, t.y * TILE_SIZE + (TILE_SIZE * s) / 2 - impactY) <= aoeRadius) t.hp -= finalDmg; });
+                if (Math.hypot((playerBase.x*TILE_SIZE+TILE_SIZE/2) - impactX, (playerBase.y*TILE_SIZE+TILE_SIZE/2) - impactY) <= aoeRadius) playerBase.hp -= finalDmg;
+
+                combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg2 });
+                
+                if (this.isUlt) {
+                    playSound('slash');
+                    slashWaves.push(new SlashWave(finalDmg * 2.0, this.x, this.y, impactX, impactY, 'slash', true, false, this.unitData.slashImg));
+                    document.getElementById('feedback').innerText = `⚔️ 須佐能乎發動【毀滅斬波】！`; document.getElementById('feedback').style.color = "#3498db";
+                }
+            }
+        }
+
         // ==========================================
         // 【新增】：洛克斯專屬大絕 - 西洋劍「蝕」
         // 功能：宛如重錘炮擊，超高傷害並附帶極大擊退力
@@ -2175,6 +2245,46 @@ class Enemy {
         }
 
 update(targetPlayer) {
+// 【新增】：敵軍 Boss 通用變身系統邏輯
+            // (你這裡可以隨意調整觸發血線，例如 this.maxHp * 0.2 或 0.5)
+            if (this.unitData.isTransformable && !this.isTransformed && !this.isTransforming && this.hp <= this.maxHp * 0.5) {
+                this.isTransforming = true; this.transformTimer = 90; this.state = 0; this.cooldown = 0;
+                playSound('explosion'); 
+                
+                let feedback = document.getElementById('feedback');
+                // 專屬 Boss 變身台詞
+                if (this.id === 'madara') {
+                    feedback.innerText = `⚠️ 警告：宇智波斑發動【須佐能乎】！霸體降臨！`; feedback.style.color = "#3498db";
+                } else {
+                    feedback.innerText = `⚠️ 警告：敵方將領進入第二形態！`; feedback.style.color = "#e74c3c";
+                }
+            }
+            
+            if (this.isTransforming) {
+                this.transformTimer--;
+                if (this.transformTimer === 45) {
+                    this.isTransformed = true; 
+                    this.currentImg = this.unitData.img2 || this.unitData.img; 
+                    
+                    // 根據不同 Boss 給予專屬的變身數值增幅
+                    if (this.id === 'madara') {
+                        this.hp = this.maxHp;    // 須佐滿血護盾
+                        this.currentScale = 3.0; // 體型暴增
+                        this.damage *= 2.0;      // 傷害翻倍
+                        this.fireRate = Math.max(30, this.fireRate * 4); // 攻速變慢
+                        this.range += 60;        // 武器變長
+                        this.speed *= 0.6;       // 移動變慢
+                    }
+                }
+                if (this.transformTimer <= 0) this.isTransforming = false;
+                return false; 
+            }
+
+            // 【新增】：須佐能乎霸體 (免疫定身與減速)
+            if (this.isTransformed && this.id === 'madara') {
+                this.speedDebuffTimer = 0; this.rootTimer = 0;
+            }
+
             if (this.rootTimer > 0) {
                 this.rootTimer--;
                 this.state = 4;
@@ -2216,6 +2326,7 @@ update(targetPlayer) {
                     if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
                     else if (this.id === 'rahu' && this.isUlt) { this.triggerRahuSlashWave(gate.x * TILE_SIZE + TILE_SIZE/2, gate.y * TILE_SIZE + TILE_SIZE/2); } 
                     else if (this.id === 'rocks') { this.triggerRocksStrike(gate, gate.x * TILE_SIZE + TILE_SIZE/2, gate.y * TILE_SIZE + TILE_SIZE/2); }
+                    else if (this.id === 'madara') { this.triggerMadaraStrike(gate, gate.x * TILE_SIZE + TILE_SIZE/2, gate.y * TILE_SIZE + TILE_SIZE/2); }
                     else { gate.hp -= this.isUlt ? this.damage * 2.0 : this.damage; }
                 }
                 // 【核心修復】：移除 towers.filter 那行！不要把城門徹底刪除，讓它保留在場上冒煙，戰鬥結束後才會自動滿血復活
@@ -2239,6 +2350,7 @@ update(targetPlayer) {
                     if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
                     else if (this.id === 'rahu') { this.triggerRahuSlashWave(targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); } 
                     else if (this.id === 'rocks') { this.triggerRocksStrike(targetPlayer, targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); }
+                    else if (this.id === 'madara') { this.triggerMadaraStrike(targetPlayer, targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); }
                     else {
                         targetPlayer.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
                         ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
@@ -2281,6 +2393,7 @@ update(targetPlayer) {
                     if (this.id === 'black_dragon' && this.isUlt) { this.triggerBlackDragonAoE(); } 
                     else if (this.id === 'rahu' && this.isUlt) { this.triggerRahuSlashWave(trueBaseX, trueBaseY); } 
                     else if (this.id === 'rocks') { this.triggerRocksStrike(playerBase, trueBaseX, trueBaseY); }
+                    else if (this.id === 'madara') { this.triggerMadaraStrike(playerBase, trueBaseX, trueBaseY); }
                     else {
                         playerBase.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
                         ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
@@ -2377,12 +2490,12 @@ update(targetPlayer) {
                 }
             }
 
-            if (this.unitData.img && this.unitData.img.complete && !this.unitData.img.isFailed && this.unitData.img.naturalWidth > 0) {
+            if (this.currentImg && this.currentImg.complete && !this.currentImg.isFailed && this.currentImg.naturalWidth > 0) {
                 let cols = 5; let rows = 5; 
-                let frameWidth = this.unitData.img.naturalWidth / cols; let frameHeight = this.unitData.img.naturalHeight / rows;
+                let frameWidth = this.currentImg.naturalWidth / cols; let frameHeight = this.currentImg.naturalHeight / rows;
                 let sx = this.frame * frameWidth; let sy = this.state * frameHeight; 
 
-                let drawWidth = TILE_SIZE * (this.unitData.drawScale || 1.5);
+                let drawWidth = TILE_SIZE * this.currentScale;
                 let aspectRatio = frameHeight / frameWidth;
                 let drawHeight = drawWidth * aspectRatio;
                 let yOffset = this.unitData.yOffset || 0; 
@@ -2390,18 +2503,25 @@ update(targetPlayer) {
                 ctx.translate(cx, cy - 5 + yOffset);
                 if (this.facingLeft) { ctx.scale(-1, 1); }
                 
-                // 【核心修復】：完全移除 ctx.filter，直接繪圖保證 60FPS 順暢度
-                ctx.drawImage(this.unitData.img, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); 
-                
+                // 【新增】：變身時的閃白光效應
+                if (this.isTransforming) {
+                    let whiteIntensity = this.transformTimer > 45 ? 1 - ((this.transformTimer - 45) / 45) : this.transformTimer / 45;
+                    ctx.filter = `brightness(${1 + whiteIntensity * 50})`;
+                } else {
+                    ctx.filter = 'none';
+                }
+
+                ctx.drawImage(this.currentImg, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); 
+                ctx.filter = 'none';
             } else {
-                ctx.fillStyle = this.unitData.color; ctx.beginPath(); ctx.arc(cx, cy, 10 * (this.unitData.drawScale || 1), 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = this.unitData.color; ctx.beginPath(); ctx.arc(cx, cy, 10 * this.currentScale, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = 'white'; ctx.font = '12px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(this.unitData.symbol, cx, cy);
             }
             
             ctx.restore(); 
 
-            if (!this.isDying) {
-                let hpOffset = (this.unitData.drawScale || 1.5) * 15; 
+            if (!this.isDying && !this.isTransforming) {
+                let hpOffset = this.currentScale * 15; 
                 ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
                 ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20, 3);
                 ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20 * (this.hp / this.maxHp), 3);
@@ -3038,12 +3158,6 @@ update(targetEnemy) {
                 ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
                 ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20, 3);
                 ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20 * (this.hp / this.maxHp), 3);
-            }
-            if (!this.isDying && !this.isTransforming) {
-                let hpOffset = this.currentScale * 15; 
-                ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.fillText('Lv'+this.level, cx, cy + TILE_SIZE/2);
-                ctx.fillStyle = 'red'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20, 3);
-                ctx.fillStyle = '#3498db'; ctx.fillRect(cx - 10, cy - hpOffset - 10, 20 * (this.hp / this.maxHp), 3);
 
                 // 將 Buff 特效邏輯正確加回我方單位
                 if (this.atkBuffTimer > 0) {
@@ -3151,10 +3265,12 @@ update(targetEnemy) {
     // ==========================================
 
     class SlashWave {
-        // 【修改】：加入 customImg 參數，讓每個人都能傳入自己的專屬圖片
         constructor(dmg, x, y, tx, ty, type, isUlt, isPlayer = false, customImg = null) {
             this.x = x; this.y = y; 
-            this.dmg = dmg; this.speed = 12; this.type = type; 
+            this.dmg = dmg; 
+            // 火球飛行速度稍慢，更有壓迫感
+            this.speed = type === 'fireball' ? 8 : 12; 
+            this.type = type; 
             this.frame = 0; this.animOffset = Math.floor(Math.random() * 60); 
             
             let angle = Math.atan2(ty - y, tx - x);
@@ -3162,17 +3278,25 @@ update(targetEnemy) {
             this.vy = Math.sin(angle) * this.speed;
             this.facingLeft = this.vx < 0;
             
-            this.width = type === 'arrow' ? 60 : 120; 
+            // 火球初始體積較小 (50)，後續會膨脹
+            this.width = type === 'arrow' ? 60 : (type === 'fireball' ? 50 : 120); 
             this.isUlt = isUlt; 
             this.isPlayer = isPlayer; 
-            // 【修改】：優先使用傳入的專屬圖，如果沒有才退回使用羅侯的預設刀氣
             this.img = customImg || EFFECT_IMGS.aoe_slash; 
             this.hitTargets = new Set();
+            // 豪火球圖是 4 幀，刀氣是 5 幀
+            this.totalFrames = type === 'fireball' ? 4 : 5; 
         }
 
         update() {
-            if (this.x < -200 || this.x > 1000 || this.y < -200 || this.y > 1000) return true;
+            // 【核心修復】：將 Y 軸的刪除邊界從 1000 擴大到 1800，適應加長版的新地圖！
+            if (this.x < -200 || this.x > 1000 || this.y < -200 || this.y > 1800) return true;
             this.x += this.vx; this.y += this.vy;
+            
+            // 【新增】：豪火球在飛行過程中，體積與攻擊判定會不斷變大！(最高膨脹至 250 像素)
+            if (this.type === 'fireball') {
+                this.width = Math.min(250, this.width + 4); 
+            }
             
             let checkCollision = (targetArr) => {
                 for (let i = targetArr.length - 1; i >= 0; i--) {
@@ -3215,16 +3339,18 @@ update(targetEnemy) {
             ctx.rotate(Math.atan2(this.vy, this.vx)); 
             
             if (this.img && this.img.complete && !this.img.isFailed && this.img.naturalWidth > 0) {
-                let frameWidth = this.img.naturalWidth / 5;
+                // 【修復】：動態讀取幀數，適配 4 幀的火球與 5 幀的刀氣
+                let frameWidth = this.img.naturalWidth / this.totalFrames;
                 let frameHeight = this.img.naturalHeight;
-                let frame = Math.floor((globalAnimTick + this.animOffset) / 10) % 5;
+                let frame = Math.floor((globalAnimTick + this.animOffset) / 10) % this.totalFrames;
                 
                 let drawW = this.width;
                 let drawH = drawW * (frameHeight / frameWidth);
                 
-                if (this.isRahuUlting) {
+                // 火球與羅侯大絕都使用高光混合模式
+                if (this.isRahuUlting || this.type === 'fireball') {
                     ctx.globalCompositeOperation = 'screen';
-                    ctx.filter = `brightness(${1.5 + Math.sin(globalAnimTick / 10) * 0.5})`;
+                    if (this.isRahuUlting) ctx.filter = `brightness(${1.5 + Math.sin(globalAnimTick / 10) * 0.5})`;
                 }
 
                 ctx.drawImage(this.img, frame * frameWidth, 0, frameWidth, frameHeight, -drawW / 2, -drawH / 2, drawW, drawH);
@@ -3367,16 +3493,20 @@ update(targetEnemy) {
 
 
                     // 【修改】：第 1, 4, 6, 7 波固定生成一次狂王羅侯
-                    if ([2, 4, 6, 8].includes(currentWave) && !window.bossSpawned && window.battleTimeRemaining < 100) {
+                    if ([2, 4, 6, 8].includes(currentWave) && !window.bossSpawned && window.battleTimeRemaining < 140) {
                         leaderType = 'rahu'; squadSize = 1; window.bossSpawned = true;
                     }
                     // 【修改】：第 9 波固定生成一次黑天龍
-                    else if (currentWave === 9 && !window.bossSpawned && window.battleTimeRemaining < 100) {
+                    else if (currentWave === 9 && !window.bossSpawned && window.battleTimeRemaining < 140) {
                         leaderType = 'black_dragon'; squadSize = 1; window.bossSpawned = true;
                     }
-                    // 【新增】：第 1 波傳奇海賊洛克斯降臨
-                    else if (currentWave === 1 && !window.bossSpawned && window.battleTimeRemaining < 100) {
+                    // 【新增】：第 3 波傳奇海賊洛克斯降臨
+                    else if (currentWave === 3 && !window.bossSpawned && window.battleTimeRemaining < 140) {
                         leaderType = 'rocks'; squadSize = 1; window.bossSpawned = true;
+                    }
+                    // 【新增】：測試用 - 第 1 波宇智波斑降臨
+                    else if (currentWave === 1 && !window.bossSpawned && window.battleTimeRemaining < 140) {
+                        leaderType = 'madara'; squadSize = 1; window.bossSpawned = true;
                     }
 
                     for (let i = 0; i < squadSize; i++) {
@@ -3792,17 +3922,6 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 }
             }
 
-            // 【新增】：監控燎原火的鎖血計時器
-            if (pUnit.immortalTimer > 0) {
-                pUnit.immortalTimer--;
-                pUnit.hp = 1; // 鎖死血量
-                if (pUnit.immortalTimer <= 0 && !pUnit.isDying) {
-                    pUnit.isDying = true; pUnit.state = 3; pUnit.deathTimer = 45; pUnit.isRetreating = true;
-                    let feedback = document.getElementById('feedback');
-                    feedback.innerText = `💨 殘兵之首撤退！`; 
-                    feedback.style.color = "#f1c40f";
-                }
-            }
             if (pUnit.isDying) {
                 pUnit.deathTimer--;
                 if (pUnit.deathTimer <= 0) {
