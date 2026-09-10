@@ -3622,7 +3622,13 @@ let refundedMeat = 0;
                 let isPlayer = idx === 0;
                 // 【新增】：主堡 Buff 結算
                 if (base.atkBuffTimer > 0) { base.atkBuffTimer--; if (base.atkBuffTimer <= 0) base.atkBuffMult = 1.0; }
-                if (globalAnimTick % 60 === 0 && base.hp < base.maxHp) base.hp = Math.min(base.maxHp, base.hp + base.healRate);
+                
+                // 【修改】：主堡每秒 (60幀) 回復最大血量的 0.5%
+                if (globalAnimTick % 60 === 0 && base.hp < base.maxHp) {
+                    let healAmount = base.maxHp * 0.005;
+                    base.hp = Math.min(base.maxHp, base.hp + healAmount);
+                }
+                
                 if (base.cooldown > 0) base.cooldown--;
                 else {
                     let bx = base.x * TILE_SIZE + TILE_SIZE / 2; let by = base.y * TILE_SIZE + TILE_SIZE / 2;
