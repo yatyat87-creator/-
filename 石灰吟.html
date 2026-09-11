@@ -383,7 +383,7 @@
         'madara': { 
             id: 'madara', name: "宇智波斑", symbol: "斑", color: '#e74c3c', 
             dmg: 5.0, range: 0.8, moveSpd: 1.2, atkSpd: 3.3, hpMult: 35.0, 
-            drawScale: 1.5, ultChance: 0.20, isTransformable: true, 
+            drawScale: 2.2, ultChance: 0.20, isTransformable: true, 
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/斑(紅甲).png", 
             imgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐能乎.png", 
             aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/豪火球.png", 
@@ -396,7 +396,7 @@
         'aizen': { 
             id: 'aizen', name: "藍染惣右介", symbol: "藍", color: '#8e44ad', 
             dmg: 4.0, range: 0.8, moveSpd: 1.8, atkSpd: 2.0, hpMult: 30.0, 
-            drawScale: 1.5, ultChance: 0.25, isTransformable: true, 
+            drawScale: 2.2, ultChance: 0.25, isTransformable: true, 
             evasion: 0.45, // 【核心】：形態一自帶 45% 機率閃避一切傷害 (鏡花水月)
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/藍染.png", 
             imgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/崩玉藍染.png", 
@@ -2359,7 +2359,7 @@ update(targetPlayer) {
                         this.speed *= 0.6;       // 移動變慢
                     } else if (this.id === 'aizen') {
                         this.hp = this.maxHp;    
-                        this.currentScale = 2.0; 
+                        this.currentScale = 2.5; 
                         this.damage *= 1.5;      
                         this.fireRate = Math.max(40, this.fireRate * 3); 
                         this.range += 180;       // 【變為遠程】：射程暴增
