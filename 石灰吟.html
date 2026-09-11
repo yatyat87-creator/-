@@ -382,15 +382,26 @@
         // =====================================
         'madara': { 
             id: 'madara', name: "宇智波斑", symbol: "斑", color: '#e74c3c', 
-            dmg: 5.0, range: 0.8, moveSpd: 1.2, atkSpd: 3.3, hpMult: 35.0, // 形態一：紅甲 (極限攻速 0.3秒一刀)
-            drawScale: 2.0, 
-            ultChance: 0.20, 
-            isTransformable: true, // 開啟雙形態變身機制
+            dmg: 5.0, range: 0.8, moveSpd: 1.2, atkSpd: 3.3, hpMult: 35.0, 
+            drawScale: 1.5, ultChance: 0.20, isTransformable: true, 
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/斑(紅甲).png", 
             imgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐能乎.png", 
-            aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/豪火球.png", // 形態一大絕
-            aoeImgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐斬擊特效.png", // 形態二普攻/大絕特效
-            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐斬波.png" // 形態二大絕刀氣
+            aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/豪火球.png", 
+            aoeImgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐斬擊特效.png", 
+            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐斬波.png" 
+        },
+        // =====================================
+        // 【新增】：虛夜宮統帥 - 藍染惣右介 (雙形態 + 閃避機制)
+        // =====================================
+        'aizen': { 
+            id: 'aizen', name: "藍染惣右介", symbol: "藍", color: '#8e44ad', 
+            dmg: 4.0, range: 0.8, moveSpd: 1.8, atkSpd: 2.0, hpMult: 30.0, 
+            drawScale: 1.5, ultChance: 0.25, isTransformable: true, 
+            evasion: 0.45, // 【核心】：形態一自帶 45% 機率閃避一切傷害 (鏡花水月)
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/藍染.png", 
+            imgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/崩玉藍染.png", 
+            aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/黑棺.png", 
+            aoeImgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/弗拉哥.png"
         }
     };
 
@@ -2108,6 +2119,23 @@ class Enemy {
             this.transformTimer = 0;
             this.currentImg = this.unitData.img; 
             this.currentScale = this.unitData.drawScale || 1.3; 
+            
+            // 【系統改造】：將血量存入私有變數，啟動攔截器
+            this._hp = this.maxHp;
+        }
+
+        // ==========================================
+        // 【核心新增】：閃避系統攔截器 (攔截所有扣血行為)
+        // ==========================================
+        get hp() { return this._hp; }
+        set hp(val) {
+            // 如果是在扣血 (val < this._hp)，且擁有迴避率，且骰中機率
+            if (val < this._hp && this._hp > 0 && this.unitData.evasion && Math.random() < this.unitData.evasion) {
+                // 觸發閃避！無視這次傷害，並跳出 MISS 字眼
+                floatingTexts.push({ x: this.x + (Math.random()*20-10), y: this.y - 30, text: "MISS", color: "#bdc3c7", timer: 30, vy: -1.5, font: 'bold 16px Arial' });
+                return; // 直接中止，血量不變
+            }
+            this._hp = val;
         }
 
 // 【新增】：黑天龍獨立大絕函數
@@ -2186,6 +2214,61 @@ class Enemy {
                     playSound('slash');
                     slashWaves.push(new SlashWave(finalDmg * 2.0, this.x, this.y, impactX, impactY, 'slash', true, false, this.unitData.slashImg));
                     document.getElementById('feedback').innerText = `⚔️ 須佐能乎發動【毀滅斬波】！`; document.getElementById('feedback').style.color = "#3498db";
+                }
+            }
+        }
+
+        // ==========================================
+        // 【新增】：藍染專屬雙形態攻擊 (黑棺定身 / 弗拉哥砲擊)
+        // ==========================================
+        triggerAizenStrike(targetObj, impactX, impactY) {
+            if (!this.isTransformed) {
+                // 【第一階段：死神】瞬步太刀與黑棺
+                let finalDmg = this.damage;
+                targetObj.hp -= finalDmg; 
+                
+                if (this.isUlt) {
+                    playSound('explosion');
+                    let aoeRadius = 120; // 黑棺範圍
+                    // 黑棺會賦予範圍內所有我方士兵 3 秒「絕對定身」
+                    playerUnits.forEach(p => { 
+                        if (!p.isDying && Math.hypot((p.x + (p.drawOffsetX||0)) - impactX, (p.y + (p.drawOffsetY||0)) - impactY) <= aoeRadius) {
+                            p.hp -= finalDmg * 2.0; 
+                            p.rootTimer = 180; 
+                        }
+                    });
+towers.forEach(t => { let s = BUILDINGS[t.id].size || 1; if (Math.hypot(t.x * TILE_SIZE + (TILE_SIZE * s) / 2 - impactX, t.y * TILE_SIZE + (TILE_SIZE * s) / 2 - impactY) <= aoeRadius) t.hp -= finalDmg * 2.0; });
+                    if (Math.hypot((playerBase.x*TILE_SIZE+TILE_SIZE/2) - impactX, (playerBase.y*TILE_SIZE+TILE_SIZE/2) - impactY) <= aoeRadius) playerBase.hp -= finalDmg * 2.0;
+                    
+                    // 【核心修復】：加上 blendMode: 'source-over'，強制黑棺以實體顏色顯示，不要被濾色模式過濾掉黑影！
+                    combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 30, maxTimer: 30, frames: 4, customImg: this.unitData.aoeImg, blendMode: 'source-over' });
+                    document.getElementById('feedback').innerText = `⬛ 藍染發動【破道之九十·黑棺】！我軍遭到定身！`; document.getElementById('feedback').style.color = "#8e44ad";
+                } else {
+                    playSound('melee');
+                    ctx.strokeStyle = '#8e44ad'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(impactX, impactY); ctx.stroke();
+                }
+            } else {
+                // 【第二階段：崩玉融合】遠程靈壓砲與弗拉哥核爆
+                let finalDmg = this.isUlt ? this.damage * 2.0 : this.damage;
+                
+                if (this.isUlt) {
+                    playSound('explosion');
+                    let aoeRadius = 180; // 弗拉哥巨大爆炸
+                    playerUnits.forEach(p => { 
+                        if (!p.isDying && Math.hypot((p.x + (p.drawOffsetX||0)) - impactX, (p.y + (p.drawOffsetY||0)) - impactY) <= aoeRadius) {
+                            p.hp -= finalDmg; 
+                            p.defDebuffTimer = 300; // 弗拉哥炸裂後賦予 5 秒降防
+                        }
+                    });
+                    towers.forEach(t => { let s = BUILDINGS[t.id].size || 1; if (Math.hypot(t.x * TILE_SIZE + (TILE_SIZE * s) / 2 - impactX, t.y * TILE_SIZE + (TILE_SIZE * s) / 2 - impactY) <= aoeRadius) t.hp -= finalDmg; });
+                    if (Math.hypot((playerBase.x*TILE_SIZE+TILE_SIZE/2) - impactX, (playerBase.y*TILE_SIZE+TILE_SIZE/2) - impactY) <= aoeRadius) playerBase.hp -= finalDmg;
+
+                    combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 40, maxTimer: 40, frames: 4, customImg: this.unitData.aoeImg2 });
+                    document.getElementById('feedback').innerText = `⚛️ 崩玉藍染發動【究極爆破·弗拉哥】！陣地防線崩潰！`; document.getElementById('feedback').style.color = "#9b59b6";
+                } else {
+                    playSound('shoot');
+                    // 崩玉普攻改為發射遠程紫光飛彈
+                    projectiles.push({ x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 20, tx: impactX, ty: impactY, damage: finalDmg, aoeRadius: 60, speed: 10, type: 'missile' });
                 }
             }
         }
@@ -2274,6 +2357,14 @@ update(targetPlayer) {
                         this.fireRate = Math.max(30, this.fireRate * 4); // 攻速變慢
                         this.range += 60;        // 武器變長
                         this.speed *= 0.6;       // 移動變慢
+                    } else if (this.id === 'aizen') {
+                        this.hp = this.maxHp;    
+                        this.currentScale = 2.0; 
+                        this.damage *= 1.5;      
+                        this.fireRate = Math.max(40, this.fireRate * 3); 
+                        this.range += 180;       // 【變為遠程】：射程暴增
+                        this.speed *= 0.5;       // 浮空移動緩慢
+                        this.unitData.evasion = 0.65; // 【崩玉絕望】：閃避率提升至 65%！
                     }
                 }
                 if (this.transformTimer <= 0) this.isTransforming = false;
@@ -2327,6 +2418,7 @@ update(targetPlayer) {
                     else if (this.id === 'rahu' && this.isUlt) { this.triggerRahuSlashWave(gate.x * TILE_SIZE + TILE_SIZE/2, gate.y * TILE_SIZE + TILE_SIZE/2); } 
                     else if (this.id === 'rocks') { this.triggerRocksStrike(gate, gate.x * TILE_SIZE + TILE_SIZE/2, gate.y * TILE_SIZE + TILE_SIZE/2); }
                     else if (this.id === 'madara') { this.triggerMadaraStrike(gate, gate.x * TILE_SIZE + TILE_SIZE/2, gate.y * TILE_SIZE + TILE_SIZE/2); }
+                    else if (this.id === 'aizen') { this.triggerAizenStrike(gate, gate.x * TILE_SIZE + TILE_SIZE/2, gate.y * TILE_SIZE + TILE_SIZE/2); }
                     else { gate.hp -= this.isUlt ? this.damage * 2.0 : this.damage; }
                 }
                 // 【核心修復】：移除 towers.filter 那行！不要把城門徹底刪除，讓它保留在場上冒煙，戰鬥結束後才會自動滿血復活
@@ -2351,6 +2443,7 @@ update(targetPlayer) {
                     else if (this.id === 'rahu') { this.triggerRahuSlashWave(targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); } 
                     else if (this.id === 'rocks') { this.triggerRocksStrike(targetPlayer, targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); }
                     else if (this.id === 'madara') { this.triggerMadaraStrike(targetPlayer, targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); }
+                    else if (this.id === 'aizen') { this.triggerAizenStrike(targetPlayer, targetPlayer.x + (targetPlayer.drawOffsetX||0), targetPlayer.y + (targetPlayer.drawOffsetY||0)); }
                     else {
                         targetPlayer.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
                         ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
@@ -2394,6 +2487,7 @@ update(targetPlayer) {
                     else if (this.id === 'rahu' && this.isUlt) { this.triggerRahuSlashWave(trueBaseX, trueBaseY); } 
                     else if (this.id === 'rocks') { this.triggerRocksStrike(playerBase, trueBaseX, trueBaseY); }
                     else if (this.id === 'madara') { this.triggerMadaraStrike(playerBase, trueBaseX, trueBaseY); }
+                    else if (this.id === 'aizen') { this.triggerAizenStrike(playerBase, trueBaseX, trueBaseY); }
                     else {
                         playerBase.hp -= this.isUlt ? this.damage * 2.0 : this.damage;
                         ctx.strokeStyle = this.isUlt ? '#e74c3c' : this.unitData.color; ctx.lineWidth = this.isUlt ? 4 : 2;
@@ -3504,9 +3598,13 @@ update(targetEnemy) {
                     else if (currentWave === 3 && !window.bossSpawned && window.battleTimeRemaining < 140) {
                         leaderType = 'rocks'; squadSize = 1; window.bossSpawned = true;
                     }
-                    // 【新增】：測試用 - 第 1 波宇智波斑降臨
-                    else if (currentWave === 1 && !window.bossSpawned && window.battleTimeRemaining < 140) {
+                    // 【新增】：測試用 - 第 5 波宇智波斑降臨
+                    else if (currentWave === 5 && !window.bossSpawned && window.battleTimeRemaining < 100) {
                         leaderType = 'madara'; squadSize = 1; window.bossSpawned = true;
+                    }
+                    // 【新增】：測試用 - 第 1 波藍染降臨
+                    else if (currentWave === 1 && !window.bossSpawned && window.battleTimeRemaining < 180) {
+                        leaderType = 'aizen'; squadSize = 1; window.bossSpawned = true;
                     }
 
                     for (let i = 0; i < squadSize; i++) {
@@ -4291,7 +4389,8 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 
                 let drawSize = eff.radius * 2.5; 
                 ctx.save();
-                ctx.globalCompositeOperation = 'screen'; 
+                // 【核心修復】：讀取特效專屬的混合模式，如果沒有特別指定，就維持預設的 'screen' 濾色發光模式
+                ctx.globalCompositeOperation = eff.blendMode || 'screen'; 
                 ctx.drawImage(img, sx, sy, fw, fh, eff.x - drawSize/2, eff.y - drawSize/2, drawSize, drawSize);
                 ctx.restore();
             } else {
