@@ -2266,12 +2266,32 @@ towers.forEach(t => { let s = BUILDINGS[t.id].size || 1; if (Math.hypot(t.x * TI
                     combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 40, maxTimer: 40, frames: 4, customImg: this.unitData.aoeImg2 });
                     document.getElementById('feedback').innerText = `⚛️ 崩玉藍染發動【究極爆破·弗拉哥】！陣地防線崩潰！`; document.getElementById('feedback').style.color = "#9b59b6";
                 } else {
-                    playSound('shoot');
-                    // 崩玉普攻改為發射遠程紫光飛彈
-                    projectiles.push({ x: this.x + this.drawOffsetX, y: this.y + this.drawOffsetY - 20, tx: impactX, ty: impactY, damage: finalDmg, aoeRadius: 60, speed: 10, type: 'missile' });
+                    playSound('shoot'); 
+                    // 【修改】：真正的「虛閃」！瞬間貫穿的毀滅紫色光束
+                    targetObj.hp -= finalDmg; 
+                    
+                    let aoeRadius = 60;
+                    playerUnits.forEach(p => { 
+                        if (p !== targetObj && !p.isDying && Math.hypot((p.x + (p.drawOffsetX||0)) - impactX, (p.y + (p.drawOffsetY||0)) - impactY) <= aoeRadius) {
+                            p.hp -= finalDmg * 0.8; 
+                        }
+                    });
+                    
+                    // 將虛閃特效加入 combatEffects，讓它在畫面上殘留 15 幀漸隱
+                    combatEffects.push({ 
+                        type: 'cero_beam', 
+                        x: this.x + this.drawOffsetX, 
+                        y: this.y + this.drawOffsetY - 30, 
+                        tx: impactX, 
+                        ty: impactY, 
+                        radius: aoeRadius, 
+                        timer: 15, 
+                        maxTimer: 15 
+                    });
                 }
             }
         }
+}
 
         // ==========================================
         // 【新增】：洛克斯專屬大絕 - 西洋劍「蝕」
@@ -4362,6 +4382,39 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 ctx.restore();
                 continue; 
             }
+            // 【新增】：藍染的「虛閃」純程式碼光束特效
+            if (eff.type === 'cero_beam') {
+                ctx.save();
+                let alpha = eff.timer / eff.maxTimer; // 隨著時間變透明
+                ctx.globalAlpha = alpha;
+                ctx.globalCompositeOperation = 'screen'; // 濾色模式讓光束更亮
+                
+                // 1. 畫出外層的紫色靈壓光暈 (極粗)
+                ctx.strokeStyle = '#8e44ad'; 
+                ctx.lineWidth = 25; 
+                ctx.shadowColor = '#9b59b6';
+                ctx.shadowBlur = 20;
+                ctx.beginPath(); 
+                ctx.moveTo(eff.x, eff.y); 
+                ctx.lineTo(eff.tx, eff.ty); 
+                ctx.stroke();
+                
+                // 2. 畫出內層的高熱白光核心 (較細)
+                ctx.strokeStyle = '#ffffff'; 
+                ctx.lineWidth = 8;
+                ctx.shadowBlur = 10;
+                ctx.stroke();
+                
+                // 3. 畫出擊中目標點的靈壓爆破圈
+                ctx.fillStyle = '#8e44ad';
+                ctx.beginPath(); 
+                ctx.arc(eff.tx, eff.ty, eff.radius * (1 - alpha), 0, Math.PI*2); 
+                ctx.fill();
+                
+                ctx.restore();
+                continue;
+            }
+
             
 // 一般 AoE 爆炸、飛彈爆炸與客製化法術特效
             let effType = eff.type || 'normal';
