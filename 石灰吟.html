@@ -3233,6 +3233,39 @@ update(targetEnemy) {
                             ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
                             ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
                         }
+                    } else if (this.id === 'f_dad') {
+                        playSound('melee');
+                        let finalDamage = (this.isUlt ? this.damage * 3.0 : this.damage) * (this.atkBuffMult || 1.0);
+                        
+                        if (this.isUlt) {
+                            // 大絕【鑽頭突破】：利用 SlashWave 發射一道破壞力極強的貫穿直線
+                            slashWaves.push(new SlashWave(finalDamage, this.x, this.y, impactX, impactY, 'slash', true, true, this.unitData.slashImg));
+                            document.getElementById('feedback').innerText = `🔥 烈陽巨漢發動大絕：【GIGA DRILL 突破】！`;
+                            document.getElementById('feedback').style.color = "#c0392b";
+                        } else {
+                            // 普攻【老爸鐵拳】：目標受到全額傷害，周圍小範圍受到半傷並被短距離震退
+                            let aoeRadius = 50;
+                            let knockbackDist = 20; // 微小擊退，用來卡住敵軍戰線
+                            targetEnemy.hp -= finalDamage; 
+                            
+                            enemies.forEach(e => {
+                                if (!e.isDying && Math.hypot((e.x + e.drawOffsetX) - impactX, (e.y + e.drawOffsetY) - impactY) <= aoeRadius) {
+                                    if (e !== targetEnemy) e.hp -= finalDamage * 0.5;
+                                    
+                                    // 物理擊退判定
+                                    let angle = Math.atan2(e.y - this.y, e.x - this.x);
+                                    e.x += Math.cos(angle) * knockbackDist;
+                                    e.y += Math.sin(angle) * knockbackDist;
+                                    e.pathIndex = getNearestPathIndex(e.x / TILE_SIZE, e.y / TILE_SIZE);
+                                }
+                            });
+
+                            // 畫出紅色重擊特效與攻擊線
+                            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 15, maxTimer: 15, type: 'normal' });
+                            ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 6;
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                            ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                        }
                     } else {
                         enemyBase.hp -= finalDamage; 
                         if (this.unitData.hasAoE) {
