@@ -2786,13 +2786,16 @@ class PlayerUnit {
             this.currentImg = this.unitData.img; // 預設使用第一張圖
             this.currentScale = this.unitData.drawScale || 1.5; // 預設大小
 
-        // 【新增修復】：明確宣告燎原火專用的屬性，避免 undefined 錯誤
+            // 【新增修復】：明確宣告燎原火專用的屬性，避免 undefined 錯誤
             this.immortalTriggered = false;
             this.immortalTimer = 0;
-        // 【新增】：攻擊力增益 Buff 系統
+            // 【新增】：攻擊力增益 Buff 系統
             this.atkBuffTimer = 0;
             this.atkBuffMult = 1.0;
             this.garrisonedArchers = 0; // 井欄專用：記錄內部弓兵數量    
+            
+            // 【新增】：媽媽專用大絕光環
+            this.ultAuraTimer = 0;
         }
 
 update(targetEnemy) {
@@ -2839,6 +2842,37 @@ update(targetEnemy) {
                 if (this.atkBuffTimer <= 0) this.atkBuffMult = 1.0;
             }
 
+                        if (this.ultAuraTimer > 0) {
+                this.ultAuraTimer--;
+                let auraRadius = 180; // 巨大的護罩範圍
+                
+                // 每 15 幀 (一秒 4 次) 進行極高額百分比回血，達到「減傷/無敵」的效果
+                if (globalAnimTick % 15 === 0) {
+                    let healMult = 0.05; // 每次回復最大血量的 5% (每秒 20%)
+                    
+                    // 1. 回復友軍部隊
+                    playerUnits.forEach(p => {
+                        if (!p.isDying && Math.hypot(p.x - this.x, p.y - this.y) <= auraRadius) {
+                            p.hp = Math.min(p.maxHp, p.hp + p.maxHp * healMult);
+                        }
+                    });
+                    // 2. 回復防禦塔與城門
+                    towers.forEach(t => {
+                        if (t.owner !== 'enemy' && !t.isDestroyed) {
+                            let tx = t.x * TILE_SIZE + TILE_SIZE/2, ty = t.y * TILE_SIZE + TILE_SIZE/2;
+                            if (Math.hypot(tx - this.x, ty - this.y) <= auraRadius) {
+                                t.hp = Math.min(t.maxHp, t.hp + t.maxHp * healMult);
+                            }
+                        }
+                    });
+                    // 3. 回復主堡
+                    let bx = playerBase.x * TILE_SIZE + TILE_SIZE/2, by = playerBase.y * TILE_SIZE + TILE_SIZE/2;
+                    if (Math.hypot(bx - this.x, by - this.y) <= auraRadius) {
+                        playerBase.hp = Math.min(playerBase.maxHp, playerBase.hp + playerBase.maxHp * healMult);
+                    }
+                }
+            }
+            
             if (this.cooldown > 0) this.cooldown--;
 
             let isDefender = (this.id === 'g1' || this.id === 'g3' || this.id === 'g7');
@@ -3178,6 +3212,27 @@ update(targetEnemy) {
                         if (this.unitData.aoeImg) combatEffects.push({ x: trueBaseX, y: trueBaseY, radius: 80, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg });
                         if (this.isUlt && this.unitData.slashImg) slashWaves.push(new SlashWave(finalDamage * 1.5, this.x, this.y, trueBaseX, trueBaseY, 'slash', true, true, this.unitData.slashImg));
                         else { ctx.strokeStyle = '#000000'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(trueBaseX, trueBaseY); ctx.stroke(); }
+                    } else if (this.id === 'f_mom') {
+                        playSound('shoot'); // 播放波動音效
+                        if (this.isUlt) {
+                            // 大絕：家母的絕對領域 (持續 5 秒)
+                            this.ultAuraTimer = 300; 
+                            let feedback = document.getElementById('feedback');
+                            feedback.innerText = `🛡️ 蒼海母艦發動【家母的絕對領域】！全軍極速回復！`; 
+                            feedback.style.color = "#f1c40f";
+                        } else {
+                            // 普攻：慈愛力場 (造成傷害並減速 2 秒)
+                            let finalDamage = this.damage * (this.atkBuffMult || 1.0);
+                            targetEnemy.hp -= finalDamage;
+                            targetEnemy.speedDebuffTimer = 120; // 賦予減速
+                            
+                            // 畫出淡藍色的波動特效
+                            combatEffects.push({ x: impactX, y: impactY, radius: 40, timer: 15, maxTimer: 15, type: 'mom_wave' });
+                            
+                            ctx.strokeStyle = '#3498db'; ctx.lineWidth = 4;
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                            ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                        }
                     } else {
                         enemyBase.hp -= finalDamage; 
                         if (this.unitData.hasAoE) {
@@ -3292,8 +3347,12 @@ update(targetEnemy) {
                 this.x += (dx / dist) * this.speed;
                 this.y += (dy / dist) * this.speed; 
             }
+            // =====================================
+            // 【新增】：媽媽大絕「家母的絕對領域」持續運算
+            // =====================================
+
             return false;
-        }
+        } // <--- 這是 update 函數結束的括號
         
         draw() {
             // 【核心修正】：如果是安全撤退，強制覆蓋為「行走狀態(0)」，不播「死亡狀態(3)」
@@ -3312,6 +3371,24 @@ update(targetEnemy) {
             let cx = this.x + this.drawOffsetX, cy = this.y + this.drawOffsetY;
 
             ctx.save();
+
+            // =====================================
+            // 【新增】：畫出「家母的絕對領域」巨大金色護罩
+            // =====================================
+            if (this.ultAuraTimer > 0) {
+                let auraRadius = 180;
+                // 讓護罩帶有呼吸般的閃爍感
+                let pulse = Math.abs(Math.sin(globalAnimTick / 10)) * 0.15;
+                
+                ctx.beginPath();
+                ctx.arc(cx, cy, auraRadius, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(241, 196, 15, ${0.15 + pulse})`; // 半透明閃爍金光
+                ctx.fill();
+                
+                ctx.strokeStyle = `rgba(241, 196, 15, 0.8)`; // 金色堅固外殼
+                ctx.lineWidth = 4;
+                ctx.stroke();
+            }
 
             if (this.isDying) {
                 let deathProgress = 1 - (this.deathTimer / 45);
