@@ -3879,11 +3879,19 @@ update(targetEnemy) {
             // 武將自動大腦與冷卻時間更新
             if (globalAnimTick % 30 === 0) {
                 
-                // 【核心修復】：手動幫未列入常規出戰名單的「顏面家族」進行復活倒數！
+// 【核心修復】：手動幫未列入常規出戰名單的「顏面家族」進行復活倒數！
                 ['f_dad', 'f_mom', 'f_daughter'].forEach(fId => {
                     let fg = GENERALS[fId];
-                    if (fg && fg.deathCooldown > 0) fg.deathCooldown -= 30;
+                    if (fg && fg.deathCooldown > 0) {
+                        fg.deathCooldown -= 30;
+                        // 【新增解鎖】：只要有人休息完畢 (回到 0)，就解除合體鎖定，允許未來的合體！
+                        if (fg.deathCooldown <= 0) {
+                            fg.deathCooldown = 0;
+                            window.fusionCooldownLock = false; 
+                        }
+                    }
                 });
+
                 // =====================================
                 // 【新增】：奇蹟合體！天元突破判定
                 // =====================================
@@ -3892,10 +3900,13 @@ update(targetEnemy) {
                 
                 if (meihuTowers.length > 0 && !fusionDeployed) {
                     let f1 = GENERALS['f_dad'], f2 = GENERALS['f_mom'], f3 = GENERALS['f_daughter'];
-                    // 如果三人同時在 CD 中 (且大於0)，代表三人同時敗退！
-                    if (f1.deathCooldown > 0 && f2.deathCooldown > 0 && f3.deathCooldown > 0) {
+                    
+                    // 【核心修復】：加入 !window.fusionCooldownLock，確保一輪只合體一次
+                    if (!window.fusionCooldownLock && f1.deathCooldown > 0 && f2.deathCooldown > 0 && f3.deathCooldown > 0) {
                         
-                        // 鎖定他們三個的冷卻時間，讓他們在合體期間無法復活
+                        window.fusionCooldownLock = true; // 鎖定！直到他們正常休息完畢
+                        
+                        // 鎖死冷卻，避免背景偷偷復活
                         f1.deathCooldown = 9999; f2.deathCooldown = 9999; f3.deathCooldown = 9999;
                         
                         // 派出超巨型合體機甲
