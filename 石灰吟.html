@@ -4121,7 +4121,19 @@ let refundedMeat = 0;
                 updateGeneralsUI();
                 updateSiegeUI(); // 【核心修復】：確保戰鬥結束後更新攻城廠的 UI 畫面！
                 updateResourcesUI();
+                // =====================================
+                // 【新增修復】：波數結束時，強制解除合體鎖定，讓家人在下一波可立刻出擊！
+                // =====================================
+                window.fusionCooldownLock = false;
+                if (GENERALS['f_dad']) GENERALS['f_dad'].deathCooldown = 0;
+                if (GENERALS['f_mom']) GENERALS['f_mom'].deathCooldown = 0;
+                if (GENERALS['f_daughter']) GENERALS['f_daughter'].deathCooldown = 0;
                 
+                // 確保美湖居的 UI 在跨波數時也會跟著重置顯示為 "0 資源"
+                if (document.getElementById('meihu-ui-row') && document.getElementById('meihu-ui-row').style.display !== 'none') {
+                    updateMeihuUI();
+                }
+
                 currentWave++;
                 startQuizPhase();
                 return;
