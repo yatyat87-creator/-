@@ -508,6 +508,15 @@
             id: "f_daughter", name: "Candice", symbol: "女", color: "#f1c40f", price: 0, isGeneral: true, isFamily: true,
             dmg: 3.5, range: 6, moveSpd: 2.0, atkSpd: 2.0, hpMult: 2.5, drawScale: 1.5, ultChance: 0.25, hasAoE: true,
             desc: "遠程：全圖飛彈", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Candice.png" 
+        },
+        // 【新增】：奇蹟合體！天元·真家族突破
+        "f_fusion": { 
+            id: "f_fusion", name: "真家族突破", symbol: "合", color: "#2ecc71", price: 0, isGeneral: true, isFamily: true,
+            dmg: 15.0, range: 2.0, moveSpd: 0.5, atkSpd: 0.8, hpMult: 15.0, drawScale: 3.8, ultChance: 0.35, hasAoE: true,
+            desc: "奇蹟合體：絕對霸體，螺旋力爆發", 
+            imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/合體機甲.png", // 待替換
+            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/合體大鑽頭.png", // 待替換
+            aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/銀河碎岩擊.png" // 待替換
         }
     };
     
@@ -2837,6 +2846,25 @@ update(targetEnemy) {
                 this.defDebuffTimer = 0;   
                 this.rootTimer = 0;        
             }
+            // 【新增】：合體機甲被動 - 絕對霸體與螺旋力場 (持續燃燒周圍敵人)
+            if (this.id === 'f_fusion') {
+                this.speedDebuffTimer = 0; 
+                this.defDebuffTimer = 0;   
+                this.rootTimer = 0; // 絕對免疫黑棺與定身
+                
+                if (globalAnimTick % 30 === 0) { // 每半秒燒一次
+                    let burnRadius = 150;
+                    enemies.forEach(e => {
+                        if (!e.isDying && Math.hypot((e.x + e.drawOffsetX) - this.x, (e.y + e.drawOffsetY) - this.y) <= burnRadius) {
+                            e.hp -= this.damage * 0.3; // 螺旋力燙傷
+                            // 畫出微微的綠色火星特效
+                            if (Math.random() < 0.3) {
+                                floatingTexts.push({ x: e.x, y: e.y - 20, text: "🔥", color: "#2ecc71", timer: 30, vy: -1 });
+                            }
+                        }
+                    });
+                }
+            }
 
             // 【新增】：攻擊力 Buff 結算
             if (this.atkBuffTimer > 0) {
@@ -3142,7 +3170,86 @@ update(targetEnemy) {
                             }
                         }
                     }
-                    else {
+                    else if (this.id === 'f_mom') {
+                        playSound('shoot'); 
+                        if (this.isUlt) {
+                            this.ultAuraTimer = 300; 
+                            let feedback = document.getElementById('feedback');
+                            feedback.innerText = `🛡️ 蒼海母艦發動【家母的絕對領域】！全軍極速回復！`; 
+                            feedback.style.color = "#f1c40f";
+                        } else {
+                            let finalDamage = this.damage * (this.atkBuffMult || 1.0);
+                            targetEnemy.hp -= finalDamage;
+                            targetEnemy.speedDebuffTimer = 120; 
+                            
+                            combatEffects.push({ x: impactX, y: impactY, radius: 40, timer: 15, maxTimer: 15, type: 'mom_wave' });
+                            ctx.strokeStyle = '#3498db'; ctx.lineWidth = 4;
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                            ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                        }
+                    } 
+                    else if (this.id === 'f_dad') {
+                        playSound('melee');
+                        let finalDamage = (this.isUlt ? this.damage * 3.0 : this.damage) * (this.atkBuffMult || 1.0);
+                        
+                        if (this.isUlt) {
+                            slashWaves.push(new SlashWave(finalDamage, this.x, this.y, impactX, impactY, 'slash', true, true, this.unitData.slashImg));
+                            document.getElementById('feedback').innerText = `🔥 烈陽巨漢發動大絕：【GIGA DRILL 突破】！`;
+                            document.getElementById('feedback').style.color = "#c0392b";
+                        } else {
+                            let aoeRadius = 50;
+                            let knockbackDist = 20; 
+                            targetEnemy.hp -= finalDamage; 
+                            
+                            enemies.forEach(e => {
+                                if (!e.isDying && Math.hypot((e.x + e.drawOffsetX) - impactX, (e.y + e.drawOffsetY) - impactY) <= aoeRadius) {
+                                    if (e !== targetEnemy) e.hp -= finalDamage * 0.5;
+                                    let angle = Math.atan2(e.y - this.y, e.x - this.x);
+                                    e.x += Math.cos(angle) * knockbackDist;
+                                    e.y += Math.sin(angle) * knockbackDist;
+                                    e.pathIndex = getNearestPathIndex(e.x / TILE_SIZE, e.y / TILE_SIZE);
+                                }
+                            });
+
+                            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 15, maxTimer: 15, type: 'normal' });
+                            ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 6;
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                            ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                        }
+                    } else if (this.id === 'f_fusion') {
+                        playSound('melee');
+                        let finalDamage = (this.isUlt ? this.damage * 4.0 : this.damage) * (this.atkBuffMult || 1.0);
+                        
+                        if (this.isUlt) {
+                            playSound('shoot'); // 加上發射音效
+                            slashWaves.push(new SlashWave(finalDamage, this.x, this.y, impactX, impactY, 'slash', true, true, this.unitData.slashImg));
+                            document.getElementById('feedback').innerText = `🌌 天元·真家族突破：【GIGA DRILL BREAK (究極粉碎) 】！`;
+                            document.getElementById('feedback').style.color = "#2ecc71";
+                        } else {
+                            let aoeRadius = 120;
+                            let knockbackDist = 80; // 誇張的擊退力
+                            targetEnemy.hp -= finalDamage; 
+                            
+                            enemies.forEach(e => {
+                                if (!e.isDying && Math.hypot((e.x + e.drawOffsetX) - impactX, (e.y + e.drawOffsetY) - impactY) <= aoeRadius) {
+                                    if (e !== targetEnemy) e.hp -= finalDamage * 0.8;
+                                    
+                                    // Boss 級不被擊退，小兵直接被轟飛
+                                    if (e.id !== 'boss' && e.id !== 'black_dragon' && e.id !== 'rahu') {
+                                        let angle = Math.atan2(e.y - this.y, e.x - this.x);
+                                        e.x += Math.cos(angle) * knockbackDist;
+                                        e.y += Math.sin(angle) * knockbackDist;
+                                        e.pathIndex = getNearestPathIndex(e.x / TILE_SIZE, e.y / TILE_SIZE);
+                                    }
+                                }
+                            });
+
+                            if (this.unitData.aoeImg) combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg });
+                            ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 12; // 超粗的綠色攻擊軌跡
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                            ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                        }
+                    } else {
                         // 【核心修正】：其他武將正常攻擊敵軍
                         targetEnemy.hp -= finalDamage; 
                         if (this.unitData.hasAoE) {
@@ -3256,6 +3363,38 @@ update(targetEnemy) {
 
                             combatEffects.push({ x: trueBaseX, y: trueBaseY, radius: aoeRadius, timer: 15, maxTimer: 15, type: 'normal' });
                             ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 6;
+                            ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
+                            ctx.lineTo(trueBaseX, trueBaseY); ctx.stroke();
+                        }
+                    } else if (this.id === 'f_fusion') {
+                        playSound('melee');
+                        let finalDamage = (this.isUlt ? this.damage * 4.0 : this.damage) * (this.atkBuffMult || 1.0);
+                        
+                        if (this.isUlt) {
+                            playSound('shoot');
+                            slashWaves.push(new SlashWave(finalDamage, this.x, this.y, trueBaseX, trueBaseY, 'slash', true, true, this.unitData.slashImg));
+                            document.getElementById('feedback').innerText = `🌌 天元·真家族突破：【GIGA DRILL BREAK (究極粉碎) 】！`;
+                            document.getElementById('feedback').style.color = "#2ecc71";
+                        } else {
+                            let aoeRadius = 120;
+                            let knockbackDist = 80; 
+                            enemyBase.hp -= finalDamage; 
+                            
+                            enemies.forEach(e => {
+                                if (!e.isDying && Math.hypot((e.x + e.drawOffsetX) - trueBaseX, (e.y + e.drawOffsetY) - trueBaseY) <= aoeRadius) {
+                                    e.hp -= finalDamage * 0.8;
+                                    
+                                    if (e.id !== 'boss' && e.id !== 'black_dragon' && e.id !== 'rahu') {
+                                        let angle = Math.atan2(e.y - this.y, e.x - this.x);
+                                        e.x += Math.cos(angle) * knockbackDist;
+                                        e.y += Math.sin(angle) * knockbackDist;
+                                        e.pathIndex = getNearestPathIndex(e.x / TILE_SIZE, e.y / TILE_SIZE);
+                                    }
+                                }
+                            });
+
+                            if (this.unitData.aoeImg) combatEffects.push({ x: trueBaseX, y: trueBaseY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg });
+                            ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 12;
                             ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
                             ctx.lineTo(trueBaseX, trueBaseY); ctx.stroke();
                         }
@@ -3745,6 +3884,29 @@ update(targetEnemy) {
                     let fg = GENERALS[fId];
                     if (fg && fg.deathCooldown > 0) fg.deathCooldown -= 30;
                 });
+                // =====================================
+                // 【新增】：奇蹟合體！天元突破判定
+                // =====================================
+                let meihuTowers = towers.filter(t => t.id === 'meihu' && (!t.owner || t.owner === 'player'));
+                let fusionDeployed = playerUnits.some(p => p.id === 'f_fusion') || deployQueue.some(u => u.id === 'f_fusion');
+                
+                if (meihuTowers.length > 0 && !fusionDeployed) {
+                    let f1 = GENERALS['f_dad'], f2 = GENERALS['f_mom'], f3 = GENERALS['f_daughter'];
+                    // 如果三人同時在 CD 中 (且大於0)，代表三人同時敗退！
+                    if (f1.deathCooldown > 0 && f2.deathCooldown > 0 && f3.deathCooldown > 0) {
+                        
+                        // 鎖定他們三個的冷卻時間，讓他們在合體期間無法復活
+                        f1.deathCooldown = 9999; f2.deathCooldown = 9999; f3.deathCooldown = 9999;
+                        
+                        // 派出超巨型合體機甲
+                        deployQueue.push({ id: 'f_fusion', level: meihuTowers[0].level, spawnIndex: getNearestPathIndex(meihuTowers[0].x, meihuTowers[0].y) });
+                        
+                        playSound('explosion'); 
+                        let feedback = document.getElementById('feedback');
+                        feedback.innerText = `⚠️ 家族羈絆共鳴！螺旋力突破臨界點！【天元·真家族突破】降臨！`;
+                        feedback.style.color = "#2ecc71";
+                    }
+                }
 
                 let tents = towers.filter(t => t.id === 'tent' && (!t.owner || t.owner === 'player'));
                 selectedGenerals.forEach(gId => {
