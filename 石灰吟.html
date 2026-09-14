@@ -495,7 +495,9 @@
         "f_dad": { 
             id: "f_dad", name: "Brian", symbol: "爸", color: "#c0392b", price: 0, isGeneral: true, isFamily: true,
             dmg: 5.0, range: 1.5, moveSpd: 1.2, atkSpd: 1.5, hpMult: 4, drawScale: 1.9, ultChance: 0.25, hasAoE: true,
-            desc: "近戰：強大擊退力", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/老爸機甲.png" 
+            desc: "近戰：強大擊退力", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/老爸機甲.png",
+            // 👇👇👇 記得補上這行 👇👇👇
+            slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布戟氣.png" 
         },
         "f_mom": { 
             id: "f_mom", name: "Yuki", symbol: "媽", color: "#2980b9", price: 0, isGeneral: true, isFamily: true,
@@ -3213,46 +3215,38 @@ update(targetEnemy) {
                         if (this.isUlt && this.unitData.slashImg) slashWaves.push(new SlashWave(finalDamage * 1.5, this.x, this.y, trueBaseX, trueBaseY, 'slash', true, true, this.unitData.slashImg));
                         else { ctx.strokeStyle = '#000000'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); ctx.lineTo(trueBaseX, trueBaseY); ctx.stroke(); }
                     } else if (this.id === 'f_mom') {
-                        playSound('shoot'); // 播放波動音效
+                        playSound('shoot'); 
                         if (this.isUlt) {
-                            // 大絕：家母的絕對領域 (持續 5 秒)
                             this.ultAuraTimer = 300; 
                             let feedback = document.getElementById('feedback');
                             feedback.innerText = `🛡️ 蒼海母艦發動【家母的絕對領域】！全軍極速回復！`; 
                             feedback.style.color = "#f1c40f";
                         } else {
-                            // 普攻：慈愛力場 (造成傷害並減速 2 秒)
                             let finalDamage = this.damage * (this.atkBuffMult || 1.0);
-                            targetEnemy.hp -= finalDamage;
-                            targetEnemy.speedDebuffTimer = 120; // 賦予減速
+                            enemyBase.hp -= finalDamage; // 【修復】：正確扣除敵方主堡血量
                             
-                            // 畫出淡藍色的波動特效
-                            combatEffects.push({ x: impactX, y: impactY, radius: 40, timer: 15, maxTimer: 15, type: 'mom_wave' });
+                            combatEffects.push({ x: trueBaseX, y: trueBaseY, radius: 40, timer: 15, maxTimer: 15, type: 'mom_wave' });
                             
                             ctx.strokeStyle = '#3498db'; ctx.lineWidth = 4;
                             ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                            ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                            ctx.lineTo(trueBaseX, trueBaseY); ctx.stroke(); // 【修復】：正確畫線到主堡
                         }
                     } else if (this.id === 'f_dad') {
                         playSound('melee');
                         let finalDamage = (this.isUlt ? this.damage * 3.0 : this.damage) * (this.atkBuffMult || 1.0);
                         
                         if (this.isUlt) {
-                            // 大絕【鑽頭突破】：利用 SlashWave 發射一道破壞力極強的貫穿直線
-                            slashWaves.push(new SlashWave(finalDamage, this.x, this.y, impactX, impactY, 'slash', true, true, this.unitData.slashImg));
+                            slashWaves.push(new SlashWave(finalDamage, this.x, this.y, trueBaseX, trueBaseY, 'slash', true, true, this.unitData.slashImg));
                             document.getElementById('feedback').innerText = `🔥 烈陽巨漢發動大絕：【GIGA DRILL 突破】！`;
                             document.getElementById('feedback').style.color = "#c0392b";
                         } else {
-                            // 普攻【老爸鐵拳】：目標受到全額傷害，周圍小範圍受到半傷並被短距離震退
                             let aoeRadius = 50;
-                            let knockbackDist = 20; // 微小擊退，用來卡住敵軍戰線
-                            targetEnemy.hp -= finalDamage; 
+                            let knockbackDist = 20; 
+                            enemyBase.hp -= finalDamage; 
                             
                             enemies.forEach(e => {
-                                if (!e.isDying && Math.hypot((e.x + e.drawOffsetX) - impactX, (e.y + e.drawOffsetY) - impactY) <= aoeRadius) {
-                                    if (e !== targetEnemy) e.hp -= finalDamage * 0.5;
-                                    
-                                    // 物理擊退判定
+                                if (!e.isDying && Math.hypot((e.x + e.drawOffsetX) - trueBaseX, (e.y + e.drawOffsetY) - trueBaseY) <= aoeRadius) {
+                                    e.hp -= finalDamage * 0.5;
                                     let angle = Math.atan2(e.y - this.y, e.x - this.x);
                                     e.x += Math.cos(angle) * knockbackDist;
                                     e.y += Math.sin(angle) * knockbackDist;
@@ -3260,11 +3254,10 @@ update(targetEnemy) {
                                 }
                             });
 
-                            // 畫出紅色重擊特效與攻擊線
-                            combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 15, maxTimer: 15, type: 'normal' });
+                            combatEffects.push({ x: trueBaseX, y: trueBaseY, radius: aoeRadius, timer: 15, maxTimer: 15, type: 'normal' });
                             ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 6;
                             ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
-                            ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
+                            ctx.lineTo(trueBaseX, trueBaseY); ctx.stroke();
                         }
                     } else {
                         enemyBase.hp -= finalDamage; 
