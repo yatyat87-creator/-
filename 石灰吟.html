@@ -4436,8 +4436,22 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
                 if (pUnit.deathTimer <= 0) {
                     if (pUnit.unitData.isGeneral) {
                         GENERALS[pUnit.id].isDeployed = false;
-                        if (!pUnit.isRetreating) { GENERALS[pUnit.id].deathCooldown = 600; document.getElementById('feedback').innerText = `☠️ 【${pUnit.unitData.name}】重傷敗退，需休整 10 秒！`; }
+                        if (!pUnit.isRetreating) { 
+                            GENERALS[pUnit.id].deathCooldown = 600; 
+                            document.getElementById('feedback').innerText = `☠️ 【${pUnit.unitData.name}】重傷敗退，需休整 10 秒！`; 
+                        }
                         else { GENERALS[pUnit.id].deathCooldown = 0; }
+                        
+                        // =====================================
+                        // 【新增】：合體機甲戰死，解除三人的 9999 秒鎖定，給予 10 秒正常休整
+                        // =====================================
+                        if (pUnit.id === 'f_fusion') {
+                            GENERALS['f_dad'].deathCooldown = 600;
+                            GENERALS['f_mom'].deathCooldown = 600;
+                            GENERALS['f_daughter'].deathCooldown = 600;
+                            document.getElementById('feedback').innerText = `💥 合體解除！家族成員休整 10 秒後可從美湖居再次出擊！`;
+                            document.getElementById('feedback').style.color = "#f39c12";
+                        }
                     }
                     playerUnits.splice(i, 1);
                 }
