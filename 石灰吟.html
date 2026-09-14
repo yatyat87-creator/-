@@ -3244,7 +3244,8 @@ update(targetEnemy) {
                                 }
                             });
 
-                            if (this.unitData.aoeImg) combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg });
+                            // 【新增】：加上 blendMode: 'source-over' 保留純黑特效
+                            if (this.unitData.aoeImg) combatEffects.push({ x: impactX, y: impactY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg, blendMode: 'source-over' });
                             ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 12; // 超粗的綠色攻擊軌跡
                             ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
                             ctx.lineTo(targetEnemy.x + targetEnemy.drawOffsetX, targetEnemy.y + targetEnemy.drawOffsetY); ctx.stroke();
@@ -3393,7 +3394,8 @@ update(targetEnemy) {
                                 }
                             });
 
-                            if (this.unitData.aoeImg) combatEffects.push({ x: trueBaseX, y: trueBaseY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg });
+                            // 【新增】：加上 blendMode: 'source-over' 保留純黑特效
+                            if (this.unitData.aoeImg) combatEffects.push({ x: trueBaseX, y: trueBaseY, radius: aoeRadius, timer: 20, maxTimer: 20, frames: 4, customImg: this.unitData.aoeImg, blendMode: 'source-over' });
                             ctx.strokeStyle = '#2ecc71'; ctx.lineWidth = 12;
                             ctx.beginPath(); ctx.moveTo(this.x + this.drawOffsetX, this.y + this.drawOffsetY); 
                             ctx.lineTo(trueBaseX, trueBaseY); ctx.stroke();
