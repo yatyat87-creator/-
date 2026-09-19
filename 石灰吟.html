@@ -336,8 +336,30 @@
         }
         document.body.removeEventListener('click', startLobbyBgm); 
     }, { once: true });
-
-// --- 建築物與兵種資料庫 ---
+// ==========================================
+    // 🗺️ 遊戲地圖資料庫
+    // ==========================================
+    const MAP_DATABASE = {
+        "level_1": {
+            name: "初始平原",
+            playerBase: { x: 17, y: 37, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 },
+            enemyBase: { x: 2, y: 2, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 },
+            pathCoords: [
+                {x:4, y:2}, {x:5, y:2}, {x:6, y:2}, {x:7, y:2}, {x:8, y:2}, {x:9, y:2}, {x:10, y:2}, {x:11, y:2}, {x:12, y:2}, {x:13, y:2}, {x:14, y:2}, {x:15, y:2}, {x:16, y:2},
+                {x:16, y:3}, {x:16, y:4}, {x:16, y:5}, {x:16, y:6}, {x:16, y:7}, {x:16, y:8}, {x:16, y:9}, {x:16, y:10},
+                {x:15, y:10}, {x:14, y:10}, {x:13, y:10}, {x:12, y:10}, {x:11, y:10}, {x:10, y:10}, {x:9, y:10}, {x:8, y:10}, {x:7, y:10}, {x:6, y:10}, {x:5, y:10}, {x:4, y:10},
+                {x:4, y:11}, {x:4, y:12}, {x:4, y:13}, {x:4, y:14}, {x:4, y:15}, {x:4, y:16}, {x:4, y:17}, {x:4, y:18}, {x:4, y:19}, {x:4, y:20},
+                {x:5, y:20}, {x:6, y:20}, {x:7, y:20}, {x:8, y:20}, {x:9, y:20}, {x:10, y:20}, {x:11, y:20}, {x:12, y:20}, {x:13, y:20}, {x:14, y:20}, {x:15, y:20}, {x:16, y:20},
+                {x:16, y:21}, {x:16, y:22}, {x:16, y:23}, {x:16, y:24}, {x:16, y:25}, {x:16, y:26}, {x:16, y:27}, {x:16, y:28}, {x:16, y:29}, {x:16, y:30},
+                {x:15, y:30}, {x:14, y:30}, {x:13, y:30}, {x:12, y:30}, {x:11, y:30}, {x:10, y:30}, {x:9, y:30}, {x:8, y:30}, {x:7, y:30}, {x:6, y:30}, {x:5, y:30}, {x:4, y:30},
+                {x:4, y:31}, {x:4, y:32}, {x:4, y:33}, {x:4, y:34}, {x:4, y:35}, {x:4, y:36}, {x:4, y:37},
+                {x:5, y:37}, {x:6, y:37}, {x:7, y:37}, {x:8, y:37}, {x:9, y:37}, {x:10, y:37}, {x:11, y:37}, {x:12, y:37}, {x:13, y:37}, {x:14, y:37}, {x:15, y:37}, {x:16, y:37}
+            ],
+            // 使用代碼快速生成原本的前20行山地(2)，後20行草地(0)的矩陣
+            terrain: Array(40).fill(0).map((_, i) => Array(20).fill(i < 20 ? 2 : 0))
+        }
+    };
+    // --- 建築物與兵種資料庫 ---
     const BUILDINGS = {
         // 資源建築：建造與升級皆用木(wood)
         "farm": { id: "farm", name: "農田", symbol: "🌾", color: "#f1c40f", type: "resource", costType: "wood", upgradeCostType: "wood", cost: 50, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Farm.png" },
@@ -639,8 +661,10 @@ const EFFECT_IMGS = {
     
     // 【新增】：將雙方城鎮中心實體化為物件 (含等級、攻防、回血屬性)
     // 【修改】：我方主堡初始血量同步提升至 25000
-    let playerBase = { x: 17, y: 37, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
-    let enemyBase = { x: 2, y: 2, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };
+    let playerBase, enemyBase;
+    let pathCoords = [];
+    let currentTerrain = [];
+    let currentLevel = "level_1"; // 預設讀取第一關
     
     let difficultyLevel = 1, frameCount = 0, spawnTimer = 0;
     let gameOver = false, gameWon = false;
@@ -859,7 +883,6 @@ const EFFECT_IMGS = {
         for (let key in GENERALS) { GENERALS[key].isDeployed = false; GENERALS[key].deathCooldown = 0; }
         window.blackDragonRespawnTimer = -1;        
 
-        generateDecorations();
         updateResourcesUI();
         updateCampsUI();
         
@@ -867,6 +890,25 @@ const EFFECT_IMGS = {
         document.getElementById('timer-display').innerText = "⏱️ 00:00";
         lastFrameTime = Date.now(); 
         
+        // 讀取當前關卡的地圖設定
+        let mapData = MAP_DATABASE[currentLevel];
+        
+        // 深度複製主堡狀態 (避免污染資料庫)
+        playerBase = JSON.parse(JSON.stringify(mapData.playerBase));
+        enemyBase = JSON.parse(JSON.stringify(mapData.enemyBase));
+        
+        // 載入道路與地形矩陣
+        pathCoords = mapData.pathCoords;
+        currentTerrain = mapData.terrain;
+        
+        // 這裡要記得呼叫我們剛剛寫的「動態生成 12 宮格」邏輯！
+        generateRings();
+
+        // 👇👇👇 貼在這裡 👇👇👇
+        // 【修復】：等馬路和主堡都載入完成後，才生成裝飾物，避開道路！
+        generateDecorations();
+        // 👆👆👆 貼在這裡 👆👆👆
+
         SOUNDS.bgm_lobby.pause();
         SOUNDS.bgm_lobby.currentTime = 0;
         
@@ -1876,36 +1918,27 @@ window.startBattlePhase = function() {
     ctx.scale(dpr, dpr); ctx.imageSmoothingEnabled = true; 
     const TILE_SIZE = 40;
     
-    // 【核心修復】：設置 2x2 主堡外圍的「12宮格圍城陣地」，避免士兵走入城牆卡死
+    // 【動態生成】：根據雙方主堡當前位置，自動計算外圍的 12 宮格圍城陣地！
     const enemyRing = [], playerRing = [];
-    // 敵方主堡 (2,2) ~ (3,3)，外圍環繞一圈
-    for(let x=1; x<=4; x++) {
-        for(let y=1; y<=4; y++) {
-            if(x>=2 && x<=3 && y>=2 && y<=3) continue; // 避開主堡本身
-            enemyRing.push({x: x, y: y});
-        }
-    }
-    // 玩家主堡 (17,37) ~ (18,38)，外圍環繞一圈
-    for(let x=16; x<=19; x++) {
-        for(let y=36; y<=39; y++) {
-            if(x>=17 && x<=18 && y>=37 && y<=38) continue; // 避開主堡本身
-            playerRing.push({x: x, y: y});
-        }
-    }
-
-
-    // 【修改】：延伸新的 S 型道路，貫穿全地圖 40 格高度
-    const pathCoords = [];
-    for(let x=4; x<=16; x++) pathCoords.push({x:x, y:2});
-    for(let y=3; y<=10; y++) pathCoords.push({x:16, y:y});
-    for(let x=15; x>=4; x--) pathCoords.push({x:x, y:10});
-    for(let y=11; y<=20; y++) pathCoords.push({x:4, y:y}); // 跨越中線
-    for(let x=5; x<=16; x++) pathCoords.push({x:x, y:20});
-    for(let y=21; y<=30; y++) pathCoords.push({x:16, y:y});
-    for(let x=15; x>=4; x--) pathCoords.push({x:x, y:30});
-    for(let y=31; y<=37; y++) pathCoords.push({x:4, y:y});
-    for(let x=5; x<=16; x++) pathCoords.push({x:x, y:37}); // 連接玩家主堡
     
+    window.generateRings = function() {
+        // 每次重新計算前先清空，支援無縫切換地圖
+        enemyRing.length = 0; 
+        playerRing.length = 0;
+        
+        for(let dx = -1; dx <= 2; dx++) {
+            for(let dy = -1; dy <= 2; dy++) {
+                // 避開 2x2 主堡本身的 4 個格子 (dx, dy 為 0 或 1 時)
+                if(dx >= 0 && dx <= 1 && dy >= 0 && dy <= 1) continue; 
+                
+                // 自動環繞敵方主堡
+                enemyRing.push({x: enemyBase.x + dx, y: enemyBase.y + dy});
+                // 自動環繞我方主堡
+                playerRing.push({x: playerBase.x + dx, y: playerBase.y + dy});
+            }
+        }
+    };
+ 
     function isPath(gx, gy) { 
         return pathCoords.some(p => p.x === gx && p.y === gy) || 
                enemyRing.some(p => p.x === gx && p.y === gy) || 
