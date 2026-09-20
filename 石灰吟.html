@@ -2830,7 +2830,7 @@ class PlayerUnit {
                 let threat = enemies.find(e => !e.isDying && ( towers.some(t => { if (t.owner === 'enemy') return false; let s = BUILDINGS[t.id].size || 1; return Math.hypot(e.x - (t.x * TILE_SIZE + (TILE_SIZE * s) / 2), e.y - (t.y * TILE_SIZE + (TILE_SIZE * s) / 2)) < 180; }) || Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250 ));
                 if (threat) {
                     this.retreatTimer = 0; hasValidTarget = true;
-                    let thIdx = threat.pathIndex >= 0 ? threat.pathIndex : pathCoords.length - 1;
+                    let thIdx = Math.max(0, Math.min(pathCoords.length - 1, threat.pathIndex));
                     if (this.pathIndex >= 0 && this.pathIndex < pathCoords.length && Math.abs(this.pathIndex - thIdx) > 1) { targetNode = pathCoords[this.pathIndex]; } 
                     else { tx = threat.x; ty = threat.y; this.drawOffsetX = 0; this.drawOffsetY = 0; }
                 } else {
@@ -2853,7 +2853,7 @@ class PlayerUnit {
                 }
                 if (ally) {
                     hasValidTarget = true;
-                    let thIdx = ally.pathIndex >= 0 ? ally.pathIndex : pathCoords.length - 1;
+                    let thIdx = Math.max(0, Math.min(pathCoords.length - 1, ally.pathIndex));
                     this.bufferTargetIdx = thIdx; 
                     let distToAlly = Math.hypot(ally.x - this.x, ally.y - this.y);
                     if (isAllBuffed && distToAlly < 100) { tx = this.x; ty = this.y; this.drawOffsetX = 0; this.drawOffsetY = 0; }
