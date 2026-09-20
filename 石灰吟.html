@@ -4262,9 +4262,10 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
         // 5. 打開我方建築視野
         towers.forEach(t => {
             if (t.owner !== 'enemy' && !t.isDestroyed) {
-                let s = BUILDINGS[t.id].size || 1;
-                // 防禦塔視野 = 射程 + 100，一般資源/軍營視野固定 150
-                let r = (BUILDINGS[t.id].type === 'attack') ? (60 + BUILDINGS[t.id].range * 30 + t.level * 10 + 100) : 150;
+                let bData = BUILDINGS[t.id];
+                let s = bData.size || 1;
+                // 【純數據驅動】：優先讀取建築的 visionRange，若無則防呆計算預設值
+                let r = bData.visionRange || ((bData.type === 'attack') ? (60 + bData.range * 30 + t.level * 10 + 100) : 150);
                 revealVision(t.x * TILE_SIZE + (TILE_SIZE * s) / 2, t.y * TILE_SIZE + (TILE_SIZE * s) / 2, r);
             }
         });
@@ -4272,7 +4273,9 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
         // 6. 打開我方部隊與將領視野
         playerUnits.forEach(p => {
             if (!p.isDying) {
-                revealVision(p.x + p.drawOffsetX, p.y + p.drawOffsetY, p.range + 120);
+                // 【純數據驅動】：優先讀取角色的 visionRange，若無則防呆使用 (攻擊距離 + 120)
+                let r = p.unitData.visionRange || (p.range + 120);
+                revealVision(p.x + p.drawOffsetX, p.y + p.drawOffsetY, r);
             }
         });
 
