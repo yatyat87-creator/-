@@ -55,7 +55,9 @@
         <div class="section-title">基礎戰鬥數值</div>
         <div class="form-group"><label>攻擊力 (Dmg)</label><input type="number" id="c-dmg" value="2.0" step="0.1" oninput="updateCode()"></div>
         <div class="form-group"><label>攻擊距離 (Range)</label><input type="number" id="c-range" value="1.0" step="0.1" oninput="updateCode()"></div>
-        <div class="form-group"><label>移動速度 (MoveSpd)</label><input type="number" id="c-spd" value="1.2" step="0.1" oninput="updateCode()"></div>
+        <!-- 👇 新增這行 👇 -->
+        <div class="form-group"><label>視野範圍 (Vision)</label><input type="number" id="c-vision" value="200" step="10" oninput="updateCode()"></div>
+        <!-- 👆 新增這行 👆 -->        <div class="form-group"><label>移動速度 (MoveSpd)</label><input type="number" id="c-spd" value="1.2" step="0.1" oninput="updateCode()"></div>
         <div class="form-group"><label>攻擊速度 (AtkSpd)</label><input type="number" id="c-atkspd" value="1.0" step="0.1" oninput="updateCode()"></div>
         <div class="form-group"><label>血量倍率 (HpMult)</label><input type="number" id="c-hp" value="2.0" step="0.1" oninput="updateCode()"></div>
         <div class="form-group"><label>免疫擊退 (霸體)</label><input type="checkbox" id="c-kb-immune" onchange="updateCode()"></div>
@@ -241,7 +243,7 @@
         
         let code = `        "${id}": { \n`;
         code += `            id: "${id}", name: "${document.getElementById('c-name').value}", symbol: "${document.getElementById('c-symbol').value}", color: "${document.getElementById('c-color').value}",\n`;
-        code += `            dmg: ${document.getElementById('c-dmg').value}, range: ${document.getElementById('c-range').value}, moveSpd: ${document.getElementById('c-spd').value}, atkSpd: ${document.getElementById('c-atkspd').value}, hpMult: ${document.getElementById('c-hp').value}, drawScale: ${document.getElementById('c-scale').value}`;
+        code += `            dmg: ${document.getElementById('c-dmg').value}, range: ${document.getElementById('c-range').value}, moveSpd: ${document.getElementById('c-spd').value}, atkSpd: ${document.getElementById('c-atkspd').value}, hpMult: ${document.getElementById('c-hp').value}, drawScale: ${document.getElementById('c-scale').value}, visionRange: ${document.getElementById('c-vision').value}`;
         
         if (document.getElementById('c-img').value) code += `,\n            imgSrc: "${document.getElementById('c-img').value}"`;
         if (document.getElementById('c-img2').value) {
