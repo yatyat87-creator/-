@@ -120,6 +120,10 @@
     <div id="setup-screen">
         <div class="title">石灰吟(終局版)</div>
         <div class="gold-display">💰 金幣: <span id="gold-count">0</span></div>
+        <div class="section-title">🗺️ 選擇作戰地圖</div>
+        <div id="map-selection-container" style="display:flex; justify-content:center; gap:15px; margin-bottom:15px; font-weight:bold; font-size:14px; flex-wrap: wrap;">
+            <!-- 地圖選項會由 JavaScript 自動生成 -->
+        </div>
         <div class="section-title">🌟 選擇難度 (決定敵軍最高強度與等級差)</div>
         <div style="display:flex; justify-content:center; gap:15px; margin-bottom:15px; font-weight:bold; font-size:14px;">
             <label><input type="radio" name="difficulty" value="15" data-offset="1" checked> 🟢 簡單 (上限Lv.15, 敵方-2級)</label>
@@ -359,6 +363,58 @@
             ],
             // 使用代碼快速生成原本的前20行山地(2)，後20行草地(0)的矩陣
             terrain: Array(40).fill(0).map((_, i) => Array(20).fill(i < 20 ? 2 : 0))
+        },        
+        "level_2": {
+            name: "自訂關卡",
+            cols: 20,
+            rows: 40,
+            playerBase: { x: 17, y: 37, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 },
+            enemyBase: { x: 2, y: 2, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 },
+            pathCoords: [
+                {x:3, y:3}, {x:4, y:3}, {x:5, y:3}, {x:6, y:3}, {x:6, y:4}, {x:6, y:5}, {x:5, y:5}, {x:5, y:6}, {x:5, y:7}, {x:5, y:8}, {x:5, y:9}, {x:5, y:10}, {x:5, y:11}, {x:5, y:12}, {x:5, y:13}, {x:6, y:13}, {x:6, y:14}, {x:6, y:15}, {x:6, y:16}, {x:6, y:17}, {x:6, y:18}, {x:6, y:19}, {x:6, y:20}, {x:7, y:20}, {x:7, y:21}, {x:7, y:22}, {x:7, y:23}, {x:7, y:24}, {x:7, y:25}, {x:7, y:26}, {x:8, y:26}, {x:9, y:26}, {x:10, y:26}, {x:10, y:27}, {x:11, y:27}, {x:11, y:28}, {x:12, y:28}, {x:13, y:28}, {x:13, y:29}, {x:14, y:29}, {x:15, y:29}, {x:15, y:30}, {x:15, y:31}, {x:16, y:31}, {x:16, y:32}, {x:16, y:33}, {x:16, y:34}, {x:16, y:35}, {x:16, y:36}, {x:16, y:37}, {x:17, y:37}
+            ],
+            terrain: [
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            ]
         }
     };
     // --- 建築物與兵種資料庫 ---
@@ -645,11 +701,13 @@ const EFFECT_IMGS = {
         // 【修正】：迴圈要跑到 40，才能覆蓋整張長地圖！
             for (let r = 0; r < mapRows; r++) { for (let c = 0; c < mapCols; c++) {
                 
-                // 1. 先判斷這格是什麼地形
+                // 1. 讀取地圖矩陣資料，精準判斷這格地形
+                let terrainVal = (currentTerrain[r] && currentTerrain[r][c] !== undefined) ? currentTerrain[r][c] : 0;
                 let terrain = 'grass';
-                if (isPath(c, r)) terrain = 'path';
-                // 【修正】：山地的楚河漢界是 20，小於 20 才是山地！
-                else if (r < 20) terrain = 'mountain';
+                
+                if (isPath(c, r) || terrainVal === 1) terrain = 'path';
+                else if (terrainVal === 2) terrain = 'mountain';
+                else if (terrainVal === 3) terrain = 'water'; // 深淵/水不會長東西
 
                 // 2. 決定是否要長出裝飾物 (將機率微調到 20% 讓草地更豐富)
                 if (Math.random() < 0.20) {
@@ -688,6 +746,18 @@ const EFFECT_IMGS = {
 
     // --- 大廳邏輯 ---
     function updateLobbyUI() {
+        // 【新增】：自動掃描 MAP_DATABASE 並生成地圖選項
+        const mapContainer = document.getElementById('map-selection-container');
+        // 【修復】：改用 children.length 判斷，避免被 HTML 註解干擾
+        if (mapContainer && mapContainer.children.length === 0) {
+            mapContainer.innerHTML = ''; // 清空裡面的註解
+            let isFirst = true;
+            for (let key in MAP_DATABASE) {
+                mapContainer.innerHTML += `<label><input type="radio" name="map_select" value="${key}" ${isFirst ? 'checked' : ''}> 🗺️ ${MAP_DATABASE[key].name}</label>`;
+                isFirst = false;
+            }
+        }
+
         document.getElementById('gold-count').innerText = playerGold;
         
         // 1. 更新基本兵種 UI
@@ -816,6 +886,10 @@ const EFFECT_IMGS = {
 
     // 【修改】：極致穩定的開始遊戲函式
     window.startGame = function() {
+        // 【新增】：讀取玩家選擇的地圖 ID
+        let selectedMap = document.querySelector('input[name="map_select"]:checked');
+        if (selectedMap) currentLevel = selectedMap.value;
+
         // 讀取難度天花板與等級偏移量
         let selectedDiff = document.querySelector('input[name="difficulty"]:checked');
         maxDifficultyLevel = parseInt(selectedDiff.value);
@@ -848,6 +922,7 @@ const EFFECT_IMGS = {
         canvas.width = mapWidth * dpr; 
         canvas.height = mapHeight * dpr;
         canvas.style.maxWidth = mapWidth + "px"; // 讓 CSS 配合放大縮小
+        document.getElementById('canvas-container').style.maxWidth = mapWidth + "px"; // 【修復】：同時釋放容器外框限制
         
         // 【核心修復】：畫布尺寸改變會重置畫筆，必須重新套用高畫質縮放比例！
         ctx.scale(dpr, dpr); 
@@ -1984,13 +2059,19 @@ window.startBattlePhase = function() {
             if (existingMeihu.length >= 1) return "⚠️ 美湖居只可以起一座！";
         }
 
-        let overlapPath = false; let overlapBuilding = false; let inBaseRing = false;
+        let overlapPath = false; let overlapBuilding = false; let inBaseRing = false; 
+        let invalidTerrain = false; // 👈 新增變數記錄惡劣地形
+
         for (let dx = 0; dx < bSize; dx++) {
             for (let dy = 0; dy < bSize; dy++) {
                 let cx = tx + dx; let cy = ty + dy;
                 if (isPath(cx, cy)) overlapPath = true;
                 let tAt = getTowerAt(cx, cy);
                 if (tAt && tAt !== towerToIgnore) overlapBuilding = true;
+                
+                // 【新增】：檢查是否為山地(2) 或深淵(3)
+                let terrainVal = (currentTerrain[cy] && currentTerrain[cy][cx] !== undefined) ? currentTerrain[cy][cx] : 0;
+                if (terrainVal === 2 || terrainVal === 3) invalidTerrain = true;
                 
                 // 【修復 2】：檢查是否踩進雙方主堡專用的 4x4 圍城區 (16格絕對禁建區)
                 if (cx >= 1 && cx <= 4 && cy >= 1 && cy <= 4) inBaseRing = true;
@@ -2001,6 +2082,7 @@ window.startBattlePhase = function() {
         if (inBaseRing) return "⚠️ 無法在主堡周圍的圍城專用陣地上建造！";
         if (bData.id !== 'gate' && overlapPath) return "⚠️ 不能蓋在道路上！";
         if (overlapBuilding) return "⚠️ 空間不足，已有建築！";
+        if (invalidTerrain) return "⚠️ 無法在山地或深淵等障礙物上建造！"; // 👈 新增地形警告
 
         // ==========================================
         // 【核心修復】：全建築連通性檢查 (BFS)
@@ -3006,12 +3088,11 @@ class PlayerUnit {
                 // 蝴蝶 (Wander) 與 小鳥 (Peck)：【強制只在草地上生成】
                 let foundGrass = false;
                 while (!foundGrass) {
-                    let c = Math.floor(Math.random() * 20);
-                    // 【修正】：Y 軸範圍拉大到 40
-                    let r = Math.floor(Math.random() * 40);
-                    
-                    // 草地判定條件：不是道路，且屬於玩家半場 (r >= 20)
-                    if (!isPath(c, r) && r >= 20) {
+                let c = Math.floor(Math.random() * mapCols);
+                let r = Math.floor(Math.random() * mapRows);
+                
+                // 【修復】：動態適應半場
+                if (!isPath(c, r) && r >= mapRows / 2) {
                         this.x = c * TILE_SIZE + Math.random() * TILE_SIZE;
                         this.y = r * TILE_SIZE + Math.random() * TILE_SIZE;
                         foundGrass = true;
@@ -3558,14 +3639,28 @@ class PlayerUnit {
             ctx.drawImage(img, sx, 0, frameWidth, frameHeight, dx, dy, TILE_SIZE, TILE_SIZE);
         };
 
-        for (let r = 0; r < 40; r++) { // 總行數變成 40
-            for (let c = 0; c < 20; c++) {
+for (let r = 0; r < mapRows; r++) { 
+            for (let c = 0; c < mapCols; c++) { 
                 let dx = c * TILE_SIZE, dy = r * TILE_SIZE;
-                if (isPath(c, r)) { 
+                
+                // 【終極解鎖】：讀取真正的地形矩陣資料！(防呆預設為 0 草地)
+                let terrainVal = (currentTerrain[r] && currentTerrain[r][c] !== undefined) ? currentTerrain[r][c] : 0;
+
+                // 1. 道路 (代號: 1 或自動尋路區域)
+                if (isPath(c, r) || terrainVal === 1) { 
                     if (TERRAIN_IMGS.path && TERRAIN_IMGS.path.complete && !TERRAIN_IMGS.path.isFailed && TERRAIN_IMGS.path.naturalWidth > 0) { 
                         drawAnimatedTerrain(TERRAIN_IMGS.path, dx, dy); 
                     } else { ctx.fillStyle = '#c49f81'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); }
-                } else if (r < 20) { // 山地與草地的交界移至中線 20
+                } 
+                // 2. 深淵 / 死水區 (代號: 3)
+                else if (terrainVal === 3) {
+                    ctx.fillStyle = '#2c3e50'; // 深藍黑色
+                    ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                    ctx.strokeStyle = '#34495e'; 
+                    ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                } 
+                // 3. 山地障礙 (代號: 2)
+                else if (terrainVal === 2) { 
                     let validMntImgs = TERRAIN_IMGS.mountain.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
                     if (validMntImgs.length > 0) { 
                         let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
@@ -3577,7 +3672,9 @@ class PlayerUnit {
                     } else { 
                         ctx.fillStyle = '#7f8c8d'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#95a5a6'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
                     }
-                } else { 
+                } 
+                // 4. 草地平原 (代號: 0)
+                else { 
                     let validGrassImgs = TERRAIN_IMGS.grass.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
                     if (validGrassImgs.length > 0) { 
                         let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
@@ -3622,8 +3719,8 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             ctx.shadowBlur = 20; 
             
             ctx.beginPath();
-            for(let r=20; r<40; r++){ // 玩家建造區改為 20~39
-                for(let c=0; c<20; c++){
+            for(let r = Math.floor(mapRows / 2); r < mapRows; r++){ // 【修復】：動態玩家半場
+                for(let c = 0; c < mapCols; c++){ // 【修復】：動態寬度
                     let inRange = false;
                     
                     // 1. 主堡 3 格範圍 (絕對置中於 17, 17)
