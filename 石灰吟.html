@@ -1957,12 +1957,36 @@ window.startBattlePhase = function() {
     ctx.scale(dpr, dpr); ctx.imageSmoothingEnabled = true; 
     const TILE_SIZE = 40;
 
-    // 👇👇 新增：迷霧專屬畫布 👇👇
+    // 👇👇 新增：迷霧專屬畫布與效能優化系統 👇👇
     const fogCanvas = document.createElement('canvas');
     fogCanvas.width = mapWidth; 
     fogCanvas.height = mapHeight;
     const fogCtx = fogCanvas.getContext('2d');
+    
+    // 【效能優化】：迷霧光源快取系統 (避免手機每幀重算漸層導致嚴重卡頓)
+    const cachedLightMap = new Map();
+    function getLightImage(radius) {
+        let key = Math.round(radius / 10) * 10; // 將半徑四捨五入到 10 的倍數，提高快取共用率
+        if (cachedLightMap.has(key)) return cachedLightMap.get(key);
+
+        let tempCanvas = document.createElement('canvas');
+        tempCanvas.width = key * 2;
+        tempCanvas.height = key * 2;
+        let tempCtx = tempCanvas.getContext('2d');
+
+        let grad = tempCtx.createRadialGradient(key, key, key * 0.4, key, key, key);
+        grad.addColorStop(0, 'rgba(0,0,0,1)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        tempCtx.fillStyle = grad;
+        tempCtx.beginPath();
+        tempCtx.arc(key, key, key, 0, Math.PI * 2);
+        tempCtx.fill();
+
+        cachedLightMap.set(key, tempCanvas);
+        return tempCanvas;
+    }
     // 👆👆 新增結束 👆👆
+
     
     // 【動態生成】：根據雙方主堡當前位置，自動計算外圍的 12 宮格圍城陣地！
     const enemyRing = [], playerRing = [];
@@ -2058,6 +2082,13 @@ window.startBattlePhase = function() {
             let existingMeihu = towers.filter(t => t.id === 'meihu' && t !== towerToIgnore && (!t.owner || t.owner === 'player'));
             if (existingMeihu.length >= 1) return "⚠️ 美湖居只可以起一座！";
         }
+
+        // 【新增】：攻城廠限制
+        if (bData.id === 'siege_workshop') {
+            let existingSiege = towers.filter(t => t.id === 'siege_workshop' && t !== towerToIgnore && (!t.owner || t.owner === 'player'));
+            if (existingSiege.length >= 1) return "⚠️ 攻城廠只可以起一座！";
+        }
+
 
         let overlapPath = false; let overlapBuilding = false; let inBaseRing = false; 
         let invalidTerrain = false; // 👈 新增變數記錄惡劣地形
@@ -4366,16 +4397,12 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
         // 2. 切換為「擦除」模式，準備像橡皮擦一樣挖開視野
         fogCtx.globalCompositeOperation = 'destination-out';
 
-        // 3. 定義開視野函數 (使用放射漸層，讓視野邊緣柔和融合)
+        // 3. 定義開視野函數 (改用超高速度的 drawImage 快取模式)
         const revealVision = (vx, vy, radius) => {
-            let grad = fogCtx.createRadialGradient(vx, vy, radius * 0.4, vx, vy, radius);
-            grad.addColorStop(0, 'rgba(0,0,0,1)'); // 中心完全清晰
-            grad.addColorStop(1, 'rgba(0,0,0,0)'); // 邊緣漸漸模糊
-            fogCtx.fillStyle = grad;
-            fogCtx.beginPath();
-            fogCtx.arc(vx, vy, radius, 0, Math.PI * 2);
-            fogCtx.fill();
+            let lightImg = getLightImage(radius);
+            fogCtx.drawImage(lightImg, vx - lightImg.width / 2, vy - lightImg.width / 2, lightImg.width, lightImg.width);
         };
+
 
         // 4. 打開我方主堡視野 (半徑 350，確保家裡是亮的)
         revealVision(playerBase.x * TILE_SIZE + TILE_SIZE, playerBase.y * TILE_SIZE + TILE_SIZE, 350);
