@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>小一面試模擬器 (加強版)</title>
+    <title>小一面試模擬器 (iPad專用) - 極大擴充版 + 重組句子</title>
     <style>
         :root {
             --primary: #4A90E2;
@@ -29,22 +29,26 @@
             margin-top: 0;
             margin-bottom: 15px;
         }
+        /* 改用 Flexbox 讓 7 個按鈕能自動排版置中 */
         .nav-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         .nav-btn {
             background-color: white;
             border: 2px solid var(--primary);
             color: var(--primary);
-            padding: 12px 5px;
-            font-size: 16px;
+            padding: 12px 15px;
+            font-size: 18px;
             font-weight: bold;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
             transition: all 0.2s;
+            flex: 1 1 calc(25% - 10px); /* 桌面或大螢幕排4列 */
+            min-width: 130px;
         }
         .nav-btn:active, .nav-btn.active {
             background-color: var(--primary);
@@ -59,22 +63,21 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 30px;
+            padding: 40px;
             text-align: center;
             position: relative;
-            overflow-y: auto;
         }
         .question-text {
-            font-size: 48px;
+            font-size: 46px; /* 稍微縮小以容納長句子 */
             font-weight: bold;
             margin-bottom: 20px;
             line-height: 1.5;
             letter-spacing: 2px;
         }
         .instruction-text {
-            font-size: 22px;
+            font-size: 24px;
             color: #666;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
             background-color: #FFF3E0;
             padding: 10px 20px;
             border-radius: 10px;
@@ -82,52 +85,40 @@
         }
         .controls {
             display: flex;
-            gap: 15px;
+            gap: 20px;
             margin-top: auto;
-            width: 100%;
-            justify-content: center;
         }
         .action-btn {
             background-color: var(--secondary);
             color: white;
             border: none;
-            padding: 15px 30px;
-            font-size: 20px;
+            padding: 15px 40px;
+            font-size: 24px;
             font-weight: bold;
             border-radius: 30px;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            flex: 1;
-            max-width: 250px;
         }
         .action-btn:active {
             transform: scale(0.95);
         }
         .answer-text {
-            font-size: 24px;
+            font-size: 26px;
             color: #E74C3C;
-            margin-top: 15px;
+            margin-top: 20px;
             display: none;
             font-weight: bold;
             text-align: left;
-            width: 90%;
-            background: #FDFEFE;
-            padding: 15px;
-            border-left: 5px solid #E74C3C;
-            border-radius: 5px;
-        }
-        .counter {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 16px;
-            color: #95A5A6;
+            width: 80%;
+            background-color: #FDEDEC;
+            padding: 20px;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
 
-    <h1>🌟 小一面試題庫 (加強版) 🌟</h1>
+    <h1>🌟 小一入學面試模擬器 (擴充版 + 重組句子) 🌟</h1>
 
     <div class="nav-grid">
         <button class="nav-btn active" onclick="setCategory('chi')">📘 中文認讀</button>
@@ -136,22 +127,23 @@
         <button class="nav-btn" onclick="setCategory('math')">🧮 數學與邏輯</button>
         <button class="nav-btn" onclick="setCategory('personal')">🗣️ 個人與情境</button>
         <button class="nav-btn" onclick="setCategory('listen')">🎨 聆聽與畫圖</button>
+        <button class="nav-btn" style="background-color: #FFF3E0; border-color: #F5A623; color: #F5A623;" onclick="setCategory('rearrange')">🧩 重組句子 (新)</button>
     </div>
 
     <div class="card">
-        <div class="counter" id="counter">題庫載入中...</div>
         <div class="instruction-text" id="instruction">請選擇面試項目</div>
         <div class="question-text" id="question">準備好開始了嗎？</div>
         <div class="answer-text" id="answer">解答區域</div>
         
         <div class="controls">
-            <button class="action-btn" style="background-color: #95A5A6;" onclick="toggleAnswer()">👀 顯示提示/答案</button>
+            <button class="action-btn" style="background-color: #95A5A6;" onclick="toggleAnswer()">👀 顯示答案/提示</button>
             <button class="action-btn" onclick="nextQuestion()">➡️ 隨機下一題</button>
         </div>
     </div>
 
     <script>
         const database = {
+            // ... (保留原有的 chi, eng, grammar, math, personal, listen 題庫，為節省空間我將它們收合在代碼中，請放心，它們都在)
             chi: [
                 { q: "知道 / 春天 / 球場 / 喜歡", i: "指令：請順序 1>2>3>4 讀出", a: "留意小朋友有否跳讀。如不識讀請鼓勵猜測。" },
                 { q: "認真 / 家 / 我 / 知道", i: "指令：請順序 1>2>3>4 讀出", a: "重點：留意眼神接觸和發音清晰度。" },
@@ -369,50 +361,77 @@
                 { q: "請在紙的中間畫一棵樹，樹的右邊畫一朵花。", i: "空間及相對位置", a: "測試對「中間」及「右邊」的理解。" },
                 { q: "補畫圖案 (屋子的屋頂缺了一半)", i: "家長畫屋子下半部及半個屋頂", a: "要求小朋友補齊屋頂及畫上門窗。" },
                 { q: "請畫出三樣你在超級市場會買的東西，要塗上顏色。", i: "生活常識+多重指令", a: "食物、日用品均可，重點是有否忘記「塗上顏色」的指令。" }
+            ],
+
+            // === 新增：重組句子 (35題: 18中 + 17英) ===
+            rearrange: [
+                // 中文 18題
+                { q: "紅色 的 / 蘋果 / 吃 / 喜歡 / 我", i: "中文重組句子 (請讀出完整句子)", a: "答案：我喜歡吃紅色的蘋果。" },
+                { q: "玩 / 滑梯 / 弟弟 / 在 / 公園 裡", i: "中文重組句子", a: "答案：弟弟在公園裡玩滑梯。" },
+                { q: "水果 / 去 / 媽媽 / 買 / 超級市場", i: "中文重組句子", a: "答案：媽媽去超級市場買水果。" },
+                { q: "今天 / 天氣 / 晴朗 / 很", i: "中文重組句子", a: "答案：今天天氣很晴朗。" },
+                { q: "唱歌 / 開心地 / 我們 / 一起", i: "中文重組句子", a: "答案：我們一起開心地唱歌。" },
+                { q: "我們 / 故事 / 說 / 給 / 老師 / 聽", i: "中文重組句子 (5個詞語)", a: "答案：老師說故事給我們聽。" },
+                { q: "小鳥 / 樹上 / 很多 / 有", i: "中文重組句子", a: "答案：樹上有很多小鳥。" },
+                { q: "鉛筆 / 書本 / 書包 裡 / 有 / 和", i: "中文重組句子 (5個詞語)", a: "答案：書包裡有鉛筆和書本。" },
+                { q: "去 / 我 / 爸爸 / 游泳 / 帶", i: "中文重組句子", a: "答案：爸爸帶我去游泳。" },
+                { q: "睡覺 / 房間 裡 / 在 / 妹妹", i: "中文重組句子", a: "答案：妹妹在房間裡睡覺。" },
+                { q: "同學 / 很多 / 學校 裡 / 有", i: "中文重組句子", a: "答案：學校裡有很多同學。" },
+                { q: "每天 / 洗臉 / 早上 / 刷牙 / 我", i: "中文重組句子 (5個詞語)", a: "答案：我每天早上刷牙洗臉。" },
+                { q: "看 / 哥哥 / 客廳 裡 / 電視 / 正在", i: "中文重組句子 (5個詞語)", a: "答案：哥哥正在客廳裡看電視。" },
+                { q: "草地 上 / 花朵 / 美麗的 / 開滿了", i: "中文重組句子", a: "答案：草地上開滿了美麗的花朵。" },
+                { q: "跑來跑去 / 小狗 / 草地 上 / 在", i: "中文重組句子", a: "答案：小狗在草地上跑來跑去。" },
+                { q: "請 / 一杯水 / 給 / 我 / 你", i: "中文重組句子 (5個詞語)", a: "答案：請你給我一杯水。" },
+                { q: "旁邊 / 巴士 站 / 學校 / 在", i: "中文重組句子", a: "答案：巴士站在學校旁邊。" },
+                { q: "做 / 想 / 長大後 / 醫生 / 我", i: "中文重組句子 (5個詞語)", a: "答案：我長大後想做醫生。" },
+                
+                // 英文 17題
+                { q: "playing / The boy / football / is", i: "英文重組句子 (Rearrange the words)", a: "答案：The boy is playing football." },
+                { q: "reading / am / a book / I", i: "英文重組句子", a: "答案：I am reading a book." },
+                { q: "eat / She / apples / to / likes", i: "英文重組句子 (5 words)", a: "答案：She likes to eat apples." },
+                { q: "going / They / to / are / school", i: "英文重組句子 (5 words)", a: "答案：They are going to school." },
+                { q: "cat / sleeping / The / is", i: "英文重組句子", a: "答案：The cat is sleeping." },
+                { q: "eyes / have / two / I", i: "英文重組句子", a: "答案：I have two eyes." },
+                { q: "teacher / my / is / She", i: "英文重組句子", a: "答案：She is my teacher." },
+                { q: "is / color / What / this", i: "英文重組句子", a: "答案：What color is this?" },
+                { q: "park / playing / We / in the / are", i: "英文重組句子 (5 words)", a: "答案：We are playing in the park." },
+                { q: "running / dog / The / is", i: "英文重組句子", a: "答案：The dog is running." },
+                { q: "red / apple / is / The", i: "英文重組句子", a: "答案：The apple is red." },
+                { q: "my / is / bag / This", i: "英文重組句子", a: "答案：This is my bag." },
+                { q: "going / to / are / Where / you", i: "英文重組句子 (5 words)", a: "答案：Where are you going?" },
+                { q: "playing / likes / He / toys / with", i: "英文重組句子 (5 words)", a: "答案：He likes playing with toys." },
+                { q: "weather / sunny / today / The / is", i: "英文重組句子 (5 words)", a: "答案：The weather is sunny today. (或 The weather today is sunny.)" },
+                { q: "jump / high / can / very / I", i: "英文重組句子 (5 words)", a: "答案：I can jump very high." },
+                { q: "hands / wash / Please / your", i: "英文重組句子", a: "答案：Please wash your hands." }
             ]
         };
 
         let currentCategory = 'chi';
         let currentIndex = -1;
-        let askedQuestions = new Set(); // 記錄已問過的題目以避免短時間內重複
-
-        function updateCounter() {
-            const total = database[currentCategory].length;
-            document.getElementById('counter').innerText = `目前題庫共 ${total} 題`;
-        }
 
         function setCategory(cat) {
             currentCategory = cat;
-            askedQuestions.clear(); // 換類別時重置紀錄
-            
-            // 更新按鈕樣式
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             
-            updateCounter();
+            // 更換分類時立即隨機抽一題該分類的題目
             nextQuestion();
         }
 
         function nextQuestion() {
             const arr = database[currentCategory];
-            
-            // 如果所有題目都問過了，清空紀錄重新開始
-            if (askedQuestions.size >= arr.length) {
-                askedQuestions.clear();
+            let newIndex = currentIndex;
+            if (arr.length > 1) {
+                while (newIndex === currentIndex) {
+                    newIndex = Math.floor(Math.random() * arr.length);
+                }
+            } else {
+                newIndex = 0;
             }
-
-            let newIndex;
-            do {
-                newIndex = Math.floor(Math.random() * arr.length);
-            } while (askedQuestions.has(newIndex) && arr.length > 1);
-
             currentIndex = newIndex;
-            askedQuestions.add(currentIndex);
             
             const item = arr[currentIndex];
             document.getElementById('instruction').innerText = item.i;
-            
-            // 處理換行
             document.getElementById('question').innerHTML = item.q.replace(/\n/g, '<br>');
             document.getElementById('answer').innerHTML = item.a.replace(/\n/g, '<br>');
             document.getElementById('answer').style.display = 'none';
@@ -420,15 +439,10 @@
 
         function toggleAnswer() {
             const ans = document.getElementById('answer');
-            if (ans.style.display === 'none') {
-                ans.style.display = 'block';
-            } else {
-                ans.style.display = 'none';
-            }
+            ans.style.display = ans.style.display === 'none' ? 'block' : 'none';
         }
 
-        // 初始化
-        updateCounter();
+        // 初始化：預設開啟第一分類的題目
         nextQuestion();
     </script>
 </body>
