@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>小一面試模擬器 (iPad專用)</title>
+    <style>
+        :root {
+            --primary: #4A90E2;
+            --secondary: #F5A623;
+            --bg: #F0F4F8;
+            --text: #333333;
+        }
+        body {
+            font-family: "PingFang HK", "Microsoft JhengHei", sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            font-size: 28px;
+            margin-top: 0;
+        }
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .nav-btn {
+            background-color: white;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            padding: 15px 10px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .nav-btn:active, .nav-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+        .card {
+            flex: 1;
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+        }
+        .question-text {
+            font-size: 56px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            line-height: 1.4;
+            letter-spacing: 2px;
+        }
+        .instruction-text {
+            font-size: 24px;
+            color: #666;
+            margin-bottom: 30px;
+            background-color: #FFF3E0;
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 1px dashed var(--secondary);
+        }
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-top: auto;
+        }
+        .action-btn {
+            background-color: var(--secondary);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+        .answer-text {
+            font-size: 28px;
+            color: #E74C3C;
+            margin-top: 20px;
+            display: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🌟 小一入學 1:1 模擬面試系統 🌟</h1>
+
+    <div class="nav-grid">
+        <button class="nav-btn active" onclick="setCategory('chi')">📘 中文認讀</button>
+        <button class="nav-btn" onclick="setCategory('eng')">📕 英文認讀</button>
+        <button class="nav-btn" onclick="setCategory('grammar')">✏️ 英文文法</button>
+        <button class="nav-btn" onclick="setCategory('math')">🧮 數學與邏輯</button>
+        <button class="nav-btn" onclick="setCategory('personal')">🗣️ 個人與情境</button>
+        <button class="nav-btn" onclick="setCategory('listen')">🎨 聆聽與畫圖</button>
+    </div>
+
+    <div class="card">
+        <div class="instruction-text" id="instruction">請選擇面試項目</div>
+        <div class="question-text" id="question">準備好開始了嗎？</div>
+        <div class="answer-text" id="answer">解答區域</div>
+        
+        <div class="controls">
+            <button class="action-btn" style="background-color: #95A5A6;" onclick="toggleAnswer()">👀 顯示家長提示/答案</button>
+            <button class="action-btn" onclick="nextQuestion()">➡️ 隨機下一題</button>
+        </div>
+    </div>
+
+    <script>
+        const database = {
+            chi: [
+                { q: "知道 / 春天 / 球場 / 喜歡", i: "指令：請順序 1>2>3>4 讀出", a: "留意小朋友有否跳讀或不按次序。如不識讀請鼓勵他們嘗試猜測。" },
+                { q: "認真 / 家 / 我 / 知道", i: "指令：請順序 1>2>3>4 讀出", a: "重點：留意眼神接觸和發音清晰度。" },
+                { q: "快樂 / 學校 / 老師 / 同學", i: "指令：請由左至右順序讀出", a: "額外題：用作測試同類型認讀能力。" },
+                { q: "公園 / 玩耍 / 太陽 / 溫暖", i: "指令：請由右至左讀出 (反向測試)", a: "測試小朋友有否留心聆聽突發指令。" }
+            ],
+            eng: [
+                { q: "eat / animal / friends / it", i: "指令：Read the words in order (A>B>C>D)", a: "注意 animal 和 friends(眾數s) 的發音。" },
+                { q: "me / bicycle / vegetable / she", i: "指令：Read the words in order (A>B>C>D)", a: "注意 vegetable (veg-ta-ble) 的正確發音。" },
+                { q: "play / school / teacher / apple", i: "指令：Read the words in order", a: "額外題：測試基礎詞彙。" },
+                { q: "圖字配對：Vegetables", i: "指令：請在iPad/桌上選出代表 Vegetables 的圖案", a: "家長請準備幾張圖卡（如水果、蔬菜、動物）讓小朋友指認。" }
+            ],
+            grammar: [
+                { q: "_____ girl is cycling.", i: "Fill in the blank (They / The / She)", a: "答案：The (The girl is cycling.)" },
+                { q: "_____ cat is sleeping.", i: "Fill in the blank (It / A / An)", a: "答案：A (A cat is sleeping.)" },
+                { q: "He _____ my grandfather.", i: "Fill in the blank (am / are / is / the)", a: "答案：is (He is my grandfather.)" },
+                { q: "_____ is my mother.", i: "Fill in the blank (He / We / She / They)", a: "答案：She (She is my mother.)" },
+                { q: "I _____ a boy.", i: "Fill in the blank (am / are / is)", a: "答案：am (額外題)" }
+            ],
+            math: [
+                { q: "請排列數字：12, 5, 46, 27, 83", i: "指令：請由【小至大】排列，並用上 < 符號", a: "答案：5 < 12 < 27 < 46 < 83" },
+                { q: "請排列數字：18, 9, 32, 55, 2", i: "指令：請由【大至小】排列，並用上 > 符號", a: "答案：55 > 32 > 18 > 9 > 2 (測試聽清楚指令)" },
+                { q: "用這四個數字組成算式：4, 6, 8, 10", i: "指令：請抽出三個數字，組成一道算式", a: "答案：4 + 6 = 10 或 10 - 6 = 4 或 10 - 4 = 6" },
+                { q: "用這四個數字組成算式：1, 2, 4, 5", i: "指令：請抽出三個數字，組成一道算式", a: "答案：1 + 4 = 5 或 5 - 4 = 1 或 5 - 1 = 4" },
+                { q: "7 + ( ? ) = 12", i: "填寫缺少的數字", a: "答案：5" },
+                { q: "9 + ( ? ) = 15", i: "填寫缺少的數字", a: "答案：6" },
+                { q: "4, 6, __, __, 12, 14", i: "數理排序", a: "答案：8, 10 (雙數遞增)" },
+                { q: "🧡 💛 💚 ___ 💛 💚 🧡", i: "圖像排序", a: "答案：🧡 (對稱/循環邏輯)" },
+                { q: "❤️ ❌ ✅, __, ❌ ✅", i: "圖像排序", a: "答案：❤️" }
+            ],
+            personal: [
+                { q: "你叫咩名？你幾多歲？", i: "個人問題", a: "要清晰完整作答，例如：我叫陳大文，今年6歲。" },
+                { q: "你讀邊間學校呀？响邊度？", i: "個人問題", a: "要求連街道名都講得出。例如：我間學校喺土瓜灣嘅天光道。" },
+                { q: "今日邊個帶你嚟？你點樣嚟我哋學校？", i: "個人問題", a: "要求清楚說明：爸爸帶我坐港鐵，由XX站去到柴灣站。" },
+                { q: "上堂時，老師教嘅嘢你唔明你會點做？你示範吓點問？", i: "情境題", a: "答：我會舉手問老師。\n示範：(舉手)老師我唔係好明，請問可唔可以講多一次呀？" },
+                { q: "如果老師講多一次你都唔明呢？", i: "情境題追問", a: "答：咁我會試吓問爸爸媽媽 / 問同學。" },
+                { q: "媽媽買了一片蛋糕，不會再買，但你和姐姐都很想吃，你會怎樣做？", i: "情景解難", a: "重點：測試分享與解決衝突能力 (例如：我會同家姐一人一半分享)。" },
+                { q: "你和媽媽在小巴，但落錯車，你會怎樣做？", i: "情景解難", a: "重點：測試冷靜與求助能力 (例如：我會拖實媽媽唔好周圍走，等媽媽搵路/睇地圖)。" },
+                { q: "好朋友生日，但媽媽沒有時間帶你去生日會，你會怎樣做？", i: "情景解難", a: "重點：體諒家人及替代方案 (例如：我會自己畫張生日卡送俾佢，下次再同佢慶祝)。" },
+                { q: "熱身遊戲：人形包剪揼 (相反指令)", i: "活動指令", a: "家長出剪，小朋友要特登出包輸俾你。測試聽指令及反應。" },
+                { q: "熱身遊戲：動物找媽媽", i: "活動指令", a: "家長遞卡給小朋友。測試有否主動開口溝通：「請問你張卡係咪兔仔媽媽呀？」而不是直接質張卡俾對方睇（出貓）。" }
+            ],
+            listen: [
+                { q: "請用指定的三種顏色筆寫出你的名字。", i: "聆聽指令 (給予紙筆)", a: "家長請隨機指定三種顏色 (如紅、藍、黃)，看小朋友是否聽從指令及揸筆姿勢。" },
+                { q: "請畫出在陸地上居住的動物。", i: "聆聽指令畫圖", a: "只要是陸地動物即可 (如貓、狗、獅子)，不可畫魚或雀鳥。" },
+                { q: "請畫出【不是】與聖誕節有關的物件。", i: "反向聆聽指令", a: "重點在聽懂【不是】。可以畫蘋果、車、書包等，不可畫聖誕樹、禮物。" },
+                { q: "請畫出【沒有】出現在課室的東西。", i: "反向聆聽指令", a: "重點在聽懂【沒有】。可以畫床、微波爐、馬路等。" },
+                { q: "補畫圖案", i: "請在一張紙上畫半邊雪糕，要求小朋友畫餘下半邊", a: "測試對稱概念及小肌肉繪畫能力，鼓勵完成漂亮的圖畫。" }
+            ]
+        };
+
+        let currentCategory = 'chi';
+        let currentIndex = -1;
+
+        function setCategory(cat) {
+            currentCategory = cat;
+            
+            // 更新按鈕樣式
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // 重置並抽取新題目
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            const arr = database[currentCategory];
+            // 隨機抽題，但避免連續抽到同一題
+            let newIndex = currentIndex;
+            if (arr.length > 1) {
+                while (newIndex === currentIndex) {
+                    newIndex = Math.floor(Math.random() * arr.length);
+                }
+            } else {
+                newIndex = 0;
+            }
+            currentIndex = newIndex;
+            
+            const item = arr[currentIndex];
+            document.getElementById('instruction').innerText = item.i;
+            
+            // 處理換行
+            document.getElementById('question').innerHTML = item.q.replace(/\n/g, '<br>');
+            document.getElementById('answer').innerHTML = item.a.replace(/\n/g, '<br>');
+            document.getElementById('answer').style.display = 'none';
+        }
+
+        function toggleAnswer() {
+            const ans = document.getElementById('answer');
+            if (ans.style.display === 'none') {
+                ans.style.display = 'block';
+            } else {
+                ans.style.display = 'none';
+            }
+        }
+
+        // 初始化
+        nextQuestion();
+    </script>
+</body>
+</html>
