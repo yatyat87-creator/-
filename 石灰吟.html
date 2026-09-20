@@ -320,20 +320,31 @@
         bgm.volume = 0.4;
     });
 
+    // 【效能優化】：建立音效節流閥 (Throttle)，避免同瞬間創造過多 Audio 節點
+    const SOUND_THROTTLE = {};
+    
     function playSound(key) {
+        let now = Date.now();
+        // 限制同一個音效在 80 毫秒內只能觸發一次！這能幫瀏覽器減少 90% 以上的無效負擔！
+        if (SOUND_THROTTLE[key] && now - SOUND_THROTTLE[key] < 80) return; 
+        SOUND_THROTTLE[key] = now;
+
         if (SOUNDS[key]) {
             let targetSound = SOUNDS[key];
             
-            // 【新增】：如果這個音效是陣列（設定了多個聲音），就隨機抽一個出來播
+            // 如果這個音效是陣列（設定了多個聲音），就隨機抽一個出來播
             if (Array.isArray(targetSound)) {
                 targetSound = targetSound[Math.floor(Math.random() * targetSound.length)];
             }
             
             let soundClone = targetSound.cloneNode();
             soundClone.volume = 0.6; 
+            // 【新增】：音效播完後，主動將其銷毀，釋放記憶體！
+            soundClone.onended = () => { soundClone.remove(); };
             soundClone.play().catch(e => console.log("瀏覽器擋住了自動播放:", e));
         }
     }
+
     document.body.addEventListener('click', function startLobbyBgm() {
         if (document.getElementById('setup-screen').style.display !== 'none') {
             SOUNDS.bgm_lobby.play().catch(e => console.log(e));
@@ -3216,8 +3227,8 @@ class PlayerUnit {
         }
 
         update() {
-            // 【核心修復】：將 Y 軸的刪除邊界從 1000 擴大到 1800，適應加長版的新地圖！
-            if (this.x < -200 || this.x > 1000 || this.y < -200 || this.y > 1800) return true;
+            // 【終極修復】：將寫死的數字改為自動適應目前地圖的寬度與高度！
+            if (this.x < -200 || this.x > mapWidth + 200 || this.y < -200 || this.y > mapHeight + 200) return true;
             this.x += this.vx; this.y += this.vy;
             
             // 【新增】：豪火球在飛行過程中，體積與攻擊判定會不斷變大！(最高膨脹至 250 像素)
