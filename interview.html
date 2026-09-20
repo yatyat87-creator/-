@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>小一面試模擬器 (iPad專用)</title>
+    <title>小一面試模擬器 (加強版)</title>
     <style>
         :root {
             --primary: #4A90E2;
@@ -27,21 +27,22 @@
             color: var(--primary);
             font-size: 28px;
             margin-top: 0;
+            margin-bottom: 15px;
         }
         .nav-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .nav-btn {
             background-color: white;
             border: 2px solid var(--primary);
             color: var(--primary);
-            padding: 15px 10px;
-            font-size: 18px;
+            padding: 12px 5px;
+            font-size: 16px;
             font-weight: bold;
-            border-radius: 12px;
+            border-radius: 10px;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -58,21 +59,22 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 40px;
+            padding: 30px;
             text-align: center;
             position: relative;
+            overflow-y: auto;
         }
         .question-text {
-            font-size: 56px;
+            font-size: 48px;
             font-weight: bold;
             margin-bottom: 20px;
-            line-height: 1.4;
+            line-height: 1.5;
             letter-spacing: 2px;
         }
         .instruction-text {
-            font-size: 24px;
+            font-size: 22px;
             color: #666;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             background-color: #FFF3E0;
             padding: 10px 20px;
             border-radius: 10px;
@@ -80,35 +82,52 @@
         }
         .controls {
             display: flex;
-            gap: 20px;
+            gap: 15px;
             margin-top: auto;
+            width: 100%;
+            justify-content: center;
         }
         .action-btn {
             background-color: var(--secondary);
             color: white;
             border: none;
-            padding: 15px 40px;
-            font-size: 24px;
+            padding: 15px 30px;
+            font-size: 20px;
             font-weight: bold;
             border-radius: 30px;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            flex: 1;
+            max-width: 250px;
         }
         .action-btn:active {
             transform: scale(0.95);
         }
         .answer-text {
-            font-size: 28px;
+            font-size: 24px;
             color: #E74C3C;
-            margin-top: 20px;
+            margin-top: 15px;
             display: none;
             font-weight: bold;
+            text-align: left;
+            width: 90%;
+            background: #FDFEFE;
+            padding: 15px;
+            border-left: 5px solid #E74C3C;
+            border-radius: 5px;
+        }
+        .counter {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 16px;
+            color: #95A5A6;
         }
     </style>
 </head>
 <body>
 
-    <h1>🌟 小一入學 1:1 模擬面試系統 🌟</h1>
+    <h1>🌟 小一面試題庫 (加強版) 🌟</h1>
 
     <div class="nav-grid">
         <button class="nav-btn active" onclick="setCategory('chi')">📘 中文認讀</button>
@@ -120,12 +139,13 @@
     </div>
 
     <div class="card">
+        <div class="counter" id="counter">題庫載入中...</div>
         <div class="instruction-text" id="instruction">請選擇面試項目</div>
         <div class="question-text" id="question">準備好開始了嗎？</div>
         <div class="answer-text" id="answer">解答區域</div>
         
         <div class="controls">
-            <button class="action-btn" style="background-color: #95A5A6;" onclick="toggleAnswer()">👀 顯示家長提示/答案</button>
+            <button class="action-btn" style="background-color: #95A5A6;" onclick="toggleAnswer()">👀 顯示提示/答案</button>
             <button class="action-btn" onclick="nextQuestion()">➡️ 隨機下一題</button>
         </div>
     </div>
@@ -133,82 +153,165 @@
     <script>
         const database = {
             chi: [
-                { q: "知道 / 春天 / 球場 / 喜歡", i: "指令：請順序 1>2>3>4 讀出", a: "留意小朋友有否跳讀或不按次序。如不識讀請鼓勵他們嘗試猜測。" },
+                { q: "知道 / 春天 / 球場 / 喜歡", i: "指令：請順序 1>2>3>4 讀出", a: "留意小朋友有否跳讀。如不識讀請鼓勵猜測。" },
                 { q: "認真 / 家 / 我 / 知道", i: "指令：請順序 1>2>3>4 讀出", a: "重點：留意眼神接觸和發音清晰度。" },
-                { q: "快樂 / 學校 / 老師 / 同學", i: "指令：請由左至右順序讀出", a: "額外題：用作測試同類型認讀能力。" },
-                { q: "公園 / 玩耍 / 太陽 / 溫暖", i: "指令：請由右至左讀出 (反向測試)", a: "測試小朋友有否留心聆聽突發指令。" }
+                { q: "天氣 / 朋友 / 學習 / 高興", i: "指令：請順序讀出", a: "測試常見生活詞彙。" },
+                { q: "幫助 / 圖書 / 遊戲 / 顏色", i: "指令：請由右至左讀出 (反向測試)", a: "測試小朋友有否留心聆聽突發指令（顏色 > 遊戲 > 圖書 > 幫助）。" },
+                { q: "唱歌 / 畫畫 / 運動 / 休息", i: "指令：請讀出第2個和第4個詞語", a: "多步指令測試：小朋友需要找出「畫畫」和「休息」。" },
+                { q: "今天 / 晴天 / 巴士 / 學校", i: "指令：請指出哪一個是交通工具並讀出來", a: "要求小朋友指住「巴士」並讀出。" },
+                { q: "蘋果 / 香蕉 / 橙 / 西瓜", i: "指令：請讀出你最喜歡吃的水果，並解釋原因", a: "認字結合口語表達。例如：『我最喜歡吃蘋果，因為好甜。』" },
+                { q: "早晨 / 謝謝 / 對不起 / 再見", i: "指令：請順序讀出", a: "禮貌用語認讀。" },
+                { q: "我和弟弟去公園玩。", i: "指令：請朗讀句子", a: "留意斷句是否自然。不應讀成「我、和、弟、弟...」。" },
+                { q: "天空有白色的雲。", i: "指令：請朗讀句子", a: "測試顏色及自然詞彙認讀。" },
+                { q: "媽媽買了紅色的蘋果。", i: "指令：請朗讀句子，然後告訴我媽媽買了甚麼顏色？", a: "朗讀後測試理解能力（紅色）。" },
+                { q: "老師教我們讀書寫字。", i: "指令：請由右邊最後一隻字開始讀到左邊第一隻字。", a: "極端反向測試：字寫書讀們我教師老（測驗專注力與應變）。" },
+                { q: "貓 / 狗 / 兔 / 魚", i: "指令：請指出哪一種動物不能在陸地上走？", a: "結合常識與認讀，答案：魚。" },
+                { q: "大象 / 老鼠 / 長頸鹿 / 猴子", i: "指令：請讀出身型最大的動物", a: "答案：大象。" },
+                { q: "開心 / 傷心 / 害怕 / 生氣", i: "指令：請讀出詞語，並做一次「開心」的表情", a: "結合情感表達。" }
             ],
             eng: [
                 { q: "eat / animal / friends / it", i: "指令：Read the words in order (A>B>C>D)", a: "注意 animal 和 friends(眾數s) 的發音。" },
                 { q: "me / bicycle / vegetable / she", i: "指令：Read the words in order (A>B>C>D)", a: "注意 vegetable (veg-ta-ble) 的正確發音。" },
-                { q: "play / school / teacher / apple", i: "指令：Read the words in order", a: "額外題：測試基礎詞彙。" },
-                { q: "圖字配對：Vegetables", i: "指令：請在iPad/桌上選出代表 Vegetables 的圖案", a: "家長請準備幾張圖卡（如水果、蔬菜、動物）讓小朋友指認。" }
+                { q: "jump / read / yellow / under", i: "指令：Read the words from right to left", a: "反向測試：under > yellow > read > jump。" },
+                { q: "happy / water / chair / family", i: "指令：Read the 1st and 3rd words", a: "多步指令：happy, chair。" },
+                { q: "morning / thank you / sorry / goodbye", i: "指令：Read all words loudly and clearly", a: "日常禮貌用語發音測試。" },
+                { q: "red / blue / green / yellow", i: "指令：Read the words and point to the colour 'green'", a: "測試認字及顏色認知（可指身邊綠色的物品或直接指屏幕）。" },
+                { q: "head / shoulders / knees / toes", i: "指令：Read the word and point to your body part", a: "讀出並指出身體部位，測試理解。" },
+                { q: "I can see a big dog.", i: "指令：Read the sentence", a: "測試句子流暢度。" },
+                { q: "This is my red book.", i: "指令：Read the sentence", a: "留意 this 和 is 的發音區分。" },
+                { q: "The bird is flying.", i: "指令：Read the sentence, what is the bird doing?", a: "讀完後回答問題：flying。" },
+                { q: "We play in the park.", i: "指令：Read the sentence", a: "測試 sight words (we, in, the)。" },
+                { q: "apple / banana / orange / grape", i: "指令：Read the words, which one is yellow?", a: "答案：banana。" },
+                { q: "car / bus / train / ship", i: "指令：Which transport moves on water? Read it.", a: "答案：ship。" },
+                { q: "cat / dog / bird / fish", i: "指令：Read the words in reverse order", a: "反向：fish > bird > dog > cat" },
+                { q: "sun / moon / star / sky", i: "指令：Read the words in order", a: "自然詞彙認讀。" }
             ],
             grammar: [
                 { q: "_____ girl is cycling.", i: "Fill in the blank (They / The / She)", a: "答案：The (The girl is cycling.)" },
                 { q: "_____ cat is sleeping.", i: "Fill in the blank (It / A / An)", a: "答案：A (A cat is sleeping.)" },
                 { q: "He _____ my grandfather.", i: "Fill in the blank (am / are / is / the)", a: "答案：is (He is my grandfather.)" },
                 { q: "_____ is my mother.", i: "Fill in the blank (He / We / She / They)", a: "答案：She (She is my mother.)" },
-                { q: "I _____ a boy.", i: "Fill in the blank (am / are / is)", a: "答案：am (額外題)" }
+                { q: "I _____ a boy/girl.", i: "Fill in the blank (am / are / is)", a: "答案：am" },
+                { q: "This is _____ apple.", i: "Fill in the blank (a / an / the)", a: "答案：an (母音開頭)" },
+                { q: "The book is _____ the table.", i: "Fill in the blank (on / in / under) [家長示範把書放在桌上]", a: "答案：on" },
+                { q: "They _____ playing football.", i: "Fill in the blank (am / are / is)", a: "答案：are" },
+                { q: "_____ you like apples?", i: "Fill in the blank (Do / Does / Is)", a: "答案：Do" },
+                { q: "I have two _____.", i: "Fill in the blank (cat / cats)", a: "答案：cats (測試眾數觀念)" },
+                { q: "_____ are you? I am 6 years old.", i: "Fill in the blank (Who / How old / Where)", a: "答案：How old" },
+                { q: "_____ is he? He is my brother.", i: "Fill in the blank (Who / What / Where)", a: "答案：Who" },
+                { q: "Look at _____ bird in the sky!", i: "Fill in the blank (a / an / the)", a: "答案：the (特定事物)" },
+                { q: "My sister _____ reading a book.", i: "Fill in the blank (am / are / is)", a: "答案：is" },
+                { q: "The dog is sleeping _____ the chair.", i: "Fill in the blank (on / in / under) [家長示範躲在椅子下]", a: "答案：under" }
             ],
             math: [
                 { q: "請排列數字：12, 5, 46, 27, 83", i: "指令：請由【小至大】排列，並用上 < 符號", a: "答案：5 < 12 < 27 < 46 < 83" },
                 { q: "請排列數字：18, 9, 32, 55, 2", i: "指令：請由【大至小】排列，並用上 > 符號", a: "答案：55 > 32 > 18 > 9 > 2 (測試聽清楚指令)" },
-                { q: "用這四個數字組成算式：4, 6, 8, 10", i: "指令：請抽出三個數字，組成一道算式", a: "答案：4 + 6 = 10 或 10 - 6 = 4 或 10 - 4 = 6" },
-                { q: "用這四個數字組成算式：1, 2, 4, 5", i: "指令：請抽出三個數字，組成一道算式", a: "答案：1 + 4 = 5 或 5 - 4 = 1 或 5 - 1 = 4" },
+                { q: "請排列數字：11, 42, 33, 21, 5", i: "指令：請由【小至大】排列", a: "答案：5, 11, 21, 33, 42" },
+                { q: "請排列數字：99, 14, 67, 31, 8", i: "指令：請由【大至小】排列", a: "答案：99, 67, 31, 14, 8" },
+                { q: "用這四個數字組成算式：4, 6, 8, 10", i: "指令：請抽出三個數字，組成一道算式", a: "答案：4 + 6 = 10 或 10 - 6 = 4 等" },
+                { q: "用這四個數字組成算式：1, 2, 4, 5", i: "指令：請抽出三個數字，組成一道算式", a: "答案：1 + 4 = 5 或 5 - 4 = 1 等" },
+                { q: "用這四個數字組成算式：2, 5, 7, 9", i: "指令：請抽出三個數字，組成一道加數算式", a: "答案：2 + 5 = 7 (只能是加數)" },
                 { q: "7 + ( ? ) = 12", i: "填寫缺少的數字", a: "答案：5" },
                 { q: "9 + ( ? ) = 15", i: "填寫缺少的數字", a: "答案：6" },
-                { q: "4, 6, __, __, 12, 14", i: "數理排序", a: "答案：8, 10 (雙數遞增)" },
+                { q: "( ? ) - 4 = 6", i: "填寫缺少的數字", a: "答案：10" },
+                { q: "14 - ( ? ) = 8", i: "填寫缺少的數字", a: "答案：6" },
+                { q: "4, 6, __, __, 12, 14", i: "數理排序 (加2)", a: "答案：8, 10" },
+                { q: "5, 10, 15, __, __, 30", i: "數理排序 (加5)", a: "答案：20, 25" },
+                { q: "10, 9, __, 7, __, 5", i: "數理排序 (倒數)", a: "答案：8, 6" },
+                { q: "1, 3, 5, __, 9", i: "數理排序 (單數)", a: "答案：7" },
                 { q: "🧡 💛 💚 ___ 💛 💚 🧡", i: "圖像排序", a: "答案：🧡 (對稱/循環邏輯)" },
-                { q: "❤️ ❌ ✅, __, ❌ ✅", i: "圖像排序", a: "答案：❤️" }
+                { q: "❤️ ❌ ✅, __, ❌ ✅", i: "圖像排序", a: "答案：❤️" },
+                { q: "🔼 ⏺️ ⏹️ 🔼 ⏺️ ___", i: "圖像排序", a: "答案：⏹️" },
+                { q: "有一架巴士，原本有5個人。到站後有3個人上車，沒有人下車。現在巴士上有幾多人？", i: "應用題", a: "答案：8個人 (5 + 3 = 8)。家長可追問過程。" },
+                { q: "你有10粒糖，分了4粒給妹妹，你還有幾多粒糖？", i: "應用題", a: "答案：6粒 (10 - 4 = 6)。" },
+                { q: "桌子上有3個蘋果和4個橙，桌子上一共有多少個水果？", i: "應用題", a: "答案：7個水果 (3 + 4 = 7)。" },
+                { q: "圖形分類：如果把『圓形、正方形、蘋果、三角形』分類，哪一個不屬於同一類？", i: "邏輯題", a: "答案：蘋果 (其他是形狀)。" },
+                { q: "找出不同：『紅、藍、黃、書包』哪一個不同？", i: "邏輯題", a: "答案：書包 (其他是顏色)。" },
+                { q: "找出不同：『巴士、地鐵、小巴、大象』", i: "邏輯題", a: "答案：大象 (其他是交通工具)。" },
+                { q: "1, 2, 3, 4, 5... 如果這5個數字是一家人，誰是爸爸（最大）？誰是BB（最小）？", i: "邏輯與擬人化", a: "答案：5是爸爸，1是BB。" }
             ],
             personal: [
-                { q: "你叫咩名？你幾多歲？", i: "個人問題", a: "要清晰完整作答，例如：我叫陳大文，今年6歲。" },
-                { q: "你讀邊間學校呀？响邊度？", i: "個人問題", a: "要求連街道名都講得出。例如：我間學校喺土瓜灣嘅天光道。" },
-                { q: "今日邊個帶你嚟？你點樣嚟我哋學校？", i: "個人問題", a: "要求清楚說明：爸爸帶我坐港鐵，由XX站去到柴灣站。" },
-                { q: "上堂時，老師教嘅嘢你唔明你會點做？你示範吓點問？", i: "情境題", a: "答：我會舉手問老師。\n示範：(舉手)老師我唔係好明，請問可唔可以講多一次呀？" },
-                { q: "如果老師講多一次你都唔明呢？", i: "情境題追問", a: "答：咁我會試吓問爸爸媽媽 / 問同學。" },
-                { q: "媽媽買了一片蛋糕，不會再買，但你和姐姐都很想吃，你會怎樣做？", i: "情景解難", a: "重點：測試分享與解決衝突能力 (例如：我會同家姐一人一半分享)。" },
-                { q: "你和媽媽在小巴，但落錯車，你會怎樣做？", i: "情景解難", a: "重點：測試冷靜與求助能力 (例如：我會拖實媽媽唔好周圍走，等媽媽搵路/睇地圖)。" },
-                { q: "好朋友生日，但媽媽沒有時間帶你去生日會，你會怎樣做？", i: "情景解難", a: "重點：體諒家人及替代方案 (例如：我會自己畫張生日卡送俾佢，下次再同佢慶祝)。" },
-                { q: "熱身遊戲：人形包剪揼 (相反指令)", i: "活動指令", a: "家長出剪，小朋友要特登出包輸俾你。測試聽指令及反應。" },
-                { q: "熱身遊戲：動物找媽媽", i: "活動指令", a: "家長遞卡給小朋友。測試有否主動開口溝通：「請問你張卡係咪兔仔媽媽呀？」而不是直接質張卡俾對方睇（出貓）。" }
+                { q: "你叫咩名？你幾多歲？", i: "基本問題", a: "要清晰完整作答：我叫陳大文，今年6歲。" },
+                { q: "你讀邊間幼稚園呀？响邊區？", i: "基本問題", a: "要求講出完整學校名稱及地區。" },
+                { q: "今日邊個帶你嚟？你點樣嚟我哋學校？", i: "觀察與記憶", a: "要求清楚說明：例如『爸爸同媽媽帶我坐地鐵，然後轉小巴嚟學校。』" },
+                { q: "你平時放假/星期六日最鍾意同爸爸媽媽去邊度玩？", i: "生活經驗分享", a: "要求講出具體地點及活動，例如：去圖書館睇書/去公園踩單車，測試表達能力及家庭互動。" },
+                { q: "你最鍾意睇咩書/咩故事？可唔可以講少少內容俾我聽？", i: "閱讀習慣 (直資學校極重視)", a: "家長請留意小朋友能否講出書名及1-2句簡單內容，避免只答「恐龍書」。" },
+                { q: "上堂時，老師教嘅嘢你唔明你會點做？你示範吓點問？", i: "情境解難 (學習態度)", a: "答：舉手問老師。示範：(舉手) 老師我唔係好明，可唔可以講多一次呀？" },
+                { q: "如果老師講多一次你都唔明呢？", i: "情境解難 (追問)", a: "答：我會試吓問同學，或者返屋企問爸爸媽媽。" },
+                { q: "媽媽買了一片蛋糕，不會再買，但你和姐姐/弟弟都很想吃，你會怎樣做？", i: "情景解難 (同理心與分享)", a: "測試解決衝突能力：『我會用刀切開一半，同家姐一人一半。』" },
+                { q: "你和媽媽在港鐵/商場走散了，你會怎樣做？", i: "情景解難 (安全意識)", a: "重點：留在原地等 / 找警察叔叔或穿制服的職員幫忙，千萬不要跟陌生人走。" },
+                { q: "好朋友生日，但媽媽沒有時間帶你去生日會，你會怎樣做？", i: "情景解難 (體諒與替代方案)", a: "重點：不扭計。『我會畫張生日卡送俾佢，下次返學再同佢講生日快樂。』" },
+                { q: "小息嘅時候，你見到有同學跌倒流血，你會點做？", i: "情景解難 (助人意識)", a: "答：我會叫佢唔好亂動，然後立刻跑去教員室搵老師幫手。" },
+                { q: "如果你喺屋企唔小心打爛咗媽媽最鍾意嘅杯，你會點做？", i: "情景解難 (誠實與責任)", a: "答：我會企喺度唔郁(怕刮傷)，然後大聲叫媽媽入黎，同佢講對唔住，係我唔小心打爛咗。" },
+                { q: "你最鍾意玩咩玩具？點解？", i: "喜好與表達", a: "不設限，重點在於『點解』的解釋是否合理豐富（例如Lego可以砌唔同形狀發揮創意）。" },
+                { q: "如果你可以變做一種動物，你想變做乜嘢？點解？", i: "創意思維", a: "無標準答案，鼓勵想像力。例如：想做雀仔，因為可以飛上天睇風景。" },
+                { q: "如果你有一支魔法棒，你想變啲咩出嚟？", i: "創意思維", a: "測試小朋友的願望和創意（例如：變好多書出黎睇、變一間大屋俾爸爸媽媽）。" },
+                { q: "喺地鐵度，你見到有個婆婆行過黎但無位坐，你會點做？", i: "品德與禮貌", a: "答：我會企起身讓座俾婆婆。" },
+                { q: "如果你帶咗件新玩具返學校，有同學未經你同意就搶走咗，你會點做？", i: "社交與衝突處理", a: "答：我會話俾佢聽『請你俾返我，你想玩可以問我借』，如果佢唔還，我會同老師講。" },
+                { q: "你有無幫手做家務？你識做啲咩家務？", i: "自理能力", a: "例如：我識自己執玩具、幫手抹枱、摺衫。" },
+                { q: "爸爸/媽媽係做咩工作架？", i: "家庭認知", a: "測試對父母的了解。例如：爸爸係會計師，媽媽係老師。" },
+                { q: "熱身遊戲：人形包剪揼 (相反指令)", i: "活動指令 (家長與小朋友玩)", a: "家長出剪，小朋友要特登出包輸俾你。測試聽指令及反應。" },
+                { q: "熱身遊戲：動物找媽媽", i: "活動指令", a: "測試有否主動開口溝通：「請問你張卡係咪兔仔媽媽呀？」嚴禁直接將卡塞給對方（避免扣分）。" },
+                { q: "熱身遊戲：紅綠燈", i: "活動指令", a: "家長叫『綠燈』小朋友原地跑，叫『紅燈』立刻企定不能動。測試身體協調與服從性。" },
+                { q: "搭地鐵去學校好，定係搭巴士去學校好？點解？", i: "比較與批判思考", a: "測試有沒有自己的觀點。例如：地鐵好，因為唔會塞車 / 巴士好，因為有風景睇。" },
+                { q: "如果今日落好大雨，但你要去公園玩，你會點做？", i: "應變能力", a: "答：我會改留喺屋企玩其他嘢，或者問媽媽可唔可以去室內遊樂場。" },
+                { q: "你覺得自己有咩優點（最叻嘅地方）？", i: "自我認知", a: "例如：我畫畫好靚、我好有禮貌、我鍾意幫人。" }
             ],
             listen: [
-                { q: "請用指定的三種顏色筆寫出你的名字。", i: "聆聽指令 (給予紙筆)", a: "家長請隨機指定三種顏色 (如紅、藍、黃)，看小朋友是否聽從指令及揸筆姿勢。" },
+                { q: "請用指定的三種顏色筆寫出你的名字。", i: "聆聽指令 (給予紙筆)", a: "家長隨機指定三種顏色 (如紅、藍、黃)。看小朋友是否聽從指令及揸筆姿勢。" },
                 { q: "請畫出在陸地上居住的動物。", i: "聆聽指令畫圖", a: "只要是陸地動物即可 (如貓、狗、獅子)，不可畫魚或雀鳥。" },
                 { q: "請畫出【不是】與聖誕節有關的物件。", i: "反向聆聽指令", a: "重點在聽懂【不是】。可以畫蘋果、車、書包等，不可畫聖誕樹、禮物。" },
                 { q: "請畫出【沒有】出現在課室的東西。", i: "反向聆聽指令", a: "重點在聽懂【沒有】。可以畫床、微波爐、馬路等。" },
-                { q: "補畫圖案", i: "請在一張紙上畫半邊雪糕，要求小朋友畫餘下半邊", a: "測試對稱概念及小肌肉繪畫能力，鼓勵完成漂亮的圖畫。" }
+                { q: "請在紙的『中間』畫一個圓形，在圓形的『上面』畫一個三角形。", i: "空間與多步指令", a: "測試空間方位概念（中間、上面）及形狀認知。" },
+                { q: "請畫一個識飛，但【唔係】雀鳥嘅物件/動物。", i: "條件限制畫圖", a: "答案可以是：飛機、直升機、蝴蝶、蜜蜂、超人等。" },
+                { q: "請畫三個蘋果，把其中一個塗上紅色，另外兩個塗上綠色。", i: "數量與顏色多步指令", a: "精準執行指令，不可多畫或少畫，顏色必須準確。" },
+                { q: "如果今日係晴天，請畫一個太陽；如果今日係雨天，請畫一把雨傘。", i: "邏輯條件指令", a: "家長不需提示天氣，小朋友需自行判斷當下天氣並畫出對應物件。" },
+                { q: "請用藍色筆畫一個正方形，然後在正方形裡面寫一個『A』字。", i: "綜合指令", a: "包含顏色、形狀、空間（裡面）、英文字母四重指令。" },
+                { q: "請畫出你最鍾意食嘅一餐飯，入面要有三樣食物。", i: "創意與數量限制", a: "觀察繪畫細節及能否控制在剛好三種食物內。" },
+                { q: "補畫圖案：畫半邊雪糕 / 蝴蝶", i: "在一張紙上畫一半，要求小朋友畫餘下一半", a: "測試對稱概念及小肌肉控制，鼓勵畫得漂亮並加上裝飾。" },
+                { q: "請聽住家長拍手的次數，在紙上畫出相同數量的圓圈。", i: "聽覺轉視覺指令", a: "家長拍手4下，小朋友畫4個圈。測試專注力。" },
+                { q: "請畫出一個開心的蘋果，同一個傷心的香蕉。", i: "擬人化與情緒繪圖", a: "將情緒結合在物件上，測試創意與對情緒的理解。" },
+                { q: "請畫出一架車，但這架車是【沒有】車輪的。", i: "矛盾指令/創意思維", a: "看小朋友如何解決問題（例如畫磁浮車、積木車、或者爛了的車），接受任何合理創意解釋。" },
+                { q: "家長讀出一組數字：『3 - 8 - 5』，請小朋友在紙上寫出來。", i: "短期記憶測試", a: "讀完一次就要求寫出，測試專注力及記憶。" }
             ]
         };
 
         let currentCategory = 'chi';
         let currentIndex = -1;
+        let askedQuestions = new Set(); // 記錄已問過的題目以避免短時間內重複
+
+        function updateCounter() {
+            const total = database[currentCategory].length;
+            document.getElementById('counter').innerText = `目前題庫共 ${total} 題`;
+        }
 
         function setCategory(cat) {
             currentCategory = cat;
+            askedQuestions.clear(); // 換類別時重置紀錄
             
             // 更新按鈕樣式
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             
-            // 重置並抽取新題目
+            updateCounter();
             nextQuestion();
         }
 
         function nextQuestion() {
             const arr = database[currentCategory];
-            // 隨機抽題，但避免連續抽到同一題
-            let newIndex = currentIndex;
-            if (arr.length > 1) {
-                while (newIndex === currentIndex) {
-                    newIndex = Math.floor(Math.random() * arr.length);
-                }
-            } else {
-                newIndex = 0;
+            
+            // 如果所有題目都問過了，清空紀錄重新開始
+            if (askedQuestions.size >= arr.length) {
+                askedQuestions.clear();
             }
+
+            let newIndex;
+            do {
+                newIndex = Math.floor(Math.random() * arr.length);
+            } while (askedQuestions.has(newIndex) && arr.length > 1);
+
             currentIndex = newIndex;
+            askedQuestions.add(currentIndex);
             
             const item = arr[currentIndex];
             document.getElementById('instruction').innerText = item.i;
@@ -229,6 +332,7 @@
         }
 
         // 初始化
+        updateCounter();
         nextQuestion();
     </script>
 </body>
