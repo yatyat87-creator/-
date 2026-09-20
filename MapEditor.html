@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>石灰吟 - 專業地圖編輯器 2.0</title>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; background: #2c3e50; color: #fff; display: flex; padding: 20px; gap: 20px; }
+        #canvas-container { background: #1a252f; border: 4px solid #f39c12; border-radius: 10px; padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        canvas { background-color: #8fbc8f; border: 1px solid #333; cursor: crosshair; image-rendering: pixelated; }
+        
+        #panel { display: flex; flex-direction: column; width: 350px; gap: 10px; }
+        .section-title { color: #f1c40f; margin: 10px 0 5px 0; border-bottom: 2px dashed #7f8c8d; padding-bottom: 5px; }
+        
+        .tool-btn { background: #34495e; color: white; border: 2px solid #bdc3c7; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; text-align: left; }
+        .tool-btn:hover { background: #3f5873; }
+        .tool-btn.active { border-color: #f1c40f; background: #2980b9; box-shadow: 0 0 10px rgba(52,152,219,0.5); }
+        .action-btn { background: #e67e22; color: white; border: none; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 8px; cursor: pointer; text-align: center; }
+        .export-btn { background: #e74c3c; color: white; border: none; padding: 15px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; text-align: center; margin-top: 10px; }
+        
+        textarea { width: 100%; height: 250px; background: #ecf0f1; color: #2c3e50; font-family: monospace; font-size: 11px; border-radius: 5px; padding: 10px; box-sizing: border-box; resize: vertical; }
+        .hint { font-size: 12px; color: #bdc3c7; line-height: 1.4; background: #34495e; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <!-- 顯示比例為 20px一格 (實際遊戲為 40px)，總計 20x40 格 -->
+        <canvas id="mapCanvas" width="400" height="800"></canvas>
+    </div>
+
+    <div id="panel">
+        <h2 style="color: #f1c40f; margin: 0;">🗺️ 地圖編輯器 2.0</h2>
+        
+        <div class="hint">
+            <b>【畫路須知】：</b>請務必從<b>「敵方主堡」</b>開始，按住滑鼠連續拖曳畫到<b>「我方主堡」</b>，系統會記錄連線順序！
+        </div>
+
+        <div class="section-title">📍 核心物件與路徑</div>
+        <button class="tool-btn active" id="tool-1" onclick="setTool(1)">🛣️ 畫筆：連續鋪設道路 (需拖曳)</button>
+        <button class="action-btn" onclick="clearPath()">🧹 清除所有道路</button>
+        <button class="tool-btn" id="tool-2" onclick="setTool(2)">👿 擺放：敵方主堡 (佔地2x2)</button>
+        <button class="tool-btn" id="tool-3" onclick="setTool(3)">👑 擺放：我方主堡 (佔地2x2)</button>
+        
+        <div class="section-title">🌲 地形筆刷 (會匯出為矩陣)</div>
+        <button class="tool-btn" id="tool-4" onclick="setTool(4)">🟩 草地 (預設地形, 屬性:0)</button>
+        <button class="tool-btn" id="tool-5" onclick="setTool(5)">⛰️ 山地 (屬性:2)</button>
+        <button class="tool-btn" id="tool-6" onclick="setTool(6)">🌊 河流 (屬性:3)</button>
+
+        <button class="export-btn" onclick="exportMap()">📥 匯出終極地圖代碼</button>
+        <textarea id="output-code" placeholder="點擊匯出後，這裡會產生帶有地形矩陣與順序路徑的代碼..."></textarea>
+    </div>
+
+<script>
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const cols = 20, rows = 40, cellSize = 20;
+    
+    // 0: 草地, 2: 山地, 3: 河流
+    let terrainGrid = Array(rows).fill(0).map(() => Array(cols).fill(0));
+    
+    // 獨立儲存路徑的「順序陣列」
+    let pathSequence = [];
+    
+    // 預設主堡位置
+    let enemyBase = { x: 2, y: 2 };
+    let playerBase = { x: 17, y: 37 };
+    
+    let currentTool = 1; // 1:道路, 2:敵堡, 3:我堡, 4:草地, 5:山地, 6:河流
+    let isDrawing = false;
+
+    function setTool(toolId) {
+        currentTool = toolId;
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+        if (document.getElementById(`tool-${toolId}`)) {
+            document.getElementById(`tool-${toolId}`).classList.add('active');
+        }
+    }
+
+    function clearPath() {
+        pathSequence = [];
+        drawMap();
+    }
+
+    function drawMap() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 1. 畫底層地形
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                let px = c * cellSize; let py = r * cellSize;
+                if (terrainGrid[r][c] === 0) ctx.fillStyle = '#8fbc8f'; // 草地
+                else if (terrainGrid[r][c] === 2) ctx.fillStyle = '#7f8c8d'; // 山地
+                else if (terrainGrid[r][c] === 3) ctx.fillStyle = '#3498db'; // 河流
+                
+                ctx.fillRect(px, py, cellSize, cellSize);
+                ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+                ctx.strokeRect(px, py, cellSize, cellSize);
+            }
+        }
+
+        // 2. 畫道路鋪設 (根據順序)
+        ctx.fillStyle = '#c49f81';
+        pathSequence.forEach(p => {
+            ctx.fillRect(p.x * cellSize, p.y * cellSize, cellSize, cellSize);
+            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+            ctx.strokeRect(p.x * cellSize, p.y * cellSize, cellSize, cellSize);
+        });
+
+        // 3. 畫路徑引導線與箭頭 (讓玩家知道行進方向)
+        if (pathSequence.length > 1) {
+            ctx.strokeStyle = 'rgba(231, 76, 60, 0.8)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(pathSequence[0].x * cellSize + cellSize/2, pathSequence[0].y * cellSize + cellSize/2);
+            for (let i = 1; i < pathSequence.length; i++) {
+                ctx.lineTo(pathSequence[i].x * cellSize + cellSize/2, pathSequence[i].y * cellSize + cellSize/2);
+            }
+            ctx.stroke();
+            ctx.lineWidth = 1;
+        }
+
+        // 4. 畫主堡 (2x2 格)
+        const drawBase = (base, color, text) => {
+            let px = base.x * cellSize; let py = base.y * cellSize;
+            ctx.fillStyle = color;
+            ctx.fillRect(px, py, cellSize * 2, cellSize * 2);
+            ctx.fillStyle = 'white'; ctx.font = '16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(text, px + cellSize, py + cellSize);
+            ctx.strokeStyle = '#fff'; ctx.strokeRect(px, py, cellSize * 2, cellSize * 2);
+        };
+        drawBase(enemyBase, '#8e44ad', '👿');
+        drawBase(playerBase, '#2980b9', '👑');
+    }
+
+    // 將格子加入路徑順序中
+    function addPathNode(c, r) {
+        if (pathSequence.length === 0) {
+            pathSequence.push({x: c, y: r});
+            return;
+        }
+        let lastNode = pathSequence[pathSequence.length - 1];
+        // 避免重複加入同一格
+        if (lastNode.x === c && lastNode.y === r) return;
+        
+        // 檢查是否相鄰 (只能上下左右連線，不可跳格)
+        let dist = Math.abs(lastNode.x - c) + Math.abs(lastNode.y - r);
+        if (dist === 1) {
+            pathSequence.push({x: c, y: r});
+        }
+    }
+
+    function handleMouse(e) {
+        const rect = canvas.getBoundingClientRect();
+        const c = Math.floor((e.clientX - rect.left) / cellSize);
+        const r = Math.floor((e.clientY - rect.top) / cellSize);
+        if (c < 0 || c >= cols || r < 0 || r >= rows) return;
+
+        if (currentTool === 1) {
+            addPathNode(c, r); // 記錄順序路徑
+        } else if (currentTool === 4) { terrainGrid[r][c] = 0; } // 畫草地
+        else if (currentTool === 5) { terrainGrid[r][c] = 2; } // 畫山地
+        else if (currentTool === 6) { terrainGrid[r][c] = 3; } // 畫河流
+        else if (currentTool === 2 && c <= cols - 2 && r <= rows - 2) {
+            enemyBase.x = c; enemyBase.y = r;
+        } else if (currentTool === 3 && c <= cols - 2 && r <= rows - 2) {
+            playerBase.x = c; playerBase.y = r;
+        }
+        drawMap();
+    }
+
+    canvas.addEventListener('mousedown', (e) => { isDrawing = true; handleMouse(e); });
+    canvas.addEventListener('mousemove', (e) => { if (isDrawing) handleMouse(e); });
+    window.addEventListener('mouseup', () => { isDrawing = false; });
+
+    // 匯出代碼
+    function exportMap() {
+        if (pathSequence.length === 0) {
+            alert("⚠️ 警告：您還沒有畫任何道路！請用畫筆從敵方主堡拖曳到我方主堡。");
+            return;
+        }
+
+        let finalCode = `// ==========================================\n// 請將以下代碼覆蓋主遊戲中對應的地圖變數\n// ==========================================\n\n`;
+        
+        // 1. 匯出主堡
+        finalCode += `    // 雙方城鎮中心位置\n`;
+        finalCode += `    let playerBase = { x: ${playerBase.x}, y: ${playerBase.y}, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };\n`;
+        finalCode += `    let enemyBase = { x: ${enemyBase.x}, y: ${enemyBase.y}, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 };\n\n`;
+        
+        // 2. 匯出順序路徑
+        let pathString = "    // 絕對循序尋路路徑 (嚴格順序)\n    const pathCoords = [\n        ";
+        pathSequence.forEach((p, index) => {
+            pathString += `{x:${p.x}, y:${p.y}}, `;
+            if ((index + 1) % 8 === 0) pathString += "\n        ";
+        });
+        pathString = pathString.replace(/, \s*$/, "") + "\n    ];\n\n";
+        finalCode += pathString;
+
+        // 3. 匯出地形矩陣 (20x40 陣列)
+        finalCode += `    // 地形 2D 矩陣 (0:草地, 2:山地, 3:河流)\n    const MAP_TERRAIN = [\n`;
+        for (let r = 0; r < rows; r++) {
+            finalCode += `        [${terrainGrid[r].join(', ')}],\n`;
+        }
+        finalCode += `    ];\n`;
+
+        document.getElementById('output-code').value = finalCode;
+    }
+
+    // 啟動初始化
+    drawMap();
+</script>
+</body>
+</html>

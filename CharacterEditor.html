@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>石灰吟 - 角色專屬編輯器 5.0 (終極版)</title>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; background: #2c3e50; color: #fff; margin: 0; padding: 20px; display: flex; gap: 20px; justify-content: center; }
+        .panel { background: #34495e; border: 4px solid #f39c12; border-radius: 10px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { color: #f1c40f; margin-top: 0; border-bottom: 2px dashed #7f8c8d; padding-bottom: 10px; }
+        
+        #form-panel { width: 480px; display: flex; flex-direction: column; gap: 10px; max-height: 85vh; overflow-y: auto; padding-right: 15px;}
+        .form-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; }
+        .form-group label { font-weight: bold; color: #bdc3c7; font-size: 13px; flex: 1; }
+        .form-group input, .form-group select { background: #ecf0f1; border: none; padding: 6px; border-radius: 5px; width: 220px; font-weight: bold; color: #2c3e50; }
+        .form-group input[type="checkbox"] { width: 20px; height: 20px; }
+        
+        .section-title { background: #2c3e50; padding: 5px 10px; border-left: 4px solid #e74c3c; font-weight: bold; color: #ecf0f1; margin: 15px 0 5px 0; }
+        
+        #preview-panel { width: 400px; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+        #canvas-wrapper { background: #dcb88e; border: 4px solid #d35400; border-radius: 8px; padding: 20px; position: relative; }
+        canvas { background-color: #8fbc8f; border: 2px solid #333; image-rendering: pixelated; }
+        
+        .export-btn { width: 100%; background: #e74c3c; color: white; border: none; padding: 15px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .export-btn:hover { background: #c0392b; transform: scale(1.02); }
+        textarea { width: 100%; height: 500px; background: #ecf0f1; color: #2c3e50; font-family: monospace; font-size: 11px; border-radius: 5px; padding: 10px; box-sizing: border-box; resize: none; white-space: pre; }
+        
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #7f8c8d; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="panel" id="form-panel">
+        <h2>🛠️ 角色數值設定 5.0 (純數據驅動)</h2>
+        
+        <div class="form-group">
+            <label>分類</label>
+            <select id="c-type" onchange="toggleFields()">
+                <option value="basic">一般兵種 (Basic Unit)</option>
+                <option value="general" selected>傳奇武將 / 英雄</option>
+                <option value="enemy">敵方軍團 / Boss</option>
+            </select>
+        </div>
+        <div class="form-group"><label>代號 (ID)</label><input type="text" id="c-id" value="new_hero" oninput="updateCode()"></div>
+        <div class="form-group"><label>顯示名稱</label><input type="text" id="c-name" value="新角色" oninput="updateCode()"></div>
+        <div class="form-group"><label>單字圖標</label><input type="text" id="c-symbol" value="新" maxlength="1" oninput="updatePreview()"></div>
+        <div class="form-group"><label>代表顏色</label><input type="color" id="c-color" value="#3498db" style="width: 50px;" oninput="updatePreview()"></div>
+        
+        <div class="section-title">外觀與動畫</div>
+        <div class="form-group"><label>精靈圖 (5x5 PNG)</label><input type="text" id="c-img" placeholder="角色行走圖" oninput="updatePreview()"></div>
+        <div class="form-group"><label>畫布繪製比例</label><input type="number" id="c-scale" value="1.5" step="0.1" oninput="updatePreview()"></div>
+        <div class="form-group"><label>變身圖 (第二形態)</label><input type="text" id="c-img2" placeholder="可選：變身後PNG" oninput="updateCode()"></div>
+        <div class="form-group" id="inv-trans-group" style="display:none;"><label>變身期間無敵</label><input type="checkbox" id="c-inv-trans" onchange="updateCode()"></div>
+        
+        <div class="section-title">基礎戰鬥數值</div>
+        <div class="form-group"><label>攻擊力 (Dmg)</label><input type="number" id="c-dmg" value="2.0" step="0.1" oninput="updateCode()"></div>
+        <div class="form-group"><label>攻擊距離 (Range)</label><input type="number" id="c-range" value="1.0" step="0.1" oninput="updateCode()"></div>
+        <div class="form-group"><label>移動速度 (MoveSpd)</label><input type="number" id="c-spd" value="1.2" step="0.1" oninput="updateCode()"></div>
+        <div class="form-group"><label>攻擊速度 (AtkSpd)</label><input type="number" id="c-atkspd" value="1.0" step="0.1" oninput="updateCode()"></div>
+        <div class="form-group"><label>血量倍率 (HpMult)</label><input type="number" id="c-hp" value="2.0" step="0.1" oninput="updateCode()"></div>
+        <div class="form-group"><label>免疫擊退 (霸體)</label><input type="checkbox" id="c-kb-immune" onchange="updateCode()"></div>
+
+        <div class="section-title">普攻型態覆蓋 (Normal Attack)</div>
+        <div class="form-group">
+            <label>普攻邏輯</label>
+            <select id="c-normal-type" onchange="updateCode()">
+                <option value="normal">預設 (單體直接傷害)</option>
+                <option value="slash">發射實體刀氣/箭矢</option>
+                <option value="boulder">拋物線巨石 (投石車用)</option>
+            </select>
+        </div>
+        <div class="form-group"><label>普攻範圍半徑 (填0為單體)</label><input type="number" id="c-normal-aoe" value="0" step="10" oninput="updateCode()"></div>
+        <div class="form-group"><label>多體同時鎖定數 (填0無效)</label><input type="number" id="c-multi-target" value="0" step="1" oninput="updateCode()"></div>
+        <div class="form-group"><label>最短射程限制 (防近身)</label><input type="number" id="c-min-range" value="0" step="10" oninput="updateCode()"></div>
+        <div class="form-group"><label>是否為裝載型井欄</label><input type="checkbox" id="c-siege-tower" onchange="updateCode()"></div>
+
+        <!-- 武將專屬：出場條件 -->
+        <div id="general-deploy" style="display:block;">
+            <div class="section-title">📜 將領出戰與 AI 設定</div>
+            <div class="form-group">
+                <label>出戰時機</label>
+                <select id="c-deploy-type" onchange="updateCode()">
+                    <option value="defend">守護 (敵軍逼近防區時)</option>
+                    <option value="ally_count">點將 (友軍達標時)</option>
+                    <option value="enemy_threat">破陣 (敵軍爆滿或遇Boss時)</option>
+                </select>
+            </div>
+            <div class="form-group"><label>達標目標 (ID 或 any)</label><input type="text" id="c-deploy-target" value="b6" oninput="updateCode()"></div>
+            <div class="form-group"><label>達標數量</label><input type="number" id="c-deploy-num" value="4" oninput="updateCode()"></div>
+            
+            <div class="form-group">
+                <label>AI 行動模式</label>
+                <select id="c-ai-type" onchange="updateCode()">
+                    <option value="normal">預設 (勇往直前)</option>
+                    <option value="defender">守家防禦 (機動支援受襲區)</option>
+                    <option value="buffer">輔助跟隨 (尋找無 Buff 友軍)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>撤退條件</label>
+                <select id="c-retreat" onchange="toggleFields()">
+                    <option value="none">死戰不退 (預設)</option>
+                    <option value="no_threat">危機解除 (無敵軍威脅防區)</option>
+                    <option value="low_allies">孤軍奮戰 (友軍數量過低)</option>
+                </select>
+            </div>
+            <div class="form-group" id="retreat-num-group" style="display:none;"><label>撤退參數 (下限)</label><input type="number" id="c-retreat-num" value="2" oninput="updateCode()"></div>
+        </div>
+
+        <!-- 敵方專屬：生成條件 -->
+        <div id="enemy-spawn" style="display:none;">
+            <div class="section-title">💀 敵軍生成與復活</div>
+            <div class="form-group">
+                <label>生成類型</label>
+                <select id="c-spawn-type" onchange="updateCode()">
+                    <option value="mob">一般小兵 (隨機出現)</option>
+                    <option value="boss">關卡 Boss (固定波數出現)</option>
+                </select>
+            </div>
+            <div class="form-group"><label>開始出現波數 (小兵)</label><input type="number" id="c-min-wave" value="1" oninput="updateCode()"></div>
+            <div class="form-group"><label>指定降臨波數 (Boss)</label><input type="text" id="c-target-waves" value="9" placeholder="例如: 1, 5, 9" oninput="updateCode()"></div>
+            <div class="form-group"><label>降臨時間限制 (Boss)</label><input type="number" id="c-spawn-time" value="140" oninput="updateCode()"></div>
+            <div class="form-group"><label>復活倒數 (幀數，填0不復活)</label><input type="number" id="c-respawn-time" value="0" step="60" title="1秒=60幀" oninput="updateCode()"></div>
+            <div class="form-group"><label>復活廣播字句</label><input type="text" id="c-respawn-msg" value="✨ 魔王暫時敗退..." oninput="updateCode()"></div>
+        </div>
+
+        <div id="advanced-skills" style="display:block;">
+            <div class="section-title">大絕招 (Active Skill)</div>
+            <div class="form-group"><label>發動率 (UltChance)</label><input type="number" id="c-ult" value="0.20" step="0.05" oninput="updateCode()"></div>
+            <div class="form-group">
+                <label>核心邏輯</label>
+                <select id="c-ult-type" onchange="updateCode()">
+                    <option value="normal">預設 (傷害強化)</option>
+                    <option value="slash">刀氣/直線貫穿</option>
+                    <option value="missile">全圖追蹤飛彈</option>
+                    <option value="heal_aura">無敵治療圈</option>
+                    <option value="black_hole">黑洞/大範圍定身</option>
+                    <option value="buff_aura">範圍強化 Buff</option>
+                    <option value="apocalypse">無色界神力</option>
+                    <option value="quake">西洋劍·蝕 (超強擊退)</option>
+                </select>
+            </div>
+            <div class="form-group"><label>招式名稱</label><input type="text" id="c-ult-name" value="絕招名稱" oninput="updateCode()"></div>
+            <div class="form-group"><label>擊退距離 (Knockback)</label><input type="number" id="c-knockback" value="0" step="10" oninput="updateCode()"></div>
+            
+            <div class="section-title">被動特性 (Passive Trait)</div>
+            <div class="form-group">
+                <label>被動能力</label>
+                <select id="c-passive" onchange="updateCode()">
+                    <option value="none">無 (None)</option>
+                    <option value="immortal">瀕死鎖血加速</option>
+                    <option value="regen_armor">自癒霸體</option>
+                    <option value="evasion">機率閃避傷害</option>
+                    <option value="spiral_burn">周圍持續燙傷</option>
+                </select>
+            </div>
+            <div class="form-group"><label>被動參數 (幀數/機率)</label><input type="number" id="c-passive-val" value="480" step="0.01" oninput="updateCode()"></div>
+
+            <div class="section-title">特效圖檔 (VFX)</div>
+            <div class="form-group"><label>實體穿透圖 (Slash)</label><input type="text" id="c-slash-img" placeholder="刀氣/箭矢/火球網址" oninput="updateCode()"></div>
+            <div class="form-group"><label>範圍爆炸圖 (AoE)</label><input type="text" id="c-aoe-img" placeholder="爆炸/法陣網址" oninput="updateCode()"></div>
+            
+            <div class="section-title" id="price-title">UI 顯示</div>
+            <div class="form-group" id="price-group"><label>解鎖價格 (金幣)</label><input type="number" id="c-price" value="100" oninput="updateCode()"></div>
+            <div class="form-group"><label>角色簡介 (Desc)</label><input type="text" id="c-desc" value="進攻：未知的神祕力量" oninput="updateCode()"></div>
+        </div>
+    </div>
+
+    <div class="panel" id="preview-panel">
+        <h2>👁️ 遊戲內預覽</h2>
+        <div id="canvas-wrapper">
+            <canvas id="previewCanvas" width="160" height="160"></canvas>
+            <div style="text-align: center; color: #333; font-weight: bold; margin-top: 5px;">Lv.99 血條模擬</div>
+        </div>
+        <button class="export-btn" onclick="exportCode()">📥 產生代碼</button>
+        <textarea id="output-code" readonly></textarea>
+    </div>
+
+<script>
+    const canvas = document.getElementById('previewCanvas');
+    const ctx = canvas.getContext('2d');
+    let spriteImage = new Image(); let animFrame = 0;
+    
+    function toggleFields() {
+        const type = document.getElementById('c-type').value;
+        document.getElementById('advanced-skills').style.display = (type === 'basic') ? 'none' : 'block';
+        document.getElementById('general-deploy').style.display = (type === 'general') ? 'block' : 'none';
+        document.getElementById('enemy-spawn').style.display = (type === 'enemy') ? 'block' : 'none';
+        
+        document.getElementById('price-group').style.display = (type === 'general') ? 'flex' : 'none';
+        document.getElementById('price-title').style.display = (type === 'general') ? 'block' : 'none';
+        
+        const rType = document.getElementById('c-retreat') ? document.getElementById('c-retreat').value : 'none';
+        if(document.getElementById('retreat-num-group')) {
+            document.getElementById('retreat-num-group').style.display = (rType === 'low_allies') ? 'flex' : 'none';
+        }
+        
+        if (document.getElementById('c-img2').value !== '') {
+            document.getElementById('inv-trans-group').style.display = 'flex';
+        } else {
+            document.getElementById('inv-trans-group').style.display = 'none';
+        }
+        updateCode();
+    }
+
+    function updatePreview() {
+        const imgSrc = document.getElementById('c-img').value;
+        if (imgSrc && spriteImage.src !== imgSrc) spriteImage.src = imgSrc;
+        toggleFields();
+        updateCode();
+    }
+
+    function drawLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height); animFrame++;
+        const scale = parseFloat(document.getElementById('c-scale').value) || 1.5;
+        const color = document.getElementById('c-color').value;
+        const symbol = document.getElementById('c-symbol').value;
+        const cx = canvas.width / 2, cy = canvas.height / 2 + 10;
+
+        ctx.save();
+        if (spriteImage.complete && spriteImage.naturalWidth > 0 && document.getElementById('c-img').value !== "") {
+            let fw = spriteImage.naturalWidth / 5, fh = spriteImage.naturalHeight / 5;
+            let drawWidth = 40 * scale, drawHeight = drawWidth * (fh / fw);
+            ctx.translate(cx, cy - 5); ctx.drawImage(spriteImage, (Math.floor(animFrame / 10) % 5) * fw, 0, fw, fh, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+        } else {
+            ctx.fillStyle = color; ctx.beginPath(); ctx.arc(cx, cy, 10 * scale, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'white'; ctx.font = 'bold 16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(symbol, cx, cy);
+        }
+        ctx.restore();
+
+        let hpOffset = scale * 15; 
+        ctx.fillStyle = 'black'; ctx.font = 'bold 12px Arial'; ctx.textAlign = 'center'; ctx.fillText('Lv.99', cx, cy + 20);
+        ctx.fillStyle = 'red'; ctx.fillRect(cx - 15, cy - hpOffset - 10, 30, 4);
+        ctx.fillStyle = '#2ecc71'; ctx.fillRect(cx - 15, cy - hpOffset - 10, 25, 4);
+        requestAnimationFrame(drawLoop);
+    }
+
+    function updateCode() {
+        const type = document.getElementById('c-type').value;
+        const id = document.getElementById('c-id').value;
+        
+        let code = `        "${id}": { \n`;
+        code += `            id: "${id}", name: "${document.getElementById('c-name').value}", symbol: "${document.getElementById('c-symbol').value}", color: "${document.getElementById('c-color').value}",\n`;
+        code += `            dmg: ${document.getElementById('c-dmg').value}, range: ${document.getElementById('c-range').value}, moveSpd: ${document.getElementById('c-spd').value}, atkSpd: ${document.getElementById('c-atkspd').value}, hpMult: ${document.getElementById('c-hp').value}, drawScale: ${document.getElementById('c-scale').value}`;
+        
+        if (document.getElementById('c-img').value) code += `,\n            imgSrc: "${document.getElementById('c-img').value}"`;
+        if (document.getElementById('c-img2').value) {
+            code += `,\n            isTransformable: true, imgSrc2: "${document.getElementById('c-img2').value}"`;
+            if (document.getElementById('c-inv-trans').checked) code += `, invincibleTransform: true`;
+        }
+
+        // 普攻覆蓋與防呆機制
+        if (document.getElementById('c-kb-immune').checked) code += `,\n            knockbackImmune: true`;
+        if (document.getElementById('c-normal-type').value !== 'normal') code += `,\n            normalAttackType: "${document.getElementById('c-normal-type').value}"`;
+        if (parseInt(document.getElementById('c-normal-aoe').value) > 0) code += `,\n            normalAoeRadius: ${document.getElementById('c-normal-aoe').value}`;
+        if (parseInt(document.getElementById('c-multi-target').value) > 0) code += `,\n            multiTarget: ${document.getElementById('c-multi-target').value}`;
+        if (parseInt(document.getElementById('c-min-range').value) > 0) code += `,\n            minRange: ${document.getElementById('c-min-range').value}`;
+        if (document.getElementById('c-siege-tower').checked) code += `,\n            isSiegeTower: true, isSiege: true, capacity: 2`;
+
+        if (type !== 'basic') {
+            code += `,\n            ultChance: ${document.getElementById('c-ult').value}`;
+            let ultType = document.getElementById('c-ult-type').value;
+            if (ultType !== 'normal') {
+                code += `,\n            skillType: "${ultType}", skillName: "${document.getElementById('c-ult-name').value}"`;
+                let kb = parseInt(document.getElementById('c-knockback').value); if (kb > 0) code += `, knockback: ${kb}`;
+            }
+            let passiveType = document.getElementById('c-passive').value;
+            if (passiveType !== 'none') code += `,\n            passiveType: "${passiveType}", passiveParam: ${document.getElementById('c-passive-val').value}`;
+            
+            if (document.getElementById('c-slash-img').value) code += `,\n            slashImgSrc: "${document.getElementById('c-slash-img').value}"`;
+            if (document.getElementById('c-aoe-img').value) code += `,\n            hasAoE: true, aoeImgSrc: "${document.getElementById('c-aoe-img').value}"`;
+            
+            // 出戰與 AI
+            if (type === 'general') {
+                code += `,\n            deployType: "${document.getElementById('c-deploy-type').value}"`;
+                if (document.getElementById('c-deploy-type').value !== 'defend') {
+                    code += `, deployTarget: "${document.getElementById('c-deploy-target').value}", deployNum: ${document.getElementById('c-deploy-num').value}`;
+                }
+                
+                let aiType = document.getElementById('c-ai-type').value;
+                if (aiType !== 'normal') code += `,\n            aiType: "${aiType}"`;
+                
+                let rType = document.getElementById('c-retreat').value;
+                if (rType !== 'none') {
+                    code += `,\n            retreatType: "${rType}"`;
+                    if (rType === 'low_allies') code += `, retreatParam: ${document.getElementById('c-retreat-num').value}`;
+                }
+                code += `,\n            price: ${document.getElementById('c-price').value}, isGeneral: true, desc: "${document.getElementById('c-desc').value}"`;
+            } else if (type === 'enemy') {
+                let sType = document.getElementById('c-spawn-type').value;
+                code += `,\n            spawnType: "${sType}"`;
+                if (sType === 'mob') {
+                    code += `, minWave: ${document.getElementById('c-min-wave').value}`;
+                } else {
+                    let wavesStr = document.getElementById('c-target-waves').value;
+                    let wavesArr = wavesStr.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+                    code += `, targetWaves: [${wavesArr.join(', ')}], spawnTimeLimit: ${document.getElementById('c-spawn-time').value}`;
+                    
+                    let rt = parseInt(document.getElementById('c-respawn-time').value);
+                    if (rt > 0) {
+                        code += `,\n            respawnTime: ${rt}, respawnMsg: "${document.getElementById('c-respawn-msg').value}"`;
+                    }
+                }
+            }
+        }
+        code += `\n        }`; document.getElementById('output-code').value = code;
+    }
+
+    function exportCode() {
+        updateCode(); const btn = document.querySelector('.export-btn'); const codeArea = document.getElementById('output-code');
+        codeArea.select(); document.execCommand('copy');
+        btn.innerText = "✔️ 已複製到剪貼簿！"; btn.style.background = "#2ecc71";
+        setTimeout(() => { btn.innerText = "📥 產生代碼"; btn.style.background = "#e74c3c"; }, 2000);
+    }
+
+    requestAnimationFrame(drawLoop); updateCode();
+</script>
+</body>
+</html>
