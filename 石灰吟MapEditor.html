@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>石灰吟 - 終極地圖編輯器</title>
+    <style>
+        body { font-family: 'Microsoft JhengHei', sans-serif; background: #1e272e; color: #fff; margin: 0; padding: 20px; display: flex; gap: 20px; height: 100vh; box-sizing: border-box; overflow: hidden; }
+        .panel { background: #2f3640; border: 4px solid #3498db; border-radius: 10px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: flex; flex-direction: column; }
+        
+        h2 { color: #3498db; margin-top: 0; border-bottom: 2px dashed #7f8c8d; padding-bottom: 10px; text-align: center; }
+        
+        /* 左側工具列 */
+        #tools-panel { width: 350px; flex-shrink: 0; overflow-y: auto; padding-right: 10px; }
+        .form-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .form-group label { font-weight: bold; color: #bdc3c7; font-size: 14px; }
+        .form-group input { background: #ecf0f1; border: none; padding: 8px; border-radius: 5px; width: 120px; font-weight: bold; color: #2c3e50; text-align: center; }
+        
+        .section-title { background: #2c3e50; padding: 8px 10px; border-left: 4px solid #e74c3c; font-weight: bold; color: #ecf0f1; margin: 15px 0 10px 0; }
+        
+        /* 筆刷按鈕 */
+        .brush-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .brush-btn { padding: 15px 10px; border: 3px solid #7f8c8d; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; background: #fff; color: #333; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .brush-btn:hover { transform: translateY(-2px); }
+        .brush-btn.active { border-color: #e74c3c; box-shadow: 0 0 15px rgba(231, 76, 60, 0.6); }
+        
+        .color-box { width: 30px; height: 30px; border-radius: 5px; border: 2px solid rgba(0,0,0,0.3); }
+
+        .btn-action { width: 100%; background: #27ae60; color: white; border: none; padding: 12px; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 10px; transition: 0.2s; }
+        .btn-action:hover { background: #2ecc71; }
+        
+        textarea { width: 100%; height: 200px; background: #ecf0f1; color: #2c3e50; font-family: monospace; font-size: 12px; border-radius: 5px; padding: 10px; box-sizing: border-box; resize: none; margin-top: 10px; white-space: pre; }
+
+        /* 右側畫布區 */
+        #canvas-panel { flex-grow: 1; align-items: center; overflow: hidden; position: relative; padding: 0; border: 4px solid #f39c12; }
+        #canvas-container { width: 100%; height: 100%; overflow: auto; background: #111; display: flex; justify-content: center; align-items: flex-start; padding: 20px; box-sizing: border-box;}
+        canvas { background-color: #8fbc8f; box-shadow: 0 0 20px rgba(0,0,0,0.8); cursor: crosshair; }
+        
+        ::-webkit-scrollbar { width: 10px; height: 10px; }
+        ::-webkit-scrollbar-thumb { background: #7f8c8d; border-radius: 5px; }
+        ::-webkit-scrollbar-corner { background: #1e272e; }
+    </style>
+</head>
+<body>
+
+    <div class="panel" id="tools-panel">
+        <h2>🗺️ 終極地圖編輯器</h2>
+        
+        <div class="section-title">📏 地圖基礎設定</div>
+        <div class="form-group"><label>地圖代號 (ID)</label><input type="text" id="map-id" value="level_2"></div>
+        <div class="form-group"><label>地圖名稱</label><input type="text" id="map-name" value="自訂關卡"></div>
+        <div class="form-group"><label>寬度 (Cols，預設20)</label><input type="number" id="map-cols" value="20" min="10" max="100"></div>
+        <div class="form-group"><label>高度 (Rows，預設40)</label><input type="number" id="map-rows" value="40" min="20" max="100"></div>
+        <button class="btn-action" style="background:#2980b9;" onclick="resizeMap()">🔄 套用尺寸並重置地圖</button>
+        
+        <div class="section-title">🖌️ 地形筆刷</div>
+        <div class="brush-grid">
+            <button class="brush-btn active" onclick="setBrush(0, this)">
+                <div class="color-box" style="background: #8fbc8f;"></div>草地 (平原)
+            </button>
+            <button class="brush-btn" onclick="setBrush(1, this)">
+                <div class="color-box" style="background: #dcb88e;"></div>道路 (Path)
+            </button>
+            <button class="brush-btn" onclick="setBrush(2, this)">
+                <div class="color-box" style="background: #7f8c8d;"></div>山地 (障礙)
+            </button>
+            <button class="brush-btn" onclick="setBrush(3, this)">
+                <div class="color-box" style="background: #2c3e50;"></div>深淵 (死區)
+            </button>
+        </div>
+
+        <div class="section-title">🏰 主堡設置 (2x2 範圍)</div>
+        <div class="brush-grid">
+            <button class="brush-btn" onclick="setBrush('player', this)">
+                <div class="color-box" style="background: #3498db;"></div>👑 我方主堡
+            </button>
+            <button class="brush-btn" onclick="setBrush('enemy', this)">
+                <div class="color-box" style="background: #8e44ad;"></div>👿 敵方主堡
+            </button>
+        </div>
+
+        <button class="btn-action" onclick="exportMap()">📥 匯出地圖資料 (JSON)</button>
+        <textarea id="output-code" readonly placeholder="點擊上方按鈕生成代碼..."></textarea>
+    </div>
+
+    <div class="panel" id="canvas-panel">
+        <div id="canvas-container">
+            <canvas id="mapCanvas"></canvas>
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const CELL_SIZE = 25; // 編輯器顯示用比例，不影響遊戲內真實大小
+    
+    let cols = 20;
+    let rows = 40;
+    let terrain = [];
+    
+    // 預設主堡位置
+    let playerBase = { x: 17, y: 37 };
+    let enemyBase = { x: 2, y: 2 };
+    
+    // 筆刷狀態: 0:草地, 1:道路, 2:山地, 3:深淵, 'player':我方, 'enemy':敵方
+    let currentBrush = 0; 
+    let isDrawing = false;
+
+    // 初始化地圖陣列
+    function initMap() {
+        terrain = [];
+        for (let r = 0; r < rows; r++) {
+            let row = [];
+            for (let c = 0; c < cols; c++) {
+                row.push(0); // 預設全草地
+            }
+            terrain.push(row);
+        }
+        
+        // 防呆：確保主堡不會在邊界外
+        playerBase.x = Math.min(playerBase.x, cols - 2);
+        playerBase.y = Math.min(playerBase.y, rows - 2);
+        enemyBase.x = Math.min(enemyBase.x, cols - 2);
+        enemyBase.y = Math.min(enemyBase.y, rows - 2);
+        
+        drawMap();
+    }
+
+    function resizeMap() {
+        if(confirm("調整尺寸將會清空目前畫好的地形，確定嗎？")) {
+            cols = parseInt(document.getElementById('map-cols').value) || 20;
+            rows = parseInt(document.getElementById('map-rows').value) || 40;
+            canvas.width = cols * CELL_SIZE;
+            canvas.height = rows * CELL_SIZE;
+            initMap();
+        }
+    }
+
+    function setBrush(type, btnObj) {
+        currentBrush = type;
+        document.querySelectorAll('.brush-btn').forEach(btn => btn.classList.remove('active'));
+        btnObj.classList.add('active');
+    }
+
+    // 繪製地圖
+    function drawMap() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                let val = terrain[r][c];
+                let color = '#8fbc8f'; // 0: 草地
+                if (val === 1) color = '#dcb88e';      // 道路
+                else if (val === 2) color = '#7f8c8d'; // 山地
+                else if (val === 3) color = '#2c3e50'; // 深淵
+                
+                ctx.fillStyle = color;
+                ctx.fillRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+                ctx.strokeRect(c * CELL_SIZE, r * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            }
+        }
+        
+        // 畫敵方主堡 (2x2)
+        ctx.fillStyle = '#8e44ad';
+        ctx.fillRect(enemyBase.x * CELL_SIZE, enemyBase.y * CELL_SIZE, CELL_SIZE * 2, CELL_SIZE * 2);
+        ctx.fillStyle = 'white'; ctx.font = '16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('👿', enemyBase.x * CELL_SIZE + CELL_SIZE, enemyBase.y * CELL_SIZE + CELL_SIZE);
+        
+        // 畫我方主堡 (2x2)
+        ctx.fillStyle = '#3498db';
+        ctx.fillRect(playerBase.x * CELL_SIZE, playerBase.y * CELL_SIZE, CELL_SIZE * 2, CELL_SIZE * 2);
+        ctx.fillStyle = 'white'; ctx.font = '16px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('👑', playerBase.x * CELL_SIZE + CELL_SIZE, playerBase.y * CELL_SIZE + CELL_SIZE);
+    }
+
+    // 處理滑鼠事件
+    function handlePaint(e) {
+        const rect = canvas.getBoundingClientRect();
+        // 根據縮放比例計算精準的點擊座標
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        let x = Math.floor(((e.clientX - rect.left) * scaleX) / CELL_SIZE);
+        let y = Math.floor(((e.clientY - rect.top) * scaleY) / CELL_SIZE);
+        
+        if (x < 0 || x >= cols || y < 0 || y >= rows) return;
+
+        if (currentBrush === 'player') {
+            if (x < cols - 1 && y < rows - 1) { playerBase = {x, y}; drawMap(); }
+        } 
+        else if (currentBrush === 'enemy') {
+            if (x < cols - 1 && y < rows - 1) { enemyBase = {x, y}; drawMap(); }
+        } 
+        else {
+            // 避免蓋掉主堡的格子
+            let inPBase = (x >= playerBase.x && x <= playerBase.x + 1 && y >= playerBase.y && y <= playerBase.y + 1);
+            let inEBase = (x >= enemyBase.x && x <= enemyBase.x + 1 && y >= enemyBase.y && y <= enemyBase.y + 1);
+            
+            if (!inPBase && !inEBase) {
+                terrain[y][x] = currentBrush;
+                drawMap();
+            }
+        }
+    }
+
+    canvas.addEventListener('mousedown', (e) => { isDrawing = true; handlePaint(e); });
+    canvas.addEventListener('mousemove', (e) => { if(isDrawing) handlePaint(e); });
+    window.addEventListener('mouseup', () => { isDrawing = false; });
+
+    // ==========================================
+    // 🪄 AI 自動尋路演算法 (BFS) - 替玩家算出道路陣列
+    // ==========================================
+    function calculatePathSequence() {
+        let queue = [];
+        let visited = new Set();
+        let parentMap = new Map();
+        
+        // 定義主堡範圍的檢測函數
+        const isEnemyBase = (x, y) => (x >= enemyBase.x && x <= enemyBase.x + 1 && y >= enemyBase.y && y <= enemyBase.y + 1);
+        const isPlayerBase = (x, y) => (x >= playerBase.x && x <= playerBase.x + 1 && y >= playerBase.y && y <= playerBase.y + 1);
+        
+        // 尋找道路的起點 (緊貼著敵軍主堡的道路)
+        let startNodes = [];
+        for(let r=0; r<rows; r++){
+            for(let c=0; c<cols; c++){
+                if(terrain[r][c] === 1 || isEnemyBase(c, r)) {
+                    // 如果這個道路點在敵軍主堡旁邊
+                    if (isEnemyBase(c, r)) {
+                        let key = `${c},${r}`;
+                        startNodes.push({x: c, y: r});
+                        visited.add(key);
+                    }
+                }
+            }
+        }
+
+        // 把起點放入 Queue
+        startNodes.forEach(node => queue.push(node));
+        let endNode = null;
+
+        // BFS 擴散搜尋
+        let directions = [[0,-1], [0,1], [-1,0], [1,0]]; // 上下左右
+        while (queue.length > 0) {
+            let curr = queue.shift();
+            
+            // 如果摸到玩家主堡，就代表找到了！
+            if (isPlayerBase(curr.x, curr.y)) {
+                endNode = curr;
+                break;
+            }
+
+            for (let dir of directions) {
+                let nx = curr.x + dir[0];
+                let ny = curr.y + dir[1];
+                let key = `${nx},${ny}`;
+                
+                if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && !visited.has(key)) {
+                    // 只允許走「道路(1)」或是踩進「玩家主堡」
+                    if (terrain[ny][nx] === 1 || isPlayerBase(nx, ny)) {
+                        visited.add(key);
+                        parentMap.set(key, curr);
+                        queue.push({x: nx, y: ny});
+                    }
+                }
+            }
+        }
+
+        if (!endNode) return null; // 找不到路
+
+        // 回溯路徑
+        let finalPath = [];
+        let currNode = endNode;
+        while (currNode) {
+            finalPath.unshift(currNode); // 插在陣列開頭
+            let key = `${currNode.x},${currNode.y}`;
+            currNode = parentMap.get(key);
+        }
+        return finalPath;
+    }
+
+    function exportMap() {
+        let pathSequence = calculatePathSequence();
+        
+        if (!pathSequence) {
+            alert("⚠️ 錯誤：敵軍主堡與我方主堡之間，沒有連續的『道路』相連！\n請用道路筆刷將兩個主堡連起來！");
+            return;
+        }
+
+        let mapId = document.getElementById('map-id').value || "level_new";
+        let mapName = document.getElementById('map-name').value || "新地圖";
+        
+        let pathStr = pathSequence.map(p => `{x:${p.x}, y:${p.y}}`).join(', ');
+
+        let terrainStr = "[\n";
+        for(let r=0; r<rows; r++) {
+            terrainStr += `                [${terrain[r].join(', ')}]${r < rows - 1 ? ',' : ''}\n`;
+        }
+        terrainStr += "            ]";
+
+        let code = `        "${mapId}": {\n`;
+        code += `            name: "${mapName}",\n`;
+        code += `            cols: ${cols},\n`;
+        code += `            rows: ${rows},\n`;
+        code += `            playerBase: { x: ${playerBase.x}, y: ${playerBase.y}, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 },\n`;
+        code += `            enemyBase: { x: ${enemyBase.x}, y: ${enemyBase.y}, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 },\n`;
+        code += `            pathCoords: [\n                ${pathStr}\n            ],\n`;
+        code += `            terrain: ${terrainStr}\n`;
+        code += `        }`;
+
+        document.getElementById('output-code').value = code;
+        
+        const btn = document.querySelector('.btn-action[onclick="exportMap()"]');
+        document.getElementById('output-code').select(); document.execCommand('copy');
+        let oldText = btn.innerText;
+        btn.innerText = "✔️ 代碼已複製！直接貼進 MAP_DATABASE 即可！";
+        setTimeout(() => { btn.innerText = oldText; }, 3000);
+    }
+
+    // 初始化畫布尺寸與地圖
+    canvas.width = cols * CELL_SIZE;
+    canvas.height = rows * CELL_SIZE;
+    initMap();
+
+</script>
+</body>
+</html>
