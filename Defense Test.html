@@ -120,6 +120,10 @@
     <div id="setup-screen">
         <div class="title">石灰吟(終局版)</div>
         <div class="gold-display">💰 金幣: <span id="gold-count">0</span></div>
+        <div class="section-title">🗺️ 選擇作戰地圖</div>
+        <div id="map-selection-container" style="display:flex; justify-content:center; gap:15px; margin-bottom:15px; font-weight:bold; font-size:14px; flex-wrap: wrap;">
+            <!-- 地圖選項會由 JavaScript 自動生成 -->
+        </div>
         <div class="section-title">🌟 選擇難度 (決定敵軍最高強度與等級差)</div>
         <div style="display:flex; justify-content:center; gap:15px; margin-bottom:15px; font-weight:bold; font-size:14px;">
             <label><input type="radio" name="difficulty" value="15" data-offset="1" checked> 🟢 簡單 (上限Lv.15, 敵方-2級)</label>
@@ -316,20 +320,31 @@
         bgm.volume = 0.4;
     });
 
+    // 【效能優化】：建立音效節流閥 (Throttle)，避免同瞬間創造過多 Audio 節點
+    const SOUND_THROTTLE = {};
+    
     function playSound(key) {
+        let now = Date.now();
+        // 限制同一個音效在 80 毫秒內只能觸發一次！這能幫瀏覽器減少 90% 以上的無效負擔！
+        if (SOUND_THROTTLE[key] && now - SOUND_THROTTLE[key] < 80) return; 
+        SOUND_THROTTLE[key] = now;
+
         if (SOUNDS[key]) {
             let targetSound = SOUNDS[key];
             
-            // 【新增】：如果這個音效是陣列（設定了多個聲音），就隨機抽一個出來播
+            // 如果這個音效是陣列（設定了多個聲音），就隨機抽一個出來播
             if (Array.isArray(targetSound)) {
                 targetSound = targetSound[Math.floor(Math.random() * targetSound.length)];
             }
             
             let soundClone = targetSound.cloneNode();
             soundClone.volume = 0.6; 
+            // 【新增】：音效播完後，主動將其銷毀，釋放記憶體！
+            soundClone.onended = () => { soundClone.remove(); };
             soundClone.play().catch(e => console.log("瀏覽器擋住了自動播放:", e));
         }
     }
+
     document.body.addEventListener('click', function startLobbyBgm() {
         if (document.getElementById('setup-screen').style.display !== 'none') {
             SOUNDS.bgm_lobby.play().catch(e => console.log(e));
@@ -342,6 +357,8 @@
     const MAP_DATABASE = {
         "level_1": {
             name: "初始平原",
+            cols: 20, // 👈 新增這行 (總格數寬)
+            rows: 40, // 👈 新增這行 (總格數高)
             playerBase: { x: 17, y: 37, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 },
             enemyBase: { x: 2, y: 2, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 },
             pathCoords: [
@@ -357,6 +374,58 @@
             ],
             // 使用代碼快速生成原本的前20行山地(2)，後20行草地(0)的矩陣
             terrain: Array(40).fill(0).map((_, i) => Array(20).fill(i < 20 ? 2 : 0))
+        },        
+        "level_2": {
+            name: "自訂關卡",
+            cols: 20,
+            rows: 40,
+            playerBase: { x: 17, y: 37, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 },
+            enemyBase: { x: 2, y: 2, hp: 25000, maxHp: 25000, level: 1, damage: 20, range: 160, fireRate: 60, cooldown: 0, healRate: 5 },
+            pathCoords: [
+                {x:3, y:3}, {x:4, y:3}, {x:5, y:3}, {x:6, y:3}, {x:6, y:4}, {x:6, y:5}, {x:5, y:5}, {x:5, y:6}, {x:5, y:7}, {x:5, y:8}, {x:5, y:9}, {x:5, y:10}, {x:5, y:11}, {x:5, y:12}, {x:5, y:13}, {x:6, y:13}, {x:6, y:14}, {x:6, y:15}, {x:6, y:16}, {x:6, y:17}, {x:6, y:18}, {x:6, y:19}, {x:6, y:20}, {x:7, y:20}, {x:7, y:21}, {x:7, y:22}, {x:7, y:23}, {x:7, y:24}, {x:7, y:25}, {x:7, y:26}, {x:8, y:26}, {x:9, y:26}, {x:10, y:26}, {x:10, y:27}, {x:11, y:27}, {x:11, y:28}, {x:12, y:28}, {x:13, y:28}, {x:13, y:29}, {x:14, y:29}, {x:15, y:29}, {x:15, y:30}, {x:15, y:31}, {x:16, y:31}, {x:16, y:32}, {x:16, y:33}, {x:16, y:34}, {x:16, y:35}, {x:16, y:36}, {x:16, y:37}, {x:17, y:37}
+            ],
+            terrain: [
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+            ]
         }
     };
     // --- 建築物與兵種資料庫 ---
@@ -602,6 +671,10 @@ const EFFECT_IMGS = {
     // 【新增】：將雙方城鎮中心實體化為物件 (含等級、攻防、回血屬性)
     // 【修改】：我方主堡初始血量同步提升至 25000
     let playerBase, enemyBase;
+    // 【新增】：動態地圖尺寸變數
+    let mapCols = 20, mapRows = 40; 
+    let mapWidth = 800
+    , mapHeight = 1600;
     let pathCoords = [];
     let currentTerrain = [];
     let currentLevel = "level_1"; // 預設讀取第一關
@@ -637,14 +710,15 @@ const EFFECT_IMGS = {
         mapDecorations = [];
         
         // 【修正】：迴圈要跑到 40，才能覆蓋整張長地圖！
-        for (let r = 0; r < 40; r++) {
-            for (let c = 0; c < 20; c++) {
+            for (let r = 0; r < mapRows; r++) { for (let c = 0; c < mapCols; c++) {
                 
-                // 1. 先判斷這格是什麼地形
+                // 1. 讀取地圖矩陣資料，精準判斷這格地形
+                let terrainVal = (currentTerrain[r] && currentTerrain[r][c] !== undefined) ? currentTerrain[r][c] : 0;
                 let terrain = 'grass';
-                if (isPath(c, r)) terrain = 'path';
-                // 【修正】：山地的楚河漢界是 20，小於 20 才是山地！
-                else if (r < 20) terrain = 'mountain';
+                
+                if (isPath(c, r) || terrainVal === 1) terrain = 'path';
+                else if (terrainVal === 2) terrain = 'mountain';
+                else if (terrainVal === 3) terrain = 'water'; // 深淵/水不會長東西
 
                 // 2. 決定是否要長出裝飾物 (將機率微調到 20% 讓草地更豐富)
                 if (Math.random() < 0.20) {
@@ -683,6 +757,18 @@ const EFFECT_IMGS = {
 
     // --- 大廳邏輯 ---
     function updateLobbyUI() {
+        // 【新增】：自動掃描 MAP_DATABASE 並生成地圖選項
+        const mapContainer = document.getElementById('map-selection-container');
+        // 【修復】：改用 children.length 判斷，避免被 HTML 註解干擾
+        if (mapContainer && mapContainer.children.length === 0) {
+            mapContainer.innerHTML = ''; // 清空裡面的註解
+            let isFirst = true;
+            for (let key in MAP_DATABASE) {
+                mapContainer.innerHTML += `<label><input type="radio" name="map_select" value="${key}" ${isFirst ? 'checked' : ''}> 🗺️ ${MAP_DATABASE[key].name}</label>`;
+                isFirst = false;
+            }
+        }
+
         document.getElementById('gold-count').innerText = playerGold;
         
         // 1. 更新基本兵種 UI
@@ -811,6 +897,10 @@ const EFFECT_IMGS = {
 
     // 【修改】：極致穩定的開始遊戲函式
     window.startGame = function() {
+        // 【新增】：讀取玩家選擇的地圖 ID
+        let selectedMap = document.querySelector('input[name="map_select"]:checked');
+        if (selectedMap) currentLevel = selectedMap.value;
+
         // 讀取難度天花板與等級偏移量
         let selectedDiff = document.querySelector('input[name="difficulty"]:checked');
         maxDifficultyLevel = parseInt(selectedDiff.value);
@@ -832,6 +922,27 @@ const EFFECT_IMGS = {
         
         // 讀取當前關卡的地圖設定
         let mapData = MAP_DATABASE[currentLevel];
+        window.cachedTerrainFrames = [null, null, null, null]; // 【效能優化】：清空並重置地形快取
+
+        // 【動態地圖】：根據資料庫設定自動調整畫布與迷霧大小
+        mapCols = mapData.cols || 20;
+        mapRows = mapData.rows || 40;
+        mapWidth = mapCols * TILE_SIZE;
+        mapHeight = mapRows * TILE_SIZE;
+
+        // 調整主遊戲畫布
+        canvas.width = mapWidth * dpr; 
+        canvas.height = mapHeight * dpr;
+        canvas.style.maxWidth = mapWidth + "px"; // 讓 CSS 配合放大縮小
+        document.getElementById('canvas-container').style.maxWidth = mapWidth + "px"; // 【修復】：同時釋放容器外框限制
+        
+        // 【核心修復】：畫布尺寸改變會重置畫筆，必須重新套用高畫質縮放比例！
+        ctx.scale(dpr, dpr); 
+        ctx.imageSmoothingEnabled = true;
+        
+        // 調整迷霧畫布
+        fogCanvas.width = mapWidth;
+        fogCanvas.height = mapHeight;
         
         // 深度複製主堡狀態 (避免污染資料庫)
         playerBase = JSON.parse(JSON.stringify(mapData.playerBase));
@@ -1853,10 +1964,41 @@ window.startBattlePhase = function() {
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5); 
     
     // 【修改】：將地圖垂直擴大為原本的兩倍 (800x1600)，總共 20x40 格！
-    canvas.width = 800 * dpr; canvas.height = 1600 * dpr; 
+    canvas.width = mapWidth * dpr; canvas.height = mapHeight * dpr; 
     canvas.style.width = "100%"; canvas.style.maxWidth = "800px"; 
     ctx.scale(dpr, dpr); ctx.imageSmoothingEnabled = true; 
     const TILE_SIZE = 40;
+
+    // 👇👇 新增：迷霧專屬畫布與效能優化系統 👇👇
+    const fogCanvas = document.createElement('canvas');
+    fogCanvas.width = mapWidth; 
+    fogCanvas.height = mapHeight;
+    const fogCtx = fogCanvas.getContext('2d');
+    
+    // 【效能優化】：迷霧光源快取系統 (避免手機每幀重算漸層導致嚴重卡頓)
+    const cachedLightMap = new Map();
+    function getLightImage(radius) {
+        let key = Math.round(radius / 10) * 10; // 將半徑四捨五入到 10 的倍數，提高快取共用率
+        if (cachedLightMap.has(key)) return cachedLightMap.get(key);
+
+        let tempCanvas = document.createElement('canvas');
+        tempCanvas.width = key * 2;
+        tempCanvas.height = key * 2;
+        let tempCtx = tempCanvas.getContext('2d');
+
+        let grad = tempCtx.createRadialGradient(key, key, key * 0.4, key, key, key);
+        grad.addColorStop(0, 'rgba(0,0,0,1)');
+        grad.addColorStop(1, 'rgba(0,0,0,0)');
+        tempCtx.fillStyle = grad;
+        tempCtx.beginPath();
+        tempCtx.arc(key, key, key, 0, Math.PI * 2);
+        tempCtx.fill();
+
+        cachedLightMap.set(key, tempCanvas);
+        return tempCanvas;
+    }
+    // 👆👆 新增結束 👆👆
+
     
     // 【動態生成】：根據雙方主堡當前位置，自動計算外圍的 12 宮格圍城陣地！
     const enemyRing = [], playerRing = [];
@@ -1926,8 +2068,8 @@ window.startBattlePhase = function() {
     // 【新增】：智能判定建造是否合法的統一函數
     function validatePlacement(tx, ty, bData, towerToIgnore) {
         let bSize = bData.size || 1;
-        if (tx < 0 || ty < 0 || tx + bSize > 20 || ty + bSize > 40) return "⚠️ 建築範圍超出邊界！"; // 修改 Y 邊界
-        if (ty < 20) return "⚠️ 必須建在己方半場 (地圖下半部)！"; // 修改雙方楚河漢界
+        if (tx < 0 || ty < 0 || tx + bSize > mapCols || ty + bSize > mapRows) return "⚠️ 建築範圍超出邊界！";
+        if (ty < mapRows / 2) return "⚠️ 必須建在己方半場！";; // 修改雙方楚河漢界
         
         if (bData.id === 'gate') {
             // 【核心修復】：過濾條件加入 (!t.owner || t.owner === 'player')，只計算玩家自己的城門
@@ -1953,13 +2095,26 @@ window.startBattlePhase = function() {
             if (existingMeihu.length >= 1) return "⚠️ 美湖居只可以起一座！";
         }
 
-        let overlapPath = false; let overlapBuilding = false; let inBaseRing = false;
+        // 【新增】：攻城廠限制
+        if (bData.id === 'siege_workshop') {
+            let existingSiege = towers.filter(t => t.id === 'siege_workshop' && t !== towerToIgnore && (!t.owner || t.owner === 'player'));
+            if (existingSiege.length >= 1) return "⚠️ 攻城廠只可以起一座！";
+        }
+
+
+        let overlapPath = false; let overlapBuilding = false; let inBaseRing = false; 
+        let invalidTerrain = false; // 👈 新增變數記錄惡劣地形
+
         for (let dx = 0; dx < bSize; dx++) {
             for (let dy = 0; dy < bSize; dy++) {
                 let cx = tx + dx; let cy = ty + dy;
                 if (isPath(cx, cy)) overlapPath = true;
                 let tAt = getTowerAt(cx, cy);
                 if (tAt && tAt !== towerToIgnore) overlapBuilding = true;
+                
+                // 【新增】：檢查是否為山地(2) 或深淵(3)
+                let terrainVal = (currentTerrain[cy] && currentTerrain[cy][cx] !== undefined) ? currentTerrain[cy][cx] : 0;
+                if (terrainVal === 2 || terrainVal === 3) invalidTerrain = true;
                 
                 // 【修復 2】：檢查是否踩進雙方主堡專用的 4x4 圍城區 (16格絕對禁建區)
                 if (cx >= 1 && cx <= 4 && cy >= 1 && cy <= 4) inBaseRing = true;
@@ -1970,6 +2125,7 @@ window.startBattlePhase = function() {
         if (inBaseRing) return "⚠️ 無法在主堡周圍的圍城專用陣地上建造！";
         if (bData.id !== 'gate' && overlapPath) return "⚠️ 不能蓋在道路上！";
         if (overlapBuilding) return "⚠️ 空間不足，已有建築！";
+        if (invalidTerrain) return "⚠️ 無法在山地或深淵等障礙物上建造！"; // 👈 新增地形警告
 
         // ==========================================
         // 【核心修復】：全建築連通性檢查 (BFS)
@@ -2046,10 +2202,10 @@ window.startBattlePhase = function() {
     canvas.addEventListener('click', (e) => {
         if (gameOver || gameWon) return;
         const rect = canvas.getBoundingClientRect(); if (rect.width === 0) return; 
-        const scaleX = 800 / rect.width, scaleY = 1600 / rect.height; // 高度比例尺改為 1600
+        const scaleX = mapWidth / rect.width, scaleY = mapHeight / rect.height; // 高度比例尺改為 mapHeight1600
         const gx = Math.floor(((e.clientX - rect.left) * scaleX) / TILE_SIZE);
         const gy = Math.floor(((e.clientY - rect.top) * scaleY) / TILE_SIZE);
-        if (gx < 0 || gx >= 20 || gy < 0 || gy >= 40) return; // Y 邊界改為 40
+        if (gx < 0 || gx >= mapCols || gy < 0 || gy >= mapRows) return;
         
         const feedback = document.getElementById('feedback');
         const existingTower = getTowerAt(gx, gy);
@@ -2477,10 +2633,9 @@ window.startBattlePhase = function() {
                 if (this.isTransforming) {
                     let whiteIntensity = this.transformTimer > 45 ? 1 - ((this.transformTimer - 45) / 45) : this.transformTimer / 45;
                     ctx.filter = `brightness(${1 + whiteIntensity * 50})`;
-                } else { ctx.filter = 'none'; }
+                }
 
-                ctx.drawImage(this.currentImg, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); 
-                ctx.filter = 'none';
+                ctx.drawImage(this.currentImg, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
             } else {
                 ctx.fillStyle = this.unitData.color; ctx.beginPath(); ctx.arc(cx, cy, 10 * this.currentScale, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = 'white'; ctx.font = '12px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(this.unitData.symbol, cx, cy);
@@ -2686,7 +2841,7 @@ class PlayerUnit {
                 let threat = enemies.find(e => !e.isDying && ( towers.some(t => { if (t.owner === 'enemy') return false; let s = BUILDINGS[t.id].size || 1; return Math.hypot(e.x - (t.x * TILE_SIZE + (TILE_SIZE * s) / 2), e.y - (t.y * TILE_SIZE + (TILE_SIZE * s) / 2)) < 180; }) || Math.hypot(e.x - (playerBase.x*TILE_SIZE+TILE_SIZE/2), e.y - (playerBase.y*TILE_SIZE+TILE_SIZE/2)) < 250 ));
                 if (threat) {
                     this.retreatTimer = 0; hasValidTarget = true;
-                    let thIdx = threat.pathIndex >= 0 ? threat.pathIndex : pathCoords.length - 1;
+                    let thIdx = Math.max(0, Math.min(pathCoords.length - 1, threat.pathIndex));
                     if (this.pathIndex >= 0 && this.pathIndex < pathCoords.length && Math.abs(this.pathIndex - thIdx) > 1) { targetNode = pathCoords[this.pathIndex]; } 
                     else { tx = threat.x; ty = threat.y; this.drawOffsetX = 0; this.drawOffsetY = 0; }
                 } else {
@@ -2709,7 +2864,7 @@ class PlayerUnit {
                 }
                 if (ally) {
                     hasValidTarget = true;
-                    let thIdx = ally.pathIndex >= 0 ? ally.pathIndex : pathCoords.length - 1;
+                    let thIdx = Math.max(0, Math.min(pathCoords.length - 1, ally.pathIndex));
                     this.bufferTargetIdx = thIdx; 
                     let distToAlly = Math.hypot(ally.x - this.x, ally.y - this.y);
                     if (isAllBuffed && distToAlly < 100) { tx = this.x; ty = this.y; this.drawOffsetX = 0; this.drawOffsetY = 0; }
@@ -2928,10 +3083,9 @@ class PlayerUnit {
                 if (this.isTransforming) {
                     let whiteIntensity = this.transformTimer > 45 ? 1 - ((this.transformTimer - 45) / 45) : this.transformTimer / 45;
                     ctx.filter = `brightness(${1 + whiteIntensity * 50})`;
-                } else { ctx.filter = 'none'; }
+                }
 
-                ctx.drawImage(this.currentImg, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); 
-                ctx.filter = 'none'; 
+                ctx.drawImage(this.currentImg, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
             } else {
                 ctx.fillStyle = this.unitData.isGeneral ? '#fcf3cf' : 'white'; ctx.fillRect(cx - TILE_SIZE/2 + 2, cy - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
                 if(this.unitData.isGeneral) { ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2; ctx.strokeRect(cx - TILE_SIZE/2 + 2, cy - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4); }
@@ -2967,20 +3121,19 @@ class PlayerUnit {
 
             if (this.data.type === 'wind') {
                 // 落葉 (Wind)：可以從畫面外任何地方吹進來，吹過所有地形
-                this.x = Math.random() < 0.5 ? -20 : Math.random() * 800;
-                this.y = this.x === -20 ? Math.random() * 800 : -20;
+                this.x = Math.random() < 0.5 ? -20 : Math.random() * mapWidth;
+                this.y = this.x === -20 ? Math.random() * mapWidth : -20;
                 this.vx = this.data.speed + Math.random();
                 this.vy = this.data.speed * 0.8 + Math.random() * 0.5;
             } else {
                 // 蝴蝶 (Wander) 與 小鳥 (Peck)：【強制只在草地上生成】
                 let foundGrass = false;
                 while (!foundGrass) {
-                    let c = Math.floor(Math.random() * 20);
-                    // 【修正】：Y 軸範圍拉大到 40
-                    let r = Math.floor(Math.random() * 40);
-                    
-                    // 草地判定條件：不是道路，且屬於玩家半場 (r >= 20)
-                    if (!isPath(c, r) && r >= 20) {
+                let c = Math.floor(Math.random() * mapCols);
+                let r = Math.floor(Math.random() * mapRows);
+                
+                // 【修復】：動態適應半場
+                if (!isPath(c, r) && r >= mapRows / 2) {
                         this.x = c * TILE_SIZE + Math.random() * TILE_SIZE;
                         this.y = r * TILE_SIZE + Math.random() * TILE_SIZE;
                         foundGrass = true;
@@ -3073,8 +3226,8 @@ class PlayerUnit {
         }
 
         update() {
-            // 【核心修復】：將 Y 軸的刪除邊界從 1000 擴大到 1800，適應加長版的新地圖！
-            if (this.x < -200 || this.x > 1000 || this.y < -200 || this.y > 1800) return true;
+            // 【終極修復】：將寫死的數字改為自動適應目前地圖的寬度與高度！
+            if (this.x < -200 || this.x > mapWidth + 200 || this.y < -200 || this.y > mapHeight + 200) return true;
             this.x += this.vx; this.y += this.vy;
             
             // 【新增】：豪火球在飛行過程中，體積與攻擊判定會不斷變大！(最高膨脹至 250 像素)
@@ -3163,7 +3316,7 @@ class PlayerUnit {
         window._realLastTime = now; 
 
         // --- 遊戲邏輯開始 ---
-        ctx.clearRect(0, 0, 800, 1600);
+        ctx.clearRect(0, 0, mapWidth, mapHeight);
         globalAnimTick++;
 
         let isPlaying = !gameOver && !gameWon;
@@ -3518,48 +3671,77 @@ class PlayerUnit {
         // 記得將 gameLoop 裡面更下面的 `if (isPlaying)` 檢查，手動改為 `if (isCombatActive)` 即可！
 
         // ============================================
-        // 2. 畫地形與環境裝飾 (永遠執行)
+        // 2. 畫地形與環境裝飾 (永遠執行) - 【極速快取版】
         // ============================================
         let terrainFrame = Math.floor(globalAnimTick / 15) % 4;
-        const drawAnimatedTerrain = (img, dx, dy) => {
-            let frameWidth = img.naturalWidth / 4; let frameHeight = img.naturalHeight;
-            let sx = terrainFrame * frameWidth;
-            ctx.drawImage(img, sx, 0, frameWidth, frameHeight, dx, dy, TILE_SIZE, TILE_SIZE);
-        };
 
-        for (let r = 0; r < 40; r++) { // 總行數變成 40
-            for (let c = 0; c < 20; c++) {
-                let dx = c * TILE_SIZE, dy = r * TILE_SIZE;
-                if (isPath(c, r)) { 
-                    if (TERRAIN_IMGS.path && TERRAIN_IMGS.path.complete && !TERRAIN_IMGS.path.isFailed && TERRAIN_IMGS.path.naturalWidth > 0) { 
-                        drawAnimatedTerrain(TERRAIN_IMGS.path, dx, dy); 
-                    } else { ctx.fillStyle = '#c49f81'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); }
-                } else if (r < 20) { // 山地與草地的交界移至中線 20
-                    let validMntImgs = TERRAIN_IMGS.mountain.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
-                    if (validMntImgs.length > 0) { 
-                        let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
-                        let tileIndex = 0; 
-                        if (validMntImgs.length >= 4) {
-                            if (randVal > 0.90) tileIndex = 1; else if (randVal > 0.80) tileIndex = 2; else if (randVal > 0.70) tileIndex = 3; 
-                        } else { tileIndex = Math.floor(randVal * validMntImgs.length); }
-                        drawAnimatedTerrain(validMntImgs[tileIndex], dx, dy); 
-                    } else { 
-                        ctx.fillStyle = '#7f8c8d'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#95a5a6'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
-                    }
-                } else { 
-                    let validGrassImgs = TERRAIN_IMGS.grass.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
-                    if (validGrassImgs.length > 0) { 
-                        let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
-                        let tileIndex = 0; 
-                        if (validGrassImgs.length >= 4) {
-                            if (randVal > 0.90) tileIndex = 1; else if (randVal > 0.80) tileIndex = 2; else if (randVal > 0.70) tileIndex = 3; 
-                        } else { tileIndex = Math.floor(randVal * validGrassImgs.length); }
-                        drawAnimatedTerrain(validGrassImgs[tileIndex], dx, dy); 
-                    } else {
-                        ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+        if (!window.cachedTerrainFrames) window.cachedTerrainFrames = [null, null, null, null];
+
+        // 如果這一幀的動畫還沒被快取，才執行 800 次的辛苦運算
+        if (!window.cachedTerrainFrames[terrainFrame]) {
+            let tCanvas = document.createElement('canvas');
+            tCanvas.width = mapWidth;
+            tCanvas.height = mapHeight;
+            let tCtx = tCanvas.getContext('2d');
+
+            const drawAnimatedTerrainToCtx = (img, dx, dy) => {
+                let frameWidth = img.naturalWidth / 4; let frameHeight = img.naturalHeight;
+                let sx = terrainFrame * frameWidth;
+                tCtx.drawImage(img, sx, 0, frameWidth, frameHeight, dx, dy, TILE_SIZE, TILE_SIZE);
+            };
+
+            let isFullyLoaded = (!TERRAIN_IMGS.path || TERRAIN_IMGS.path.complete) &&
+                                TERRAIN_IMGS.grass.every(img => !img || img.complete) &&
+                                TERRAIN_IMGS.mountain.every(img => !img || img.complete);
+
+            for (let r = 0; r < mapRows; r++) { 
+                for (let c = 0; c < mapCols; c++) { 
+                    let dx = c * TILE_SIZE, dy = r * TILE_SIZE;
+                    let terrainVal = (currentTerrain[r] && currentTerrain[r][c] !== undefined) ? currentTerrain[r][c] : 0;
+
+                    if (isPath(c, r) || terrainVal === 1) { 
+                        if (TERRAIN_IMGS.path && TERRAIN_IMGS.path.complete && !TERRAIN_IMGS.path.isFailed && TERRAIN_IMGS.path.naturalWidth > 0) { 
+                            drawAnimatedTerrainToCtx(TERRAIN_IMGS.path, dx, dy); 
+                        } else { tCtx.fillStyle = '#c49f81'; tCtx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); }
+                    } 
+                    else if (terrainVal === 3) {
+                        tCtx.fillStyle = '#2c3e50'; tCtx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                        tCtx.strokeStyle = '#34495e'; tCtx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                    } 
+                    else if (terrainVal === 2) { 
+                        let validMntImgs = TERRAIN_IMGS.mountain.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
+                        if (validMntImgs.length > 0) { 
+                            let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
+                            let tileIndex = 0; 
+                            if (validMntImgs.length >= 4) {
+                                if (randVal > 0.90) tileIndex = 1; else if (randVal > 0.80) tileIndex = 2; else if (randVal > 0.70) tileIndex = 3; 
+                            } else { tileIndex = Math.floor(randVal * validMntImgs.length); }
+                            drawAnimatedTerrainToCtx(validMntImgs[tileIndex], dx, dy); 
+                        } else { 
+                            tCtx.fillStyle = '#7f8c8d'; tCtx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); tCtx.strokeStyle = '#95a5a6'; tCtx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                        }
+                    } 
+                    else { 
+                        let validGrassImgs = TERRAIN_IMGS.grass.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
+                        if (validGrassImgs.length > 0) { 
+                            let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
+                            let tileIndex = 0; 
+                            if (validGrassImgs.length >= 4) {
+                                if (randVal > 0.90) tileIndex = 1; else if (randVal > 0.80) tileIndex = 2; else if (randVal > 0.70) tileIndex = 3; 
+                            } else { tileIndex = Math.floor(randVal * validGrassImgs.length); }
+                            drawAnimatedTerrainToCtx(validGrassImgs[tileIndex], dx, dy); 
+                        } else {
+                            tCtx.fillStyle = '#8fbc8f'; tCtx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); tCtx.strokeStyle = '#7da27d'; tCtx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                        }
                     }
                 }
             }
+            // 只有在圖片全讀取完的狀態下，才正式存入快取，避免黑畫面
+            if (isFullyLoaded) window.cachedTerrainFrames[terrainFrame] = tCanvas;
+            ctx.drawImage(tCanvas, 0, 0); // 第一次先直接畫
+        } else {
+            // 往後的每一幀，只需要這一行，瞬間省下 800 次迴圈！
+            ctx.drawImage(window.cachedTerrainFrames[terrainFrame], 0, 0);
         }
 
         mapDecorations.forEach(dec => {
@@ -3584,15 +3766,15 @@ class PlayerUnit {
         // ============================================
         // 【修改】：無縫藍色螢光興建範圍 (修正偏位並適配主堡大範圍)
         // ============================================
-if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove) && !isDeleteMode) {
+    if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove) && !isDeleteMode) {
             ctx.save();
-            ctx.fillStyle = 'rgba(52, 152, 219, 0.35)'; 
-            ctx.shadowColor = '#00a8ff';
-            ctx.shadowBlur = 20; 
+            ctx.fillStyle = 'rgba(52, 152, 219, 0.45)'; // 稍微調深顏色彌補
+            ctx.shadowColor = 'transparent'; 
+            ctx.shadowBlur = 0;
             
             ctx.beginPath();
-            for(let r=20; r<40; r++){ // 玩家建造區改為 20~39
-                for(let c=0; c<20; c++){
+            for(let r = Math.floor(mapRows / 2); r < mapRows; r++){ // 【修復】：動態玩家半場
+                for(let c = 0; c < mapCols; c++){ // 【修復】：動態寬度
                     let inRange = false;
                     
                     // 1. 主堡 3 格範圍 (絕對置中於 17, 17)
@@ -4212,8 +4394,8 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             let scaleSize = 1.2; let cw = TERRAIN_IMGS.clouds.naturalWidth || 100; let ch = TERRAIN_IMGS.clouds.naturalHeight || 100;
             cloudOffsetX = (cloudOffsetX - 0.8) % (cw * scaleSize); cloudOffsetY = (cloudOffsetY - 0.4) % (ch * scaleSize); 
             ctx.save(); 
-            ctx.globalAlpha = 0.55; 
-            ctx.globalCompositeOperation = 'multiply'; 
+            ctx.globalAlpha = 0.15; 
+            ctx.globalCompositeOperation = 'source-over';
             
             // 【效能優化 1】：把 pattern 快取起來，絕對不能每 16 毫秒重複創造！
             if (!window.cachedCloudPattern) {
@@ -4222,9 +4404,63 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             ctx.fillStyle = window.cachedCloudPattern;
             
             ctx.translate(cloudOffsetX, cloudOffsetY); ctx.scale(scaleSize, scaleSize); 
-            let startX = -cloudOffsetX / scaleSize; let startY = -cloudOffsetY / scaleSize; let drawW = 800 / scaleSize; let drawH = 1600 / scaleSize;
+            let startX = -cloudOffsetX / scaleSize; let startY = -cloudOffsetY / scaleSize; let drawW = mapWidth / scaleSize; let drawH = mapHeight / scaleSize;
             ctx.fillRect(startX, startY, drawW, drawH); ctx.restore();
         }
+
+        // 👇👇👇 貼在這裡：戰爭迷霧系統 👇👇👇
+        // ============================================
+        // 【新增】：戰爭迷霧系統 (Fog of War)
+        // ============================================
+        // 1. 在隱形畫布塗滿深藍黑色的迷霧 (保留 4% 透明度讓玩家隱約看見地形輪廓)
+        fogCtx.globalCompositeOperation = 'source-over';
+        fogCtx.fillStyle = 'rgba(15, 20, 25, 0.96)'; 
+        fogCtx.fillRect(0, 0, mapWidth, mapHeight);
+
+        // 2. 切換為「擦除」模式，準備像橡皮擦一樣挖開視野
+        fogCtx.globalCompositeOperation = 'destination-out';
+
+        // 3. 定義開視野函數 (改用超高速度的 drawImage 快取模式)
+        const revealVision = (vx, vy, radius) => {
+            let lightImg = getLightImage(radius);
+            fogCtx.drawImage(lightImg, vx - lightImg.width / 2, vy - lightImg.width / 2, lightImg.width, lightImg.width);
+        };
+
+
+        // 4. 打開我方主堡視野 (半徑 350，確保家裡是亮的)
+        revealVision(playerBase.x * TILE_SIZE + TILE_SIZE, playerBase.y * TILE_SIZE + TILE_SIZE, 350);
+
+        // 5. 打開我方建築視野
+        towers.forEach(t => {
+            if (t.owner !== 'enemy' && !t.isDestroyed) {
+                let bData = BUILDINGS[t.id];
+                let s = bData.size || 1;
+                // 【純數據驅動】：優先讀取建築的 visionRange，若無則防呆計算預設值
+                let r = bData.visionRange || ((bData.type === 'attack') ? (60 + bData.range * 30 + t.level * 10 + 100) : 150);
+                revealVision(t.x * TILE_SIZE + (TILE_SIZE * s) / 2, t.y * TILE_SIZE + (TILE_SIZE * s) / 2, r);
+            }
+        });
+
+        // 6. 打開我方部隊與將領視野
+        playerUnits.forEach(p => {
+            if (!p.isDying) {
+                // 【純數據驅動】：優先讀取角色的 visionRange，若無則防呆使用 (攻擊距離 + 120)
+                let r = p.unitData.visionRange || (p.range + 120);
+                revealVision(p.x + p.drawOffsetX, p.y + p.drawOffsetY, r);
+            }
+        });
+
+        // 7. 【效能優化】：只讓巨石與大絕招照亮黑夜，禁止普通滿天飛的弓箭參與挖洞！
+        projectiles.forEach(p => { 
+            if (p.type === 'boulder') revealVision(p.x, p.y, 100); 
+        });
+        slashWaves.forEach(sw => { 
+            if (sw.isUlt) revealVision(sw.x, sw.y, 120); 
+        });
+
+        // 8. 將這張「打好洞」的迷霧，完整蓋到遊戲主畫面上！
+        ctx.drawImage(fogCanvas, 0, 0, mapWidth, mapHeight);
+        // 👆👆👆 迷霧系統結束 👆👆👆
 
         // ============================================
         // 8. 【修改】：畫出動態對白氣泡 (支援飄動與噴泉物理效果)
