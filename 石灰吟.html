@@ -922,6 +922,7 @@ const EFFECT_IMGS = {
         
         // 讀取當前關卡的地圖設定
         let mapData = MAP_DATABASE[currentLevel];
+        window.cachedTerrainFrames = [null, null, null, null]; // 【效能優化】：清空並重置地形快取
 
         // 【動態地圖】：根據資料庫設定自動調整畫布與迷霧大小
         mapCols = mapData.cols || 20;
@@ -2632,10 +2633,9 @@ window.startBattlePhase = function() {
                 if (this.isTransforming) {
                     let whiteIntensity = this.transformTimer > 45 ? 1 - ((this.transformTimer - 45) / 45) : this.transformTimer / 45;
                     ctx.filter = `brightness(${1 + whiteIntensity * 50})`;
-                } else { ctx.filter = 'none'; }
+                }
 
-                ctx.drawImage(this.currentImg, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); 
-                ctx.filter = 'none';
+                ctx.drawImage(this.currentImg, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
             } else {
                 ctx.fillStyle = this.unitData.color; ctx.beginPath(); ctx.arc(cx, cy, 10 * this.currentScale, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = 'white'; ctx.font = '12px Microsoft JhengHei'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(this.unitData.symbol, cx, cy);
@@ -3083,10 +3083,9 @@ class PlayerUnit {
                 if (this.isTransforming) {
                     let whiteIntensity = this.transformTimer > 45 ? 1 - ((this.transformTimer - 45) / 45) : this.transformTimer / 45;
                     ctx.filter = `brightness(${1 + whiteIntensity * 50})`;
-                } else { ctx.filter = 'none'; }
+                }
 
-                ctx.drawImage(this.currentImg, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight); 
-                ctx.filter = 'none'; 
+                ctx.drawImage(this.currentImg, sx, sy, frameWidth, frameHeight, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
             } else {
                 ctx.fillStyle = this.unitData.isGeneral ? '#fcf3cf' : 'white'; ctx.fillRect(cx - TILE_SIZE/2 + 2, cy - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4);
                 if(this.unitData.isGeneral) { ctx.strokeStyle = '#f1c40f'; ctx.lineWidth = 2; ctx.strokeRect(cx - TILE_SIZE/2 + 2, cy - TILE_SIZE/2 + 2, TILE_SIZE - 4, TILE_SIZE - 4); }
@@ -3672,64 +3671,77 @@ class PlayerUnit {
         // 記得將 gameLoop 裡面更下面的 `if (isPlaying)` 檢查，手動改為 `if (isCombatActive)` 即可！
 
         // ============================================
-        // 2. 畫地形與環境裝飾 (永遠執行)
+        // 2. 畫地形與環境裝飾 (永遠執行) - 【極速快取版】
         // ============================================
         let terrainFrame = Math.floor(globalAnimTick / 15) % 4;
-        const drawAnimatedTerrain = (img, dx, dy) => {
-            let frameWidth = img.naturalWidth / 4; let frameHeight = img.naturalHeight;
-            let sx = terrainFrame * frameWidth;
-            ctx.drawImage(img, sx, 0, frameWidth, frameHeight, dx, dy, TILE_SIZE, TILE_SIZE);
-        };
 
-for (let r = 0; r < mapRows; r++) { 
-            for (let c = 0; c < mapCols; c++) { 
-                let dx = c * TILE_SIZE, dy = r * TILE_SIZE;
-                
-                // 【終極解鎖】：讀取真正的地形矩陣資料！(防呆預設為 0 草地)
-                let terrainVal = (currentTerrain[r] && currentTerrain[r][c] !== undefined) ? currentTerrain[r][c] : 0;
+        if (!window.cachedTerrainFrames) window.cachedTerrainFrames = [null, null, null, null];
 
-                // 1. 道路 (代號: 1 或自動尋路區域)
-                if (isPath(c, r) || terrainVal === 1) { 
-                    if (TERRAIN_IMGS.path && TERRAIN_IMGS.path.complete && !TERRAIN_IMGS.path.isFailed && TERRAIN_IMGS.path.naturalWidth > 0) { 
-                        drawAnimatedTerrain(TERRAIN_IMGS.path, dx, dy); 
-                    } else { ctx.fillStyle = '#c49f81'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); }
-                } 
-                // 2. 深淵 / 死水區 (代號: 3)
-                else if (terrainVal === 3) {
-                    ctx.fillStyle = '#2c3e50'; // 深藍黑色
-                    ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); 
-                    ctx.strokeStyle = '#34495e'; 
-                    ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
-                } 
-                // 3. 山地障礙 (代號: 2)
-                else if (terrainVal === 2) { 
-                    let validMntImgs = TERRAIN_IMGS.mountain.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
-                    if (validMntImgs.length > 0) { 
-                        let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
-                        let tileIndex = 0; 
-                        if (validMntImgs.length >= 4) {
-                            if (randVal > 0.90) tileIndex = 1; else if (randVal > 0.80) tileIndex = 2; else if (randVal > 0.70) tileIndex = 3; 
-                        } else { tileIndex = Math.floor(randVal * validMntImgs.length); }
-                        drawAnimatedTerrain(validMntImgs[tileIndex], dx, dy); 
-                    } else { 
-                        ctx.fillStyle = '#7f8c8d'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#95a5a6'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
-                    }
-                } 
-                // 4. 草地平原 (代號: 0)
-                else { 
-                    let validGrassImgs = TERRAIN_IMGS.grass.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
-                    if (validGrassImgs.length > 0) { 
-                        let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
-                        let tileIndex = 0; 
-                        if (validGrassImgs.length >= 4) {
-                            if (randVal > 0.90) tileIndex = 1; else if (randVal > 0.80) tileIndex = 2; else if (randVal > 0.70) tileIndex = 3; 
-                        } else { tileIndex = Math.floor(randVal * validGrassImgs.length); }
-                        drawAnimatedTerrain(validGrassImgs[tileIndex], dx, dy); 
-                    } else {
-                        ctx.fillStyle = '#8fbc8f'; ctx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); ctx.strokeStyle = '#7da27d'; ctx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+        // 如果這一幀的動畫還沒被快取，才執行 800 次的辛苦運算
+        if (!window.cachedTerrainFrames[terrainFrame]) {
+            let tCanvas = document.createElement('canvas');
+            tCanvas.width = mapWidth;
+            tCanvas.height = mapHeight;
+            let tCtx = tCanvas.getContext('2d');
+
+            const drawAnimatedTerrainToCtx = (img, dx, dy) => {
+                let frameWidth = img.naturalWidth / 4; let frameHeight = img.naturalHeight;
+                let sx = terrainFrame * frameWidth;
+                tCtx.drawImage(img, sx, 0, frameWidth, frameHeight, dx, dy, TILE_SIZE, TILE_SIZE);
+            };
+
+            let isFullyLoaded = (!TERRAIN_IMGS.path || TERRAIN_IMGS.path.complete) &&
+                                TERRAIN_IMGS.grass.every(img => !img || img.complete) &&
+                                TERRAIN_IMGS.mountain.every(img => !img || img.complete);
+
+            for (let r = 0; r < mapRows; r++) { 
+                for (let c = 0; c < mapCols; c++) { 
+                    let dx = c * TILE_SIZE, dy = r * TILE_SIZE;
+                    let terrainVal = (currentTerrain[r] && currentTerrain[r][c] !== undefined) ? currentTerrain[r][c] : 0;
+
+                    if (isPath(c, r) || terrainVal === 1) { 
+                        if (TERRAIN_IMGS.path && TERRAIN_IMGS.path.complete && !TERRAIN_IMGS.path.isFailed && TERRAIN_IMGS.path.naturalWidth > 0) { 
+                            drawAnimatedTerrainToCtx(TERRAIN_IMGS.path, dx, dy); 
+                        } else { tCtx.fillStyle = '#c49f81'; tCtx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); }
+                    } 
+                    else if (terrainVal === 3) {
+                        tCtx.fillStyle = '#2c3e50'; tCtx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                        tCtx.strokeStyle = '#34495e'; tCtx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                    } 
+                    else if (terrainVal === 2) { 
+                        let validMntImgs = TERRAIN_IMGS.mountain.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
+                        if (validMntImgs.length > 0) { 
+                            let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
+                            let tileIndex = 0; 
+                            if (validMntImgs.length >= 4) {
+                                if (randVal > 0.90) tileIndex = 1; else if (randVal > 0.80) tileIndex = 2; else if (randVal > 0.70) tileIndex = 3; 
+                            } else { tileIndex = Math.floor(randVal * validMntImgs.length); }
+                            drawAnimatedTerrainToCtx(validMntImgs[tileIndex], dx, dy); 
+                        } else { 
+                            tCtx.fillStyle = '#7f8c8d'; tCtx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); tCtx.strokeStyle = '#95a5a6'; tCtx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                        }
+                    } 
+                    else { 
+                        let validGrassImgs = TERRAIN_IMGS.grass.filter(img => img && img.complete && !img.isFailed && img.naturalWidth > 0);
+                        if (validGrassImgs.length > 0) { 
+                            let hash = Math.sin(r * 12.9898 + c * 78.233) * 43758.5453; let randVal = hash - Math.floor(hash); 
+                            let tileIndex = 0; 
+                            if (validGrassImgs.length >= 4) {
+                                if (randVal > 0.90) tileIndex = 1; else if (randVal > 0.80) tileIndex = 2; else if (randVal > 0.70) tileIndex = 3; 
+                            } else { tileIndex = Math.floor(randVal * validGrassImgs.length); }
+                            drawAnimatedTerrainToCtx(validGrassImgs[tileIndex], dx, dy); 
+                        } else {
+                            tCtx.fillStyle = '#8fbc8f'; tCtx.fillRect(dx, dy, TILE_SIZE, TILE_SIZE); tCtx.strokeStyle = '#7da27d'; tCtx.strokeRect(dx, dy, TILE_SIZE, TILE_SIZE); 
+                        }
                     }
                 }
             }
+            // 只有在圖片全讀取完的狀態下，才正式存入快取，避免黑畫面
+            if (isFullyLoaded) window.cachedTerrainFrames[terrainFrame] = tCanvas;
+            ctx.drawImage(tCanvas, 0, 0); // 第一次先直接畫
+        } else {
+            // 往後的每一幀，只需要這一行，瞬間省下 800 次迴圈！
+            ctx.drawImage(window.cachedTerrainFrames[terrainFrame], 0, 0);
         }
 
         mapDecorations.forEach(dec => {
@@ -3754,11 +3766,11 @@ for (let r = 0; r < mapRows; r++) {
         // ============================================
         // 【修改】：無縫藍色螢光興建範圍 (修正偏位並適配主堡大範圍)
         // ============================================
-if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove) && !isDeleteMode) {
+    if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove) && !isDeleteMode) {
             ctx.save();
-            ctx.fillStyle = 'rgba(52, 152, 219, 0.35)'; 
-            ctx.shadowColor = '#00a8ff';
-            ctx.shadowBlur = 20; 
+            ctx.fillStyle = 'rgba(52, 152, 219, 0.45)'; // 稍微調深顏色彌補
+            ctx.shadowColor = 'transparent'; 
+            ctx.shadowBlur = 0;
             
             ctx.beginPath();
             for(let r = Math.floor(mapRows / 2); r < mapRows; r++){ // 【修復】：動態玩家半場
@@ -4382,8 +4394,8 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             let scaleSize = 1.2; let cw = TERRAIN_IMGS.clouds.naturalWidth || 100; let ch = TERRAIN_IMGS.clouds.naturalHeight || 100;
             cloudOffsetX = (cloudOffsetX - 0.8) % (cw * scaleSize); cloudOffsetY = (cloudOffsetY - 0.4) % (ch * scaleSize); 
             ctx.save(); 
-            ctx.globalAlpha = 0.55; 
-            ctx.globalCompositeOperation = 'multiply'; 
+            ctx.globalAlpha = 0.15; 
+            ctx.globalCompositeOperation = 'source-over';
             
             // 【效能優化 1】：把 pattern 快取起來，絕對不能每 16 毫秒重複創造！
             if (!window.cachedCloudPattern) {
@@ -4438,9 +4450,13 @@ if ((selectedBuilding || typeof buildingToMove !== 'undefined' && buildingToMove
             }
         });
 
-        // 7. 【彩蛋】：讓飛行中的大絕招與飛彈也能暫時照亮黑夜！
-        projectiles.forEach(p => revealVision(p.x, p.y, 100));
-        slashWaves.forEach(sw => revealVision(sw.x, sw.y, 120));
+        // 7. 【效能優化】：只讓巨石與大絕招照亮黑夜，禁止普通滿天飛的弓箭參與挖洞！
+        projectiles.forEach(p => { 
+            if (p.type === 'boulder') revealVision(p.x, p.y, 100); 
+        });
+        slashWaves.forEach(sw => { 
+            if (sw.isUlt) revealVision(sw.x, sw.y, 120); 
+        });
 
         // 8. 將這張「打好洞」的迷霧，完整蓋到遊戲主畫面上！
         ctx.drawImage(fogCanvas, 0, 0, mapWidth, mapHeight);
