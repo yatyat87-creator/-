@@ -27,7 +27,24 @@
             color: var(--primary);
             font-size: 28px;
             margin-top: 0;
+            margin-bottom: 5px;
+        }
+        .header-actions {
+            text-align: center;
             margin-bottom: 15px;
+        }
+        .reset-btn {
+            background-color: #fff;
+            color: #E74C3C;
+            border: 1px solid #E74C3C;
+            padding: 5px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .reset-btn:active {
+            background-color: #FDEDEC;
         }
         .nav-grid {
             display: flex;
@@ -115,11 +132,21 @@
             padding: 20px;
             border-radius: 10px;
         }
+        .progress-text {
+            font-size: 16px;
+            color: #7F8C8D;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
     </style>
 </head>
 <body>
 
-    <h1>🌟 小一入學面試模擬器 (擴充版 + 重組句子) 🌟</h1>
+    <h1>🌟 小一入學面試模擬器 (擴充版) 🌟</h1>
+    <div class="header-actions">
+        <button class="reset-btn" onclick="resetProgress()">🔄 重置所有進度 (全部題目重頭嚟過)</button>
+    </div>
 
     <div class="nav-grid">
         <button class="nav-btn active" onclick="setCategory('chi')">📘 中文認讀</button>
@@ -128,23 +155,25 @@
         <button class="nav-btn" onclick="setCategory('math')">🧮 數學與邏輯</button>
         <button class="nav-btn" onclick="setCategory('personal')">🗣️ 個人與情境</button>
         <button class="nav-btn" onclick="setCategory('listen')">🎨 聆聽與畫圖</button>
-        <button class="nav-btn" style="background-color: #FFF3E0; border-color: #F5A623; color: #F5A623;" onclick="setCategory('rearrange')">🧩 重組句子 (新)</button>
+        <button class="nav-btn" style="background-color: #FFF3E0; border-color: #F5A623; color: #F5A623;" onclick="setCategory('rearrange')">🧩 重組句子</button>
     </div>
 
     <div class="card">
+        <div class="progress-text" id="progress">剩餘: 0 題</div>
         <div class="instruction-text" id="instruction">請選擇面試項目</div>
         <div class="question-text" id="question">準備好開始了嗎？</div>
         <div class="answer-text" id="answer">解答區域</div>
         
         <div class="controls">
             <button class="action-btn" style="background-color: #95A5A6;" onclick="toggleAnswer()">👀 顯示答案/提示</button>
-            <button class="action-btn" style="background-color: #2ECC71;" onclick="markGood()">✅ 答得好</button>
-            <button class="action-btn" style="background-color: #E74C3C;" onclick="markBad()">❌ 答得唔好</button>
+            <button class="action-btn" style="background-color: #2ECC71;" id="btn-good" onclick="markGood()">✅ 答得好</button>
+            <button class="action-btn" style="background-color: #E74C3C;" id="btn-bad" onclick="markBad()">❌ 答得唔好</button>
         </div>
     </div>
 
     <script>
-        const database = {
+        // 預設的完整題庫
+        const defaultDatabase = {
             chi: [
                 { q: "知道 / 春天 / 球場 / 喜歡", i: "指令：請順序 1>2>3>4 讀出", a: "留意小朋友有否跳讀。如不識讀請鼓勵猜測。" },
                 { q: "認真 / 家 / 我 / 知道", i: "指令：請順序 1>2>3>4 讀出", a: "重點：留意眼神接觸和發音清晰度。" },
@@ -492,7 +521,7 @@
                 { q: "回答問題答錯咗，全班同學睇住你，你會點做？", i: "抗壓能力", a: "答：唔會害怕，聽老師講解正確答案，下次再嘗試。" },
                 { q: "同朋友玩遊戲，大家想玩嘅嘢唔同（一個想畫畫，一個想砌積木），點辦？", i: "協商能力", a: "答：可以輪流玩，先畫畫再砌積木，或者玩剪刀石頭布決定。" },
                 { q: "班上有身體不方便或者特別慢嘅同學，我哋應該點對待佢哋？", i: "包容接納", a: "答：要互相包容，主動關心同幫忙，唔可以欺負佢哋。" },
-                { q: "屋企有客人嚟拜訪，你會點樣招待客人？", i: "家庭禮儀", a: "答：主主動叫人『叔叔阿姨好』，請客人坐同倒水。" },
+                { q: "屋企有客人嚟拜訪，你會點樣招待客人？", i: "家庭禮儀", a: "答：主動叫人『叔叔阿姨好』，請客人坐同倒水。" },
                 { q: "喺電影院睇電影或者喺圖書館，點解唔可以大聲說話？", i: "顧及他人", a: "答：因為會影響其他人睇戲同睇書，要尊重公共場所規矩。" },
                 { q: "同屋企人食飯時，長輩未坐落嚟，我哋可以先食嗎？", i: "傳統禮儀", a: "答：唔可以，要等長輩坐好、叫『爸爸媽媽食飯』先開始食。" },
                 { q: "食飯時，如果不小心將食物掉喺枱上面或者地上，可以點做？", i: "生活習慣", a: "答：地上的食物唔可以再食，要拾起丟進垃圾桶。" },
@@ -602,52 +631,95 @@
             ]
         };
 
+        // 嘗試從瀏覽器提取進度，如果沒有，就複製 defaultDatabase
+        let database;
+        const savedData = localStorage.getItem('interviewProgress');
+        if (savedData) {
+            database = JSON.parse(savedData);
+        } else {
+            // 深拷貝一份預設題庫
+            database = JSON.parse(JSON.stringify(defaultDatabase));
+        }
+
         let currentCategory = 'chi';
         let currentIndex = -1;
+
+        // 保存進度到 localStorage
+        function saveProgress() {
+            localStorage.setItem('interviewProgress', JSON.stringify(database));
+            updateProgressText();
+        }
+
+        // 重置進度功能
+        function resetProgress() {
+            if (confirm("確定要重置所有進度嗎？所有『答得好』的題目將會再次出現！")) {
+                localStorage.removeItem('interviewProgress');
+                database = JSON.parse(JSON.stringify(defaultDatabase));
+                currentIndex = -1;
+                nextQuestion();
+                alert("進度已成功重置！");
+            }
+        }
+
+        // 更新剩餘題數顯示
+        function updateProgressText() {
+            const count = database[currentCategory].length;
+            document.getElementById('progress').innerText = `剩餘: ${count} 題`;
+        }
 
         function setCategory(cat) {
             currentCategory = cat;
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             
-            // 更換分類時立即隨機抽一題該分類的題目
-            currentIndex = -1; // 切換時重置索引，以防出錯
+            currentIndex = -1; 
             nextQuestion();
         }
 
         function markGood() {
             const arr = database[currentCategory];
-            // 將這條「答得好」的題目從題庫中刪除
             if (arr.length > 0 && currentIndex !== -1) {
+                // 將題目從當前題庫刪除
                 arr.splice(currentIndex, 1);
+                // 儲存進度
+                saveProgress();
             }
             
-            // 由於陣列長度改變了，必須重置索引並抽下一題
             currentIndex = -1;
             nextQuestion();
         }
 
         function markBad() {
-            // 答得唔好，題目保留在陣列中，直接抽下一題
+            // 答錯無需刪除，直接下一題
             nextQuestion();
         }
 
         function nextQuestion() {
             const arr = database[currentCategory];
+            updateProgressText();
             
-            // 如果該類別題目已被全部清空
+            const btnGood = document.getElementById('btn-good');
+            const btnBad = document.getElementById('btn-bad');
+            
             if (arr.length === 0) {
                 document.getElementById('instruction').innerText = "完成！";
-                document.getElementById('question').innerHTML = "🎉 恭喜！這個類別的題目已經全部答對！";
+                document.getElementById('question').innerHTML = "🎉 恭喜！這個類別的題目已經全部答對！<br><span style='font-size: 20px; color: #7F8C8D;'>可以選擇其他類別，或按上方重置按鈕重做。</span>";
                 document.getElementById('answer').innerHTML = "";
                 document.getElementById('answer').style.display = 'none';
+                
+                // 隱藏按鈕
+                btnGood.style.display = 'none';
+                btnBad.style.display = 'none';
                 currentIndex = -1;
                 return;
             }
 
+            // 顯示按鈕 (以防被隱藏)
+            btnGood.style.display = 'inline-block';
+            btnBad.style.display = 'inline-block';
+
             let newIndex = currentIndex;
             if (arr.length > 1) {
-                // 確保下一題不會與剛才重複 (當題庫大於1題時)
                 while (newIndex === currentIndex) {
                     newIndex = Math.floor(Math.random() * arr.length);
                 }
@@ -668,7 +740,7 @@
             ans.style.display = ans.style.display === 'none' ? 'block' : 'none';
         }
 
-        // 初始化：預設開啟第一分類的題目
+        // 初始化
         nextQuestion();
     </script>
 </body>
