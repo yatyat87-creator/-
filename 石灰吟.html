@@ -1411,7 +1411,7 @@ window.startBattlePhase = function() {
         // ==========================================
         // 【新增】：時代科技限制 (美湖居需主城達標)
         // ==========================================
-        const targetLevel = 16; // 👈 你可以在這裡自由修改需要的等級 (例如 15、30 或 45)
+        const targetLevel = 1; // 👈 你可以在這裡自由修改需要的等級 (例如 15、30 或 45)
         if (bId === 'meihu' && playerBase.level < targetLevel) {
             playSound('error'); // 播放錯誤音效
             const feedback = document.getElementById('feedback');
