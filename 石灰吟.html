@@ -1225,8 +1225,16 @@ window.startBattlePhase = function() {
             if (comboMultiplier > 0) {
                 feedback.innerText += ` 🎉 結算：共答對 ${comboMultiplier} 題，資源大豐收！`;
                 
-                // 1. 派發保底基礎資源 (50 * 倍數)
-                let baseGain = 50 * comboMultiplier;
+                // 1. 派發基礎資源 + 人口紅利
+                // 計算當前真實總人口 (包含活著的村民 + 場上的兵力)
+                let totalCurrentPop = currentTownPop + window.getMilitaryPop();
+                
+                // 設定人口紅利：每 1 個人口，額外給予 2 點資源 (你可依難度自行修改這個數字)
+                let popBonus = totalCurrentPop * 2; 
+                
+                // 最終收益 = (基礎 50 + 人口紅利) * 答對題數倍數
+                let baseGain = Math.floor((50 + popBonus) * comboMultiplier);
+                
                 gameGold += baseGain; gameWood += baseGain; gameMeat += baseGain; gameStone += baseGain;
                 
                 let bx = playerBase.x * TILE_SIZE + TILE_SIZE / 2;
@@ -1307,12 +1315,12 @@ window.startBattlePhase = function() {
         }
     }
 
-    // 1. 計算最高村民上限 (主城 20 + 每級農田 10)
+    // 1. 計算最高村民上限 (主城 20 + 每級農田 5)
     window.getMaxTownPop = function() {
         let basePop = 20;
         let farmPop = 0;
         let farms = towers.filter(t => t.id === 'farm' && (!t.owner || t.owner === 'player'));
-        farms.forEach(f => farmPop += (10 * f.level));
+        farms.forEach(f => farmPop += (5 * f.level)); // 【修改】：每級農田只增加 5 個人口
         return basePop + farmPop;
     };
 
