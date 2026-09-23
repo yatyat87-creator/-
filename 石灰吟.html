@@ -466,20 +466,20 @@ const ENEMY_TYPES = {
         },
         'rocks': { 
             id: 'rocks', name: "洛克斯", symbol: "洛", color: '#4a235a', dmg: 12.0, range: 1.8, moveSpd: 0.5, atkSpd: 0.6, hpMult: 45.0, drawScale: 2.2, ultChance: 0.30, 
-            skillType: "quake", skillName: "西洋劍·蝕", knockback: 120, spawnType: "boss", targetWaves: [3], spawnTimeLimit: 140, knockbackImmune: true,
+            skillType: "quake", skillName: "西洋劍·蝕", knockback: 120, spawnType: "boss", targetWaves: [3,6,9], spawnTimeLimit: 140, knockbackImmune: true,
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/洛克斯.png", aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/洛克斯震波.png" 
         },
         'madara': { 
             id: 'madara', name: "宇智波斑", symbol: "斑", color: '#e74c3c', dmg: 5.0, range: 0.8, moveSpd: 1.2, atkSpd: 3.3, hpMult: 35.0, drawScale: 2.2, ultChance: 0.20, 
             isTransformable: true, skillType: "fireball", skillType2: "slash", skillName: "火遁·豪火滅卻", skillName2: "毀滅斬波", passiveType2: "unstoppable",
-            transformStats: { scaleMult: 1.8, dmgMult: 2.0, fireRateMult: 4.0, rangeAdd: 60, speedMult: 0.6 }, spawnType: "boss", targetWaves: [5], spawnTimeLimit: 100, knockbackImmune: true,
+            transformStats: { scaleMult: 1.8, dmgMult: 2.0, fireRateMult: 4.0, rangeAdd: 60, speedMult: 0.6 }, spawnType: "boss", targetWaves: [4,8], spawnTimeLimit: 100, knockbackImmune: true,
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/斑(紅甲).png", imgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐能乎.png", 
             aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/豪火球.png", aoeImgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐斬擊特效.png", slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/須佐斬波.png" 
         },
         'aizen': { 
             id: 'aizen', name: "藍染惣右介", symbol: "藍", color: '#8e44ad', dmg: 4.0, range: 0.8, moveSpd: 1.8, atkSpd: 2.0, hpMult: 30.0, drawScale: 2.2, ultChance: 0.25, 
             isTransformable: true, evasion: 0.45, skillType: "black_hole", skillType2: "cero_beam", skillName: "破道之九十·黑棺", skillName2: "究極爆破·弗拉哥",
-            transformStats: { scaleMult: 1.1, dmgMult: 1.5, fireRateMult: 3.0, rangeAdd: 180, speedMult: 0.5, newEvasion: 0.65 }, spawnType: "boss", targetWaves: [1], spawnTimeLimit: 180, knockbackImmune: true,
+            transformStats: { scaleMult: 1.1, dmgMult: 1.5, fireRateMult: 3.0, rangeAdd: 180, speedMult: 0.5, newEvasion: 0.65 }, spawnType: "boss", targetWaves: [5,9], spawnTimeLimit: 180, knockbackImmune: true,
             imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/藍染.png", imgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/崩玉藍染.png", aoeImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/黑棺.png", aoeImgSrc2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/弗拉哥.png"
         }
     };
@@ -1400,7 +1400,7 @@ window.startBattlePhase = function() {
         // ==========================================
         // 【新增】：時代科技限制 (美湖居需主城達標)
         // ==========================================
-        const targetLevel = 1; // 👈 你可以在這裡自由修改需要的等級 (例如 15、30 或 45)
+        const targetLevel = 16; // 👈 你可以在這裡自由修改需要的等級 (例如 15、30 或 45)
         if (bId === 'meihu' && playerBase.level < targetLevel) {
             playSound('error'); // 播放錯誤音效
             const feedback = document.getElementById('feedback');
