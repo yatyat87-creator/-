@@ -276,89 +276,101 @@
 // ==========================================
     // 【新增】：遊戲音效庫與播放管理器
     // ==========================================
+    // ==========================================
+    // 【終極升級】：Web Audio API 專業遊戲音效引擎 (零卡頓)
+    // ==========================================
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+    const audioBuffers = {}; 
+
+    // 1. 長背景音樂 (BGM) 保持使用 Audio 標籤串流播放 (節省記憶體)
     const SOUNDS = {
-        bgm_lobby: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-07.mp3"), // 【新增】：大廳與選擇難度 BGM
+        bgm_lobby: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-07.mp3"),
         bgm_battle: [
             new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-08.mp3"),
             new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-05.mp3"),
             new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-04.mp3"),
             new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Track-02.mp3")
-        ],
-        click: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/click.mp3"), // 按鈕點擊
-        build: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Build.mp3"), // 建築成功/升級
-        error: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/error.mp3"), // 錯誤/資源不足
-        correct: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/correct.mp3"), // 答對
-        wrong: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/wrong.mp3"), // 答錯
-        melee: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Melee.mp3"), // 普攻揮砍
-        shoot: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Shoot.mp3"), // 射箭/主堡雷射
-        slash: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Slash.mp3"), // 狂王刀氣
-        explosion: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/explosion.mp3"), // 飛彈/大絕爆炸
-        
-        // 【修改】：將死亡音效改為陣列，支援隨機播放多種聲音
-        death: [
-            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/death.mp3"),
-            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death2.mp3"), // <--- 請替換為你的第二個死亡音效網址
-            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death3.mp3"), // <--- 請替換為你的第二個死亡音效網址
-            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death4.mp3"), // <--- 請替換為你的第二個死亡音效網址
-            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death5.mp3"), // <--- 請替換為你的第二個死亡音效網址
-            new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death6.mp3")  // <--- 請替換為你的第三個死亡音效網址
-        ],
-        
-        win: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/win.mp3"), // 勝利
-        lose: new Audio("https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/lose.mp3") // 戰敗
+        ]
     };
-    // 【新增】：記錄當前這場戰鬥抽到的 BGM
-    let currentBattleBgm = null;
-
-    // 設定大廳音樂無限循環
-    SOUNDS.bgm_lobby.loop = true;
-    SOUNDS.bgm_lobby.volume = 0.4;
     
-    // 【修改】：用迴圈將所有戰鬥 BGM 都設定為無限循環與音量 0.4
-    SOUNDS.bgm_battle.forEach(bgm => {
-        bgm.loop = true;
-        bgm.volume = 0.4;
-    });
+    SOUNDS.bgm_lobby.loop = true; SOUNDS.bgm_lobby.volume = 0.4;
+    SOUNDS.bgm_battle.forEach(bgm => { bgm.loop = true; bgm.volume = 0.4; });
 
-    // 【效能優化】：建立音效節流閥 (Throttle)，避免同瞬間創造過多 Audio 節點
+    // 2. 短音效 (SFX) 網址清單 - 準備解碼並寫入硬體緩衝區
+    const SFX_URLS = {
+        click: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/click.mp3",
+        build: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Build.mp3",
+        error: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/error.mp3",
+        correct: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/correct.mp3",
+        wrong: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/wrong.mp3",
+        melee: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Melee.mp3",
+        shoot: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Shoot.mp3",
+        slash: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Slash.mp3",
+        explosion: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/explosion.mp3",
+        death1: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/death.mp3",
+        death2: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death2.mp3",
+        death3: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death3.mp3",
+        death4: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death4.mp3",
+        death5: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death5.mp3",
+        death6: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Death6.mp3",
+        win: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/win.mp3",
+        lose: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/lose.mp3"
+    };
+
+    // 異步載入並解碼所有短音效
+    async function loadAllSFX() {
+        for (let key in SFX_URLS) {
+            try {
+                let response = await fetch(SFX_URLS[key]);
+                let arrayBuffer = await response.arrayBuffer();
+                audioBuffers[key] = await audioCtx.decodeAudioData(arrayBuffer);
+            } catch (e) { console.log(`音效 ${key} 載入失敗:`, e); }
+        }
+    }
+    loadAllSFX(); // 遊戲啟動時自動在背景載入
+
     const SOUND_THROTTLE = {};
     
     function playSound(key) {
+        // 瀏覽器安全限制：必須在玩家首次互動後解鎖 AudioContext
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
         let now = Date.now();
-        // 限制同一個音效在 80 毫秒內只能觸發一次！這能幫瀏覽器減少 90% 以上的無效負擔！
+        // 節流閥：限制同一個音效在 80 毫秒內只能觸發一次
         if (SOUND_THROTTLE[key] && now - SOUND_THROTTLE[key] < 80) return; 
         SOUND_THROTTLE[key] = now;
 
-        if (SOUNDS[key]) {
-            let targetSound = SOUNDS[key];
-            
-            // 如果這個音效是陣列（設定了多個聲音），就隨機抽一個出來播
-            if (Array.isArray(targetSound)) {
-                targetSound = targetSound[Math.floor(Math.random() * targetSound.length)];
-            }
-            
-            let soundClone = targetSound.cloneNode();
-            soundClone.volume = 0.6; 
-            // 【新增】：音效播完後，主動將其銷毀，釋放記憶體！
-            // 找到這行原本的代碼：
-            // soundClone.onended = () => { soundClone.remove(); };
+        // 處理死亡音效的隨機陣列邏輯
+        let targetKey = key;
+        if (key === 'death') {
+            let deathIndex = Math.floor(Math.random() * 6) + 1;
+            targetKey = 'death' + deathIndex;
+        }
 
-            // ✅ 替換為以下這段：
-            soundClone.onended = function() { 
-                this.src = ''; // 徹底切斷音源連接，釋放內部緩衝區
-                this.removeAttribute('src'); // 強制通知瀏覽器進行垃圾回收 (Garbage Collection)
-                this.remove(); 
-            };
-            soundClone.play().catch(e => console.log("瀏覽器擋住了自動播放:", e));
+        // 播放 Web Audio API 緩衝區音效 (超輕量、零延遲、用完即棄不佔資源)
+        if (audioBuffers[targetKey]) {
+            let source = audioCtx.createBufferSource();
+            source.buffer = audioBuffers[targetKey];
+            
+            let gainNode = audioCtx.createGain();
+            gainNode.gain.value = 0.6; // 設定音量
+            
+            source.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            source.start(0);
         }
     }
 
+    // 玩家首次點擊畫面時，解鎖底層音效引擎並播放大廳音樂
     document.body.addEventListener('click', function startLobbyBgm() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
         if (document.getElementById('setup-screen').style.display !== 'none') {
             SOUNDS.bgm_lobby.play().catch(e => console.log(e));
         }
         document.body.removeEventListener('click', startLobbyBgm); 
     }, { once: true });
+
 // ==========================================
     // 🗺️ 遊戲地圖資料庫
     // ==========================================
@@ -4362,10 +4374,21 @@ class PlayerUnit {
                     enemies.forEach(e => {
                         if (Math.hypot((e.x + e.drawOffsetX) - p.tx, (e.y + e.drawOffsetY) - p.ty) <= p.aoeRadius) e.hp -= p.damage;
                     });
+                    
+                    // 👇 加入這段：讓飛彈也能對敵方防禦塔造成傷害！
+                    towers.forEach(t => {
+                        if (t.owner === 'enemy' && !t.isDestroyed) {
+                            let tx = t.x * TILE_SIZE + TILE_SIZE / 2, ty = t.y * TILE_SIZE + TILE_SIZE / 2;
+                            if (Math.hypot(tx - p.tx, ty - p.ty) <= p.aoeRadius) t.hp -= p.damage; 
+                        }
+                    });
+                    // 👆 新增結束
+                    
                     if (Math.hypot((enemyBase.x*TILE_SIZE+TILE_SIZE/2) - p.tx, (enemyBase.y*TILE_SIZE+TILE_SIZE/2) - p.ty) <= p.aoeRadius) enemyBase.hp -= p.damage;
                     
                     combatEffects.push({ x: p.tx, y: p.ty, radius: p.aoeRadius, timer: 30, type: p.type });
                 }
+
                 projectiles.splice(i, 1);
             } else {
                 p.x += (dx / dist) * p.speed;
