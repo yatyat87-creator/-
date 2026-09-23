@@ -824,7 +824,7 @@ const EFFECT_IMGS = {
         updateLobbyUI();
     }
     // 【修改】：極致穩定的返回大廳函式
-    window.returnToMenu = function() {
+        window.returnToMenu = function() {
         // 1. 停止動畫迴圈 (使用 window. 前綴避免變數未宣告的報錯)
         if (window.animFrameId) {
             cancelAnimationFrame(window.animFrameId);
@@ -909,6 +909,7 @@ const EFFECT_IMGS = {
         document.getElementById('setup-screen').style.display = 'none';
         document.getElementById('play-screen').style.display = 'block';
         
+        // 停止舊的動畫迴圈
         if (window.animFrameId) cancelAnimationFrame(window.animFrameId);
         for (let key in GENERALS) { GENERALS[key].isDeployed = false; GENERALS[key].deathCooldown = 0; }
         window.blackDragonRespawnTimer = -1;        
@@ -940,9 +941,9 @@ const EFFECT_IMGS = {
         ctx.scale(dpr, dpr); 
         ctx.imageSmoothingEnabled = true;
         
-        // 調整迷霧畫布
-        fogCanvas.width = mapWidth;
-        fogCanvas.height = mapHeight;
+        // 【效能終極優化】：迷霧畫布降至一半長寬 (運算量減少 75%)
+        fogCanvas.width = mapWidth / 2;
+        fogCanvas.height = mapHeight / 2;
         
         // 深度複製主堡狀態 (避免污染資料庫)
         playerBase = JSON.parse(JSON.stringify(mapData.playerBase));
@@ -971,7 +972,9 @@ const EFFECT_IMGS = {
 
         currentWave = 1;
         startQuizPhase(); 
-        window.animFrameId = requestAnimationFrame(gameLoop); 
+        // 重置高精度計時器，並啟動遊戲主迴圈
+        window.lastFrameTime = 0; 
+        window.animFrameId = requestAnimationFrame(gameLoop);
     };
 
     window.startQuizPhase = function() {
@@ -1960,8 +1963,8 @@ window.startBattlePhase = function() {
     // --- Canvas 與地圖建造邏輯 ---
     const canvas = document.getElementById('gameCanvas'); 
     const ctx = canvas.getContext('2d');
-    // 【效能優化】：限制手機最高只用 1.5 倍渲染，畫質依然清晰，但能大幅減輕 GPU 負擔與發熱！
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5); 
+// 【效能終極優化】：強制為 1，減少超過 50% 的像素運算負擔！
+    const dpr = 1;
     
     // 【修改】：將地圖垂直擴大為原本的兩倍 (800x1600)，總共 20x40 格！
     canvas.width = mapWidth * dpr; canvas.height = mapHeight * dpr; 
@@ -3070,14 +3073,9 @@ class PlayerUnit {
                 ctx.translate(cx, cy - 5 + yOffset);
                 if (this.facingLeft) { ctx.scale(-1, 1); }
                 
+                // 【效能優化】：徹底移除引發 restore 瓶頸的 ctx.clip()
                 if (this.isDying && this.isRetreating) {
-                    let deathProgress = 1 - (this.deathTimer / 45); ctx.beginPath();
-                    let numBlinds = 8; let blindH = drawHeight / numBlinds;
-                    for (let i = 0; i < numBlinds; i++) {
-                        let delay = (numBlinds - 1 - i) * 0.08; let localProgress = Math.max(0, Math.min(1, (deathProgress - delay) * 2));
-                        ctx.rect(-drawWidth / 2, -drawHeight / 2 + i * blindH, drawWidth, blindH * (1 - localProgress));
-                    }
-                    ctx.clip(); 
+                    ctx.globalAlpha = Math.max(0, this.deathTimer / 45);
                 }
 
                 if (this.isTransforming) {
@@ -3301,19 +3299,19 @@ class PlayerUnit {
 
     // --- 遊戲主迴圈 ---
     function gameLoop(timestamp) {
-        // 1. 強制註冊下一幀
+        // 1. 強制註冊下一幀 (回歸瀏覽器的 VIP 遊戲渲染通道)
         window.animFrameId = requestAnimationFrame(gameLoop);
         
-        // 2. 【物理鎖幀 3.0】：改用絕對真實時間 Date.now()，無視手機系統的刷新率作弊！
-        let now = Date.now();
-        if (!window._realLastTime) window._realLastTime = now;
-        let elapsed = now - window._realLastTime;
+        // 2. 初始化高精度計時器
+        if (!window.lastFrameTime) window.lastFrameTime = timestamp;
+        let elapsed = timestamp - window.lastFrameTime;
         
-        // 3. 容錯閘門：真實世界只要過得少於 15 毫秒 (即高於 60 FPS)，直接腰斬，唔准運算！
-        if (elapsed < 15) return; 
+        // 3. 完美的物理鎖幀 (60 FPS = 16.66 毫秒)
+        // 只要時間還沒到 16.66 毫秒，就提早結束，等待下一幀
+        if (elapsed < 16.66) return; 
         
-        // 4. 嚴格重置時間
-        window._realLastTime = now; 
+        // 4. 嚴格重置時間，並「保留多出來的餘數」！(徹底解決 144Hz 螢幕的時間誤差)
+        window.lastFrameTime = timestamp - (elapsed % 16.66);
 
         // --- 遊戲邏輯開始 ---
         ctx.clearRect(0, 0, mapWidth, mapHeight);
@@ -4300,8 +4298,8 @@ class PlayerUnit {
                 ctx.beginPath();
                 ctx.arc(eff.x, eff.y, eff.radius, 0, Math.PI * 2);
                 
-                ctx.fillStyle = 'black';
-                ctx.globalCompositeOperation = 'saturation';
+                // 【效能優化】：移除電腦極不友善的 saturation 混合模式
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
                 ctx.fill();
                 
                 ctx.globalCompositeOperation = 'source-over';
@@ -4319,20 +4317,16 @@ class PlayerUnit {
                 ctx.globalAlpha = alpha;
                 ctx.globalCompositeOperation = 'screen'; // 濾色模式讓光束更亮
                 
-                // 1. 畫出外層的紫色靈壓光暈 (極粗)
-                ctx.strokeStyle = '#8e44ad'; 
-                ctx.lineWidth = 25; 
-                ctx.shadowColor = '#9b59b6';
-                ctx.shadowBlur = 20;
+                // 【效能優化】：拔除會引發卡頓的 shadowBlur，改用透明度疊加
+                ctx.strokeStyle = 'rgba(142, 68, 173, 0.5)'; 
+                ctx.lineWidth = 35; 
                 ctx.beginPath(); 
                 ctx.moveTo(eff.x, eff.y); 
                 ctx.lineTo(eff.tx, eff.ty); 
                 ctx.stroke();
                 
-                // 2. 畫出內層的高熱白光核心 (較細)
                 ctx.strokeStyle = '#ffffff'; 
                 ctx.lineWidth = 8;
-                ctx.shadowBlur = 10;
                 ctx.stroke();
                 
                 // 3. 畫出擊中目標點的靈壓爆破圈
@@ -4412,18 +4406,19 @@ class PlayerUnit {
         // ============================================
         // 【新增】：戰爭迷霧系統 (Fog of War)
         // ============================================
-        // 1. 在隱形畫布塗滿深藍黑色的迷霧 (保留 4% 透明度讓玩家隱約看見地形輪廓)
+        // 1. 在隱形畫布塗滿深藍黑色的迷霧
         fogCtx.globalCompositeOperation = 'source-over';
         fogCtx.fillStyle = 'rgba(15, 20, 25, 0.96)'; 
-        fogCtx.fillRect(0, 0, mapWidth, mapHeight);
+        fogCtx.fillRect(0, 0, mapWidth / 2, mapHeight / 2); // 👈 配合縮小版畫布
 
         // 2. 切換為「擦除」模式，準備像橡皮擦一樣挖開視野
         fogCtx.globalCompositeOperation = 'destination-out';
 
-        // 3. 定義開視野函數 (改用超高速度的 drawImage 快取模式)
+        
+        // 3. 定義開視野函數 (座標與半徑全部除以 2)
         const revealVision = (vx, vy, radius) => {
-            let lightImg = getLightImage(radius);
-            fogCtx.drawImage(lightImg, vx - lightImg.width / 2, vy - lightImg.width / 2, lightImg.width, lightImg.width);
+            let lightImg = getLightImage(radius / 2); // 👈 半徑除以 2
+            fogCtx.drawImage(lightImg, (vx / 2) - lightImg.width / 2, (vy / 2) - lightImg.width / 2, lightImg.width, lightImg.width); // 👈 座標除以 2
         };
 
 
