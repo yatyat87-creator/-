@@ -2444,8 +2444,7 @@ window.startBattlePhase = function() {
             this.speed = this.unitData.moveSpd * 1.5 + (wave * 0.05); 
             this.range = 30 + (this.unitData.range * 20);
             this.damage = 10 * this.unitData.dmg * (1 + wave * 0.2); 
-            this.fireRate = Math.max(10, 60 / this.unitData.atkSpd - wave);
-            
+            this.fireRate = Math.max(10, Math.floor((60 / this.unitData.atkSpd) / (1 + wave * 0.03)));            
             this.cooldown = 0; this.state = 0; this.frame = 0; this.facingLeft = true; 
             this.lane = Math.floor(Math.random() * 3) - 1;
             this.laneOffset = this.lane * 12; this.drawOffsetX = 0; this.drawOffsetY = 0;
@@ -2762,8 +2761,7 @@ class PlayerUnit {
             this.speed = this.unitData.moveSpd * 1.5; 
             this.range = 30 + (this.unitData.range * 20); 
             this.damage = 10 * this.unitData.dmg * level; 
-            this.fireRate = Math.max(10, 60 / this.unitData.atkSpd - (level * 2));
-            this.cooldown = 0; this.state = 0; this.frame = 0; this.facingLeft = true; 
+            this.fireRate = Math.max(10, Math.floor((60 / this.unitData.atkSpd) / (1 + level * 0.05)));            this.cooldown = 0; this.state = 0; this.frame = 0; this.facingLeft = true; 
             this.lane = Math.floor(Math.random() * 3) - 1;
             this.laneOffset = this.lane * 12; this.drawOffsetX = 0; this.drawOffsetY = 0;
             
@@ -2917,7 +2915,7 @@ class PlayerUnit {
             if (this.atkBuffTimer > 0) { this.atkBuffTimer--; if (this.atkBuffTimer <= 0) this.atkBuffMult = 1.0; }
             if (this.ultAuraTimer > 0) {
                 this.ultAuraTimer--;
-                if (globalAnimTick % 15 === 0) {
+                if (globalAnimTick % 60 === 0) {
                     let healMult = 0.05; 
                     playerUnits.forEach(p => { if (!p.isDying && Math.hypot(p.x - this.x, p.y - this.y) <= 180) p.hp = Math.min(p.maxHp, p.hp + p.maxHp * healMult); });
                     towers.forEach(t => { if (t.owner !== 'enemy' && !t.isDestroyed) { let tx = t.x * TILE_SIZE + TILE_SIZE/2, ty = t.y * TILE_SIZE + TILE_SIZE/2; if (Math.hypot(tx - this.x, ty - this.y) <= 180) t.hp = Math.min(t.maxHp, t.hp + t.maxHp * healMult); }});
@@ -3450,20 +3448,48 @@ class PlayerUnit {
                 timerUI.innerHTML = `<span style="color:${cSeason.color}; text-shadow: 1px 1px 0 #000;">${cSeason.icon} ${cSeason.name} | ${month}月${dayOfMonth}日</span>`;
                 document.getElementById('wave-display').innerText = `強度: Lv.${Math.floor(difficultyLevel)} (第 ${year} 年)`;
 
-                // 3. 每日結算：繁衍與扣除糧食
+                        // 3. 每日結算：繁衍與扣除糧食
                 if (currentDay > window.lastDayProcessed && window.battleTimeRemaining > 0) {
                     window.lastDayProcessed = currentDay;
                     
                     let maxPop = window.getMaxTownPop();
                     
-                    // A. 人口繁衍：每天自動誕生 (最大值的 1% 或最低 1 人)
+                    // ==========================================
+                    // 【全新微型社會】：計算城鎮 GDP (經濟繁榮度)
+                    // 掃描玩家所有「資源類建築」與「市場」的總等級
+                    // ==========================================
+                    let gdpLevelSum = 0;
+                    towers.forEach(t => {
+                        if ((!t.owner || t.owner === 'player') && !t.isDestroyed) {
+                            let bData = BUILDINGS[t.id];
+                            if (bData.type === 'resource' || t.id === 'market') {
+                                gdpLevelSum += t.level;
+                            }
+                        }
+                    });
+                    
+                    // A. 人口繁衍：結合現存人口 (生育) + GDP (移民)
                     if (currentTownPop < maxPop && gameMeat > 0) {
-                        // 計算增長量：Math.max(1, 最大人口 * 0.01)
-                        let popGrowth = Math.max(1, Math.floor(maxPop * 0.01));
+                        // 1. 基礎保底：每天至少 1 人
+                        // 2. 生育率：現存人口的 2% (人越多生越快)
+                        // 3. 經濟吸引力：每 5 點 GDP (等級總和) 額外吸引 1 名外來移民
+                        let baseGrowth = 1;
+                        let birthGrowth = Math.floor(currentTownPop * 0.02);
+                        let immigrationGrowth = Math.floor(gdpLevelSum / 5);
+                        
+                        let popGrowth = baseGrowth + birthGrowth + immigrationGrowth;
                         currentTownPop += popGrowth;
                         
-                        // 確保不會超過上限
+                        // 確保不會超過農田提供的最大上限
                         if (currentTownPop > maxPop) currentTownPop = maxPop;
+                        
+                        // 【可選特效】：在主城上方跳出每日增加的人口數，讓玩家有感！
+                        if (currentTownPop < maxPop) {
+                            let bx = playerBase.x * TILE_SIZE + TILE_SIZE / 2;
+                            let by = playerBase.y * TILE_SIZE - 20;
+                            floatingTexts.push({ x: bx, y: by, text: `👨‍🌾+${popGrowth}`, color: "#2ecc71", timer: 45, vx: (Math.random()-0.5), vy: -1.5, font: 'bold 14px Arial' });
+                        }
+                        
                     } else if (currentTownPop > maxPop) {
                         currentTownPop--; // 拆除農田導致房屋不足，村民流失
                     }
@@ -4216,8 +4242,7 @@ class PlayerUnit {
                 if (isPlaying && bData.type === 'attack') {
                     const range = 60 + (bData.range * 30) + (tower.level * 10);
                     const damage = 10 * bData.dmg * tower.level * (tower.atkBuffMult || 1.0);                    
-                    const fireRate = Math.max(10, 60 / bData.spd - (tower.level * 2)); 
-                    
+                    const fireRate = Math.max(10, Math.floor((60 / bData.spd) / (1 + tower.level * 0.05)));                     
                     if (tower.cooldown > 0) { tower.cooldown--; tower.state = (tower.cooldown > fireRate - 15) ? 1 : 0; } 
                     else {
                         // 【修改】：根據塔的所有權決定射擊目標 (敵軍塔射玩家，玩家塔射敵軍)
