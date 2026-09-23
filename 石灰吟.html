@@ -340,7 +340,15 @@
             let soundClone = targetSound.cloneNode();
             soundClone.volume = 0.6; 
             // 【新增】：音效播完後，主動將其銷毀，釋放記憶體！
-            soundClone.onended = () => { soundClone.remove(); };
+            // 找到這行原本的代碼：
+            // soundClone.onended = () => { soundClone.remove(); };
+
+            // ✅ 替換為以下這段：
+            soundClone.onended = function() { 
+                this.src = ''; // 徹底切斷音源連接，釋放內部緩衝區
+                this.removeAttribute('src'); // 強制通知瀏覽器進行垃圾回收 (Garbage Collection)
+                this.remove(); 
+            };
             soundClone.play().catch(e => console.log("瀏覽器擋住了自動播放:", e));
         }
     }
@@ -535,6 +543,7 @@ const ENEMY_TYPES = {
         },
         "f_dad": { 
             id: "f_dad", name: "Brian", symbol: "爸", color: "#c0392b", price: 0, isGeneral: true, isFamily: true, dmg: 5.0, range: 1.5, moveSpd: 1.2, atkSpd: 1.5, hpMult: 4, drawScale: 1.9, ultChance: 0.25, hasAoE: true, desc: "近戰：強大擊退力", 
+            normalAttackType: "slash", // 👈 新增這行：讓老爸普攻也是揮舞鑽頭並發出揮砍聲
             skillType: "slash", skillName: "GIGA DRILL 突破", knockback: 40, imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/老爸機甲.png", slashImgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/呂布戟氣.png" 
         },
         "f_mom": { 
@@ -543,6 +552,7 @@ const ENEMY_TYPES = {
         },
         "f_daughter": { 
             id: "f_daughter", name: "Candice", symbol: "女", color: "#f1c40f", price: 0, isGeneral: true, isFamily: true, dmg: 3.5, range: 6, moveSpd: 2.0, atkSpd: 2.0, hpMult: 2.5, drawScale: 1.5, ultChance: 0.25, hasAoE: true, desc: "遠程：全圖飛彈", 
+            normalAttackType: "missile", // 👈 新增這行：讓她普攻射出飛彈並發出正確的發射聲
             skillType: "missile", skillName: "滿天星飛彈", imgSrc: "https://raw.githubusercontent.com/yatyat87-creator/PNG-file/main/Candice.png" 
         },
         "f_fusion": { 
@@ -882,6 +892,15 @@ const EFFECT_IMGS = {
         gameWood = 100;
         gameMeat = 100;
         gameStone = 100;
+        
+        // 👇 【新增修復】：徹底重置微型社會、波數與特殊機制狀態
+        currentTownPop = 20;                // 重置村民人口為初始 20 人
+        currentWave = 1;                    // 重置關卡波數
+        siegeCamp = [null, null];           // 徹底清空攻城廠內的車輛
+        window.fusionCooldownLock = false;  // 解除真家族合體鎖定
+        window.bossSpawned = false;         // 重置 Boss 出現標記
+        if (window.enemyRes) { window.enemyRes.stone = 0; window.enemyRes.wood = 0; } // 沒收敵軍 AI 殘留的資源
+        // 👆 【新增結束】
 
         // 【修改】：如果有正在播放的戰鬥音樂，將其停止
         if (currentBattleBgm) {
