@@ -145,7 +145,7 @@
                 <span id="wave-display" style="color: #2980b9; margin: 0 10px;">強度: Lv.1</span>
                 <span id="timer-display" style="color: #34495e; font-family: monospace; font-size: 18px;">⏱️ 00:00</span>
                 <!-- 【新增】：人口上限標籤 -->
-                <span id="pop-display" style="color: #2ecc71; margin: 0 10px; font-weight: bold;">👨‍兵力: 0/50</span>
+                <span id="pop-display" style="color: #2ecc71; margin: 0 10px; font-weight: bold;">👨‍🌾村民: 20/20 | ⚔️兵力: 0/10</span>
                 <span style="color: #e74c3c;">❤️ 我方: <span id="hp-display">1000</span></span>
             </div>
 
@@ -661,8 +661,9 @@ const EFFECT_IMGS = {
     let unlockedGenerals = JSON.parse(localStorage.getItem('tdGameUnlocked_v2')) || [];
     let selectedGenerals = [];
 
-// 起始資源給予 1000 木材
+    // 起始資源給予 1000 木材
     let gameGold = 300, gameWood = 100, gameMeat = 100, gameStone = 100; 
+    let currentTownPop = 20; // 【新增】：當前實際村民數量
     let selectedBuilding = null;
     let isDeleteMode = false;
     let offenseCamp = new Array(10).fill(null);
@@ -1130,9 +1131,13 @@ window.startBattlePhase = function() {
             enemyBase.damage = 20 + (enemyBase.level - 1) * 10;
         }
 
-        // 【新增】：設定戰鬥階段倒數計時 3 分鐘 (180秒)
+        // 【新增】：設定戰鬥階段倒數計時 3 分鐘 (180秒) 與日曆系統
         window.battleTimeRemaining = 180;
-        document.getElementById('timer-display').innerText = "⏱️ 剩餘 03:00";
+        window.lastDayProcessed = 0; // 記錄已經結算過的天數
+        
+        let seasonNames = ['🌸 春季', '☀️ 夏季', '🍂 秋季', '❄️ 冬季'];
+        let currentSeason = seasonNames[(currentWave - 1) % 4];
+        document.getElementById('timer-display').innerText = `${currentSeason} | 第 1 天`;
         
         // (最底部的 let newLevel = ... 已經刪除！)
     };;
@@ -1302,24 +1307,45 @@ window.startBattlePhase = function() {
         }
     }
 
-    window.getPlayerPop = function() {
+    // 1. 計算最高村民上限 (主城 20 + 每級農田 10)
+    window.getMaxTownPop = function() {
+        let basePop = 20;
+        let farmPop = 0;
+        let farms = towers.filter(t => t.id === 'farm' && (!t.owner || t.owner === 'player'));
+        farms.forEach(f => farmPop += (10 * f.level));
+        return basePop + farmPop;
+    };
+
+    // 2. 計算當前軍隊數量 (將領與家人不計入兵力與人口)
+    window.getMilitaryPop = function() {
         let pop = 0;
-        // 【修改】：如果不是將領，或是是 Family，就要算人口
-        playerUnits.forEach(p => { if (!p.unitData.isGeneral || p.unitData.isFamily) pop += p.unitData.isSiege ? 2 : 1; });
+        // 只計算非將領 (即普通士兵與攻城車)
+        playerUnits.forEach(p => { 
+            if (!p.unitData.isGeneral) pop += p.unitData.isSiege ? 2 : 1; 
+        });
         offenseCamp.forEach(u => { if (u) pop += 1; });
         siegeCamp.forEach(u => { if (u) pop += 2; });
-        deployQueue.forEach(u => { if (!GENERALS[u.id] || GENERALS[u.id].isFamily) pop += BASIC_UNITS[u.id] && BASIC_UNITS[u.id].isSiege ? 2 : 1; });
+        deployQueue.forEach(u => { 
+            // 佇列中的如果是基礎兵種 (不包含在 GENERALS 中) 才計算
+            if (BASIC_UNITS[u.id]) pop += BASIC_UNITS[u.id].isSiege ? 2 : 1; 
+        });
         return pop;
     };
 
+    // 3. 刷新 UI 面板
     function updateResourcesUI() {
         document.getElementById('game-gold').innerText = gameGold; 
         document.getElementById('game-wood').innerText = gameWood; 
         document.getElementById('game-meat').innerText = gameMeat;
         document.getElementById('game-stone').innerText = gameStone;
-        // 【新增】：實時更新人口 UI
+        
         let popDisplay = document.getElementById('pop-display');
-        if (popDisplay) popDisplay.innerText = `👨‍兵力: ${window.getPlayerPop()}/50`;
+        if (popDisplay) {
+            let maxPop = window.getMaxTownPop();
+            let milPop = window.getMilitaryPop();
+            let maxMilPop = Math.floor(maxPop / 2); // 兵力上限是總人口的一半
+            popDisplay.innerText = `👨‍🌾村民: ${currentTownPop}/${maxPop} | ⚔️兵力: ${milPop}/${maxMilPop}`;
+        }
     }
 
     // --- 建造與兵營操作 ---
@@ -1366,12 +1392,22 @@ window.startBattlePhase = function() {
         }
     }
 
-
-
     function selectBuilding(bId) {
         // 【修復】：點擊建築按鈕時，強制自動關閉「拆除模式」與「移動模式」，防止系統幽靈狀態並存
         if (isDeleteMode) toggleDeleteMode();
         if (isMoveMode) toggleMoveMode();
+
+        // ==========================================
+        // 【新增】：時代科技限制 (美湖居需主城達標)
+        // ==========================================
+        const targetLevel = 1; // 👈 你可以在這裡自由修改需要的等級 (例如 15、30 或 45)
+        if (bId === 'meihu' && playerBase.level < targetLevel) {
+            playSound('error'); // 播放錯誤音效
+            const feedback = document.getElementById('feedback');
+            feedback.innerText = `⚠️ 時代未達標！【美湖居】需要城鎮中心升級至 Lv.${targetLevel} 才能解鎖建造！`;
+            feedback.style.color = "#e74c3c";
+            return; // 拒絕選取，直接中斷執行
+        }
 
         selectedBuilding = selectedBuilding === bId ? null : bId;
         document.querySelectorAll('#build-menu .slot').forEach(btn => btn.style.borderColor = '#7f8c8d');
@@ -1420,16 +1456,25 @@ window.startBattlePhase = function() {
             return; 
         }
 
-        // 【新增】：我方人口上限判定
-        let currentPop = window.getPlayerPop();
-        if (currentPop >= 50) {
-            feedback.innerText = "⚠️ 兵力已達 50 上限！"; 
+        // 【微型社會】：兵力上限判定與村民徵召
+        let milPop = window.getMilitaryPop();
+        let maxMilPop = Math.floor(window.getMaxTownPop() / 2);
+        
+        if (milPop >= maxMilPop) {
+            feedback.innerText = `⚠️ 兵力已達上限 (${maxMilPop})！請多建農田提升總人口！`; 
+            feedback.style.color = "#e74c3c"; return;
+        }
+        if (currentTownPop <= 0) {
+            feedback.innerText = `⚠️ 鎮上沒有多餘的村民可以徵召入伍了！`; 
             feedback.style.color = "#e74c3c"; return;
         }
 
-        // 4. 實際招募數量 = 空位、買得起數量、剩餘人口空間 三者的最小值
-        let popSpace = 50 - currentPop;
-        let recruitCount = Math.min(emptyIndices.length, affordableCount, popSpace);
+        // 4. 實際招募數量 = 空位、買得起、兵力空間、剩餘村民 四者的最小值
+        let popSpace = maxMilPop - milPop;
+        let recruitCount = Math.min(emptyIndices.length, affordableCount, popSpace, currentTownPop);
+        
+        // 徵兵成功：扣除肉，並將村民轉移到兵營
+        currentTownPop -= recruitCount;
 
         // 5. 一次過扣除總消耗資源
         gameMeat -= (50 * recruitCount); 
@@ -1545,7 +1590,7 @@ window.startBattlePhase = function() {
                 btn.disabled = true;
             } else {
                 btn.style.background = '#fff'; btn.style.color = '#2c3e50';
-                btn.innerHTML = `${g.name}<br><br>0 資源<br>1 人口`;
+                btn.innerHTML = `${g.name}<br><br>0 資源<br>0 人口`;
                 btn.onclick = () => deployFamily(fId);
             }
             container.appendChild(btn);
@@ -1553,7 +1598,7 @@ window.startBattlePhase = function() {
     };
 
     // ============================================
-    // 【新增】：家人獨立出擊邏輯
+    // 【新增】：家人獨立出擊邏輯 (英雄單位無人口限制)
     // ============================================
     window.deployFamily = function(fId) {
         if (gamePhase !== 2 || gameOver || gameWon) {
@@ -1564,12 +1609,6 @@ window.startBattlePhase = function() {
         let meihuTowers = towers.filter(t => t.id === 'meihu');
         if (meihuTowers.length === 0) return;
 
-        // 檢查人口限制
-        if (window.getPlayerPop() + 1 > 50) {
-            document.getElementById('feedback').innerText = "⚠️ 兵力已達上限，無法派出家人！"; 
-            document.getElementById('feedback').style.color = "#e74c3c"; return;
-        }
-
         let g = GENERALS[fId];
         let isDeployed = playerUnits.some(p => p.id === fId) || deployQueue.some(u => u.id === fId);
         if (isDeployed || g.deathCooldown > 0) return;
@@ -1577,10 +1616,10 @@ window.startBattlePhase = function() {
         // 從美湖居的位置出發
         let spawnIndex = getNearestPathIndex(meihuTowers[0].x, meihuTowers[0].y);
         
-        // 加入出擊佇列 (等級跟隨美湖居等級)
+        // 加入出擊佇列 (不扣除村民，完全不佔用兵力)
         deployQueue.push({ id: fId, level: meihuTowers[0].level, spawnIndex: spawnIndex });
         
-        document.getElementById('feedback').innerText = `🚀 【${g.name}】已從美湖居出擊！`; 
+        document.getElementById('feedback').innerText = `🚀 【${g.name}】已從美湖居出擊！(英雄不佔用人口)`; 
         document.getElementById('feedback').style.color = "#1abc9c";
         
         updateMeihuUI(); // 立即更新按鈕狀態
@@ -1622,7 +1661,8 @@ window.startBattlePhase = function() {
         
         if (isDeleteMode) {
             offenseCamp[index] = null; 
-            feedback.innerText = "🗑️ 已解散該部隊。"; 
+            currentTownPop++; // 退役回歸村民
+            feedback.innerText = "🗑️ 已解散部隊，1 名士兵退役回歸村民。"; 
             feedback.style.color = "#e74c3c";
         } else {
             // 【修改】：一鍵全選/取消選取所有同類兵種
@@ -1701,16 +1741,23 @@ window.startBattlePhase = function() {
         let uData = BASIC_UNITS[siegeId];
         let feedback = document.getElementById('feedback');
         
-        // 【修改】：配合新價格，檢查 stone 與 gold 並扣除
+        // 檢查 stone 與 gold 並扣除
         if (siegeId === 'trebuchet' && (gameWood < 10 || gameStone < 40)) {
             feedback.innerText = "⚠️ 資源不足！投石車需要 10 木與 40 石。"; return;
         } else if (siegeId === 'siege_tower' && (gameWood < 10 || gameGold < 40)) {
             feedback.innerText = "⚠️ 資源不足！井欄需要 10 木與 40 金。"; return;
         }
 
-        // 【新增】：攻城車需佔用 2 人口
-        if (window.getPlayerPop() + 2 > 50) {
-            feedback.innerText = "⚠️ 兵力空間不足！攻城車需佔用 2 人口。"; 
+        // 【微型社會修復】：攻城車需佔用 2 人口
+        let milPop = window.getMilitaryPop();
+        let maxMilPop = Math.floor(window.getMaxTownPop() / 2);
+        
+        if (milPop + 2 > maxMilPop) {
+            feedback.innerText = `⚠️ 兵力空間不足！攻城車需佔用 2 兵力空間。`; 
+            feedback.style.color = "#e74c3c"; return;
+        }
+        if (currentTownPop < 2) {
+            feedback.innerText = `⚠️ 鎮上村民不足！需要 2 名村民來操作攻城車。`; 
             feedback.style.color = "#e74c3c"; return;
         }
 
@@ -1722,7 +1769,10 @@ window.startBattlePhase = function() {
         if (siegeId === 'trebuchet') { gameWood -= 10; gameStone -= 40; }
         else { gameWood -= 10; gameGold -= 40; }
         
-        updateResourcesUI();
+        // 成功製造：扣除 2 名村民
+        currentTownPop -= 2; 
+        updateResourcesUI(); // 刷新人口面板
+        
         siegeCamp[emptyIdx] = { id: siegeId, level: currentSelectedTarget ? currentSelectedTarget.level : 1, selected: false };
         feedback.innerText = `✔️ 成功製造一輛【${uData.name}】！`;
         updateSiegeUI();
@@ -3327,16 +3377,69 @@ class PlayerUnit {
         // (原有的自動生產資源邏輯已被徹底移除！)
 
         if (isCombatActive) {
-            // 【新增】：戰鬥階段 3 分鐘倒數計時器
+            // 【城鎮經營 Phase 1】：四季日曆與每日生存結算
             if (globalAnimTick % 60 === 0) {
                 window.battleTimeRemaining--;
-                let m = String(Math.floor(Math.max(0, window.battleTimeRemaining) / 60)).padStart(2, '0');
-                let s = String(Math.max(0, window.battleTimeRemaining) % 60).padStart(2, '0');
-                document.getElementById('timer-display').innerText = `⏱️ 剩餘 ${m}:${s}`;
                 
-                // 時間到！強制清空敵軍，結束戰鬥回合
+                // 1. 計算天數與四季 (180秒 = 90天，每 2 秒過 1 天)
+                let elapsedSeconds = 180 - window.battleTimeRemaining;
+                let currentDay = Math.floor(elapsedSeconds / 2) + 1;
+                if (currentDay > 90) currentDay = 90; // 鎖定最高 90 天
+                
+                let seasons = [
+                    { name: '春季', icon: '🌸', color: '#ff9ff3' },
+                    { name: '夏季', icon: '☀️', color: '#feca57' },
+                    { name: '秋季', icon: '🍂', color: '#ff9f43' },
+                    { name: '冬季', icon: '❄️', color: '#48dbfb' }
+                ];
+                let seasonIndex = (currentWave - 1) % 4;
+                let year = Math.floor((currentWave - 1) / 4) + 1;
+                let cSeason = seasons[seasonIndex];
+
+                // 【新增】：計算真實月份與日期 (1波=1季=3個月，每月30天)
+                // 根據季節推算當前是第幾個月 (春:1~3月, 夏:4~6月, 秋:7~9月, 冬:10~12月)
+                let month = (seasonIndex * 3) + Math.ceil(currentDay / 30);
+                let dayOfMonth = currentDay % 30;
+                if (dayOfMonth === 0) dayOfMonth = 30; // 處理每個月最後一天
+
+                // 2. 更新頂部 UI (顯示 季節、月份與日期)
+                let timerUI = document.getElementById('timer-display');
+                timerUI.innerHTML = `<span style="color:${cSeason.color}; text-shadow: 1px 1px 0 #000;">${cSeason.icon} ${cSeason.name} | ${month}月${dayOfMonth}日</span>`;
+                document.getElementById('wave-display').innerText = `強度: Lv.${Math.floor(difficultyLevel)} (第 ${year} 年)`;
+
+                // 3. 每日結算：繁衍與扣除糧食
+                if (currentDay > window.lastDayProcessed && window.battleTimeRemaining > 0) {
+                    window.lastDayProcessed = currentDay;
+                    
+                    let maxPop = window.getMaxTownPop();
+                    
+                    // A. 人口繁衍：每天自動誕生 1 名村民，直到住滿
+                    if (currentTownPop < maxPop && gameMeat > 0) {
+                        currentTownPop++;
+                    } else if (currentTownPop > maxPop) {
+                        currentTownPop--; // 拆除農田導致房屋不足，村民流失
+                    }
+
+                    // B. 結算伙食費：村民與士兵都要吃飯 (每 5 人吃 1 塊肉)
+                    let totalFeedPop = currentTownPop + window.getMilitaryPop();
+                    let dailyFoodCost = Math.max(1, Math.floor(totalFeedPop / 5));
+                    
+                    if (gameMeat >= dailyFoodCost) {
+                        gameMeat -= dailyFoodCost;
+                    } else {
+                        gameMeat = 0;
+                        // 飢荒懲罰：沒有肉吃，村民餓死/流失
+                        if (currentTownPop > 0) currentTownPop--;
+                        let bx = playerBase.x * TILE_SIZE + TILE_SIZE / 2;
+                        let by = playerBase.y * TILE_SIZE - 40;
+                        floatingTexts.push({ x: bx, y: by, text: `⚠️ 飢荒！村民流失！`, color: "#e74c3c", timer: 60, vx: 0, vy: -1, font: 'bold 16px Arial' });
+                    }
+                    updateResourcesUI(); 
+                }
+
+                // 4. 年底結算：時間到！強制清空敵軍，結束戰鬥回合
                 if (window.battleTimeRemaining <= 0) {
-                    enemies = []; // 觸發下方的波數清理完畢邏輯
+                    enemies = []; 
                     waveEnemiesToSpawn = 0;
                 }
             }
