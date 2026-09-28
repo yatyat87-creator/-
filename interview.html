@@ -155,12 +155,18 @@
         <button class="nav-btn" onclick="setCategory('math')">🧮 數學與邏輯</button>
         <button class="nav-btn" onclick="setCategory('personal')">🗣️ 個人與情境</button>
         <button class="nav-btn" onclick="setCategory('listen')">🎨 聆聽與畫圖</button>
-        <button class="nav-btn" style="background-color: #FFF3E0; border-color: #F5A623; color: #F5A623;" onclick="setCategory('rearrange')">🧩 重組句子</button>
+        <button class="nav-btn" onclick="setCategory('rearrange')">🧩 重組句子</button>
+        <!-- 下面是新增的按鈕 -->
+        <button class="nav-btn" style="background-color: #E8F8F5; border-color: #1ABC9C; color: #1ABC9C;" onclick="setCategory('story')">📖 故事選擇題 (新)</button>
     </div>
 
     <div class="card">
         <div class="progress-text" id="progress">剩餘: 0 題</div>
         <div class="instruction-text" id="instruction">請選擇面試項目</div>
+        
+        <!-- 新增：手動朗讀按鈕 -->
+        <button onclick="speakText()" style="background-color: #3498DB; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-size: 18px; margin-bottom: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🔊 朗讀題目</button>
+        
         <div class="question-text" id="question">準備好開始了嗎？</div>
         <div class="answer-text" id="answer">解答區域</div>
         
@@ -628,6 +634,59 @@
                 { q: "weather / sunny / today / The / is", i: "英文重組句子 (5 words)", a: "答案：The weather is sunny today. (或 The weather today is sunny.)" },
                 { q: "jump / high / can / very / I", i: "英文重組句子 (5 words)", a: "答案：I can jump very high." },
                 { q: "hands / wash / Please / your", i: "英文重組句子", a: "答案：Please wash your hands." }
+            ],
+            // === 新增：短篇故事選擇題 ===
+            story: [
+                { 
+                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
+                    q: "【故事】\n今天天氣很好，小兔子白白拿著一個紅色的氣球去公園玩。她在公園裡遇到了好朋友小熊，小熊當時正在吃一條黃色的香蕉。\n\n【問題】\n1. 小兔子的氣球是什麼顏色？\n A. 藍色  B. 紅色  C. 黃色\n\n2. 小熊正在吃什麼？\n A. 蘋果  B. 香蕉  C. 橙", 
+                    a: "答案：\n1. B (紅色)\n2. B (香蕉)" 
+                },
+                { 
+                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
+                    q: "【故事】\n森林裡，小猴子皮皮爬上一棵很高的大樹。他摘了3個紅蘋果和2個青蘋果，然後把所有的蘋果都放進一個藍色的籃子裡準備帶回家。\n\n【問題】\n1. 小猴子摘了多少個紅蘋果？\n A. 2個  B. 3個  C. 5個\n\n2. 裝蘋果的籃子是什麼顏色？\n A. 藍色  B. 紅色  C. 綠色", 
+                    a: "答案：\n1. B (3個)\n2. A (藍色)" 
+                },
+                { 
+                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
+                    q: "【故事】\n星期日早上，熊貓媽媽帶小熊貓去超級市場。他們買了一盒牛奶、兩包餅乾和一個大西瓜。付款的時候，熊貓媽媽用八達通來給錢。\n\n【問題】\n1. 他們買了多少包餅乾？\n A. 一包  B. 兩包  C. 三包\n\n2. 熊貓媽媽用什麼方式付款？\n A. 現金  B. 信用卡  C. 八達通", 
+                    a: "答案：\n1. B (兩包)\n2. C (八達通)" 
+                },
+                { 
+                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
+                    q: "【故事】\n小貓花花有一條很溫暖的黃色頸巾。今天下大雨，她帶了一把紅色的雨傘出門，去圖書館找小白狗一起看故事書。\n\n【問題】\n1. 今天的天氣是怎樣的？\n A. 晴天  B. 下雨  C. 刮大風\n\n2. 小貓花花去哪裡找小白狗？\n A. 公園  B. 學校  C. 圖書館", 
+                    a: "答案：\n1. B (下雨)\n2. C (圖書館)" 
+                },
+                { 
+                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
+                    q: "【故事】\n小明最喜歡的動物是長頸鹿，因為牠的脖子很長。昨天小明生日，爸爸送了一架藍色的玩具火車給他，他開心得跳了起來。\n\n【問題】\n1. 小明最喜歡什麼動物？\n A. 大象  B. 長頸鹿  C. 老虎\n\n2. 爸爸送給小明的玩具火車是什麼顏色？\n A. 藍色  B. 紅色  C. 綠色", 
+                    a: "答案：\n1. B (長頸鹿)\n2. A (藍色)" 
+                },
+                { 
+                    i: "Listen to the story and answer (家長請朗讀一次)", 
+                    q: "【Story】\nTom has a fast toy car. It is blue and has four black wheels. He plays with it in the living room with his sister, Lily.\n\n【Question】\n1. What color is Tom's toy car?\n A. Red  B. Blue  C. Black\n\n2. Who does Tom play with?\n A. His brother  B. His friend  C. His sister", 
+                    a: "答案：\n1. B (Blue)\n2. C (His sister, Lily)" 
+                },
+                { 
+                    i: "Listen to the story and answer (家長請朗讀一次)", 
+                    q: "【Story】\nA little bird named Pip lives in a big green tree. Every morning, Pip eats three worms and sings a happy song to wake up the other animals.\n\n【Question】\n1. Where does Pip live?\n A. In a house  B. In a green tree  C. In a blue box\n\n2. How many worms does Pip eat in the morning?\n A. Two  B. Three  C. Four", 
+                    a: "答案：\n1. B (In a green tree)\n2. B (Three)" 
+                },
+                { 
+                    i: "Listen to the story and answer (家長請朗讀一次)", 
+                    q: "【Story】\nMary goes to the beach with her family. She builds a big sandcastle. Her brother finds a small yellow crab near the water.\n\n【Question】\n1. What does Mary build?\n A. A sandcastle  B. A snowman  C. A house\n\n2. What color is the crab?\n A. Red  B. Yellow  C. Green", 
+                    a: "答案：\n1. A (A sandcastle)\n2. B (Yellow)" 
+                },
+                { 
+                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
+                    q: "【故事】\n放學後，媽媽帶家明去餐廳吃下午茶。家明點了一份三文治和一杯熱朱古力，媽媽點了一件士多啤梨蛋糕。他們有說有笑，非常開心。\n\n【問題】\n1. 家明點了什麼飲品？\n A. 橙汁  B. 熱牛奶  C. 熱朱古力\n\n2. 媽媽吃了什麼口味的蛋糕？\n A. 巧克力  B. 士多啤梨  C. 芒果", 
+                    a: "答案：\n1. C (熱朱古力)\n2. B (士多啤梨)" 
+                },
+                { 
+                    i: "Listen to the story and answer (家長請朗讀一次)", 
+                    q: "【Story】\nIt is raining today. Peter puts on his yellow raincoat and green boots. He jumps in the puddles and laughs loudly.\n\n【Question】\n1. What is the weather like today?\n A. Sunny  B. Raining  C. Windy\n\n2. What color are Peter's boots?\n A. Yellow  B. Red  C. Green", 
+                    a: "答案：\n1. B (Raining)\n2. C (Green)" 
+                }
             ]
         };
 
@@ -733,6 +792,9 @@
             document.getElementById('question').innerHTML = item.q.replace(/\n/g, '<br>');
             document.getElementById('answer').innerHTML = item.a.replace(/\n/g, '<br>');
             document.getElementById('answer').style.display = 'none';
+            
+            // 新增：每次轉新題目時，自動嘗試朗讀
+            speakText();
         }
 
         function toggleAnswer() {
@@ -740,6 +802,32 @@
             ans.style.display = ans.style.display === 'none' ? 'block' : 'none';
         }
 
+        function speakText() {
+            // 停止當前正在播放的聲音 (避免重疊)
+            window.speechSynthesis.cancel();
+
+            // 獲取畫面上的純文字 (innerText 會自動忽略 HTML 標籤)
+            const textToRead = document.getElementById('question').innerText;
+            
+            // 建立語音物件
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            
+            // 自動判斷語言：如果英文字母數量多於中文字，就用英文朗讀，否則用廣東話
+            const engCount = (textToRead.match(/[a-zA-Z]/g) || []).length;
+            const chiCount = (textToRead.match(/[\u4e00-\u9fa5]/g) || []).length;
+            
+            if (engCount > chiCount) {
+                utterance.lang = 'en-US'; // 英文
+            } else {
+                utterance.lang = 'zh-HK'; // 廣東話
+            }
+            
+            // 語速調整：0.85 稍微讀慢少少，方便小朋友聆聽 (1 為正常速度)
+            utterance.rate = 0.85; 
+            
+            // 播放語音
+            window.speechSynthesis.speak(utterance);
+        }
         // 初始化
         nextQuestion();
     </script>
