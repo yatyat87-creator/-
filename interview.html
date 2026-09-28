@@ -164,9 +164,8 @@
         <div class="progress-text" id="progress">剩餘: 0 題</div>
         <div class="instruction-text" id="instruction">請選擇面試項目</div>
         
-        <!-- 新增：手動朗讀按鈕 -->
-        <button onclick="speakText()" style="background-color: #3498DB; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-size: 18px; margin-bottom: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🔊 朗讀題目</button>
-        
+        <!-- 新增：手動朗讀按鈕 (已更新點擊事件) -->
+        <button id="read-btn" onclick="playCurrentAudio()" style="display: none; background-color: #3498DB; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-size: 18px; margin-bottom: 15px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🔊 重播語音</button>        
         <div class="question-text" id="question">準備好開始了嗎？</div>
         <div class="answer-text" id="answer">解答區域</div>
         
@@ -635,57 +634,218 @@
                 { q: "jump / high / can / very / I", i: "英文重組句子 (5 words)", a: "答案：I can jump very high." },
                 { q: "hands / wash / Please / your", i: "英文重組句子", a: "答案：Please wash your hands." }
             ],
-            // === 新增：短篇故事選擇題 ===
+
+            // === 長篇升級版：短篇故事選擇題 (結構化資料) ===
             story: [
                 { 
-                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
-                    q: "【故事】\n今天天氣很好，小兔子白白拿著一個紅色的氣球去公園玩。她在公園裡遇到了好朋友小熊，小熊當時正在吃一條黃色的香蕉。\n\n【問題】\n1. 小兔子的氣球是什麼顏色？\n A. 藍色  B. 紅色  C. 黃色\n\n2. 小熊正在吃什麼？\n A. 蘋果  B. 香蕉  C. 橙", 
-                    a: "答案：\n1. B (紅色)\n2. B (香蕉)" 
+                    storyText: "今天天氣非常好，天空沒有一片雲。小兔子白白穿上一條漂亮的粉紅色裙子，拿著一個紅色的氣球去公園玩。她在公園裡的滑梯旁邊，遇到了好朋友小熊。小熊當時剛做完運動，滿頭大汗，正坐在長椅上吃一條黃色的香蕉補充體力。白白走過去和小熊分享她昨天在圖書館借來的故事書。他們約定明天再一起去草地上放風箏。", 
+                    questions: [
+                        { q: "小兔子的氣球是什麼顏色？", options: ["A. 藍色", "B. 紅色", "C. 黃色"], correct: 1 },
+                        { q: "小熊正在吃什麼？", options: ["A. 蘋果", "B. 香蕉", "C. 橙"], correct: 1 }
+                    ]
                 },
                 { 
-                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
-                    q: "【故事】\n森林裡，小猴子皮皮爬上一棵很高的大樹。他摘了3個紅蘋果和2個青蘋果，然後把所有的蘋果都放進一個藍色的籃子裡準備帶回家。\n\n【問題】\n1. 小猴子摘了多少個紅蘋果？\n A. 2個  B. 3個  C. 5個\n\n2. 裝蘋果的籃子是什麼顏色？\n A. 藍色  B. 紅色  C. 綠色", 
-                    a: "答案：\n1. B (3個)\n2. A (藍色)" 
+                    storyText: "在一個茂密的森林裡，住著一隻非常活潑的小猴子，名叫皮皮。秋天到了，樹上結滿了又大又甜的果實。皮皮敏捷地爬上一棵很高的大樹，他在樹丫之間跳來跳去。他精挑細選，摘了3個紅紅的蘋果和2個青色的蘋果，然後把所有的蘋果都小心翼翼地放進一個藍色的籃子裡。皮皮準備把這些新鮮的蘋果帶回家，和猴子媽媽一起分享這個美味的下午茶。", 
+                    questions: [
+                        { q: "小猴子摘了多少個紅蘋果？", options: ["A. 2個", "B. 3個", "C. 5個"], correct: 1 },
+                        { q: "裝蘋果的籃子是什麼顏色？", options: ["A. 藍色", "B. 紅色", "C. 綠色"], correct: 0 }
+                    ]
                 },
                 { 
-                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
-                    q: "【故事】\n星期日早上，熊貓媽媽帶小熊貓去超級市場。他們買了一盒牛奶、兩包餅乾和一個大西瓜。付款的時候，熊貓媽媽用八達通來給錢。\n\n【問題】\n1. 他們買了多少包餅乾？\n A. 一包  B. 兩包  C. 三包\n\n2. 熊貓媽媽用什麼方式付款？\n A. 現金  B. 信用卡  C. 八達通", 
-                    a: "答案：\n1. B (兩包)\n2. C (八達通)" 
+                    storyText: "星期日早上，陽光普照。熊貓媽媽帶著小熊貓圓圓一起去超級市場買東西。超級市場裡有很多人，圓圓幫媽媽推著購物車。他們在零食區買了一盒新鮮的牛奶、兩包朱古力味的餅乾，然後在水果區挑選了一個又大又圓的西瓜。到了付款的時候，熊貓媽媽拿出一張八達通來給錢，圓圓也很有禮貌地向收銀員姨姨說了聲謝謝，然後開心地回家了。", 
+                    questions: [
+                        { q: "他們買了多少包餅乾？", options: ["A. 一包", "B. 兩包", "C. 三包"], correct: 1 },
+                        { q: "熊貓媽媽用什麼方式付款？", options: ["A. 現金", "B. 信用卡", "C. 八達通"], correct: 2 }
+                    ]
                 },
                 { 
-                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
-                    q: "【故事】\n小貓花花有一條很溫暖的黃色頸巾。今天下大雨，她帶了一把紅色的雨傘出門，去圖書館找小白狗一起看故事書。\n\n【問題】\n1. 今天的天氣是怎樣的？\n A. 晴天  B. 下雨  C. 刮大風\n\n2. 小貓花花去哪裡找小白狗？\n A. 公園  B. 學校  C. 圖書館", 
-                    a: "答案：\n1. B (下雨)\n2. C (圖書館)" 
+                    storyText: "小貓花花是一隻很怕冷的小貓，她有一條很溫暖的黃色頸巾，是媽媽親手織給她的。今天早上突然下起了一場大雨，天空灰濛濛的。花花穿上雨靴，帶了一把紅色的雨傘出門。她沒有去公園，而是去了圖書館，因為她約了小白狗一起看一本關於恐龍的故事書。在圖書館裡，他們安靜地坐在一起，度過了一個充實的下雨天。", 
+                    questions: [
+                        { q: "今天的天氣是怎樣的？", options: ["A. 晴天", "B. 下雨", "C. 刮大風"], correct: 1 },
+                        { q: "小貓花花去哪裡找小白狗？", options: ["A. 公園", "B. 學校", "C. 圖書館"], correct: 2 }
+                    ]
                 },
                 { 
-                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
-                    q: "【故事】\n小明最喜歡的動物是長頸鹿，因為牠的脖子很長。昨天小明生日，爸爸送了一架藍色的玩具火車給他，他開心得跳了起來。\n\n【問題】\n1. 小明最喜歡什麼動物？\n A. 大象  B. 長頸鹿  C. 老虎\n\n2. 爸爸送給小明的玩具火車是什麼顏色？\n A. 藍色  B. 紅色  C. 綠色", 
-                    a: "答案：\n1. B (長頸鹿)\n2. A (藍色)" 
+                    storyText: "小明是一個很有愛心的小男孩，他最喜歡的動物是長頸鹿，因為他覺得長頸鹿的脖子很長，可以吃到樹上最高最甜的樹葉。昨天是小明的六歲生日，家裡舉辦了一個生日派對。爸爸送了一架藍色的玩具火車給他，火車還會發出嘟嘟的聲音，他開心得跳了起來。晚上，小明吃了一塊朱古力蛋糕，並許下了一個願望，希望明年可以去動物園看真正的長頸鹿。", 
+                    questions: [
+                        { q: "小明最喜歡什麼動物？", options: ["A. 大象", "B. 長頸鹿", "C. 老虎"], correct: 1 },
+                        { q: "爸爸送給小明的玩具火車是什麼顏色？", options: ["A. 藍色", "B. 紅色", "C. 綠色"], correct: 0 }
+                    ]
                 },
                 { 
-                    i: "Listen to the story and answer (家長請朗讀一次)", 
-                    q: "【Story】\nTom has a fast toy car. It is blue and has four black wheels. He plays with it in the living room with his sister, Lily.\n\n【Question】\n1. What color is Tom's toy car?\n A. Red  B. Blue  C. Black\n\n2. Who does Tom play with?\n A. His brother  B. His friend  C. His sister", 
-                    a: "答案：\n1. B (Blue)\n2. C (His sister, Lily)" 
+                    storyText: "Tom is a very active six-year-old boy who loves playing with all kinds of vehicles. He has a fast toy car that is his absolute favorite. It is bright blue and has four shiny black wheels that help it go extremely fast on the floor. Every afternoon after finishing his homework, Tom plays with it in the spacious living room. He often builds a long race track using his wooden blocks and books. His younger sister, Lily, loves to join him. Lily has a red toy bus, and they often race their vehicles together to see which one is the fastest. Yesterday, Tom's blue car won the race, and Lily cheered for him loudly. Their mother brought them some apple juice and cookies as a snack. Tom was very happy to share his cookies with Lily, and they continued to play peacefully until it was time for dinner.", 
+                    questions: [
+                        { q: "What color is Tom's toy car?", options: ["A. Red", "B. Blue", "C. Black"], correct: 1 },
+                        { q: "Who does Tom play with?", options: ["A. His brother", "B. His friend", "C. His sister"], correct: 2 }
+                    ]
                 },
                 { 
-                    i: "Listen to the story and answer (家長請朗讀一次)", 
-                    q: "【Story】\nA little bird named Pip lives in a big green tree. Every morning, Pip eats three worms and sings a happy song to wake up the other animals.\n\n【Question】\n1. Where does Pip live?\n A. In a house  B. In a green tree  C. In a blue box\n\n2. How many worms does Pip eat in the morning?\n A. Two  B. Three  C. Four", 
-                    a: "答案：\n1. B (In a green tree)\n2. B (Three)" 
+                    storyText: "A cheerful little bird named Pip lives high up in a big green tree, right in the middle of a beautiful forest. Pip has bright yellow feathers and a tiny orange beak. Every morning, as soon as the sun rises, Pip wakes up and gets ready for the day. He flies down to the grassy ground and eats three tasty worms for his breakfast. After his tummy is full, Pip flies back to the highest branch of his green tree and sings a very happy and beautiful song. His sweet voice wakes up all the other animals in the forest, like the sleepy bears, the jumping rabbits, and the slow turtles. Everyone loves listening to Pip's morning song because it brings joy to their day. In the evening, Pip watches the sunset before going back to sleep in his cozy little nest, ready to sing again the next morning.", 
+                    questions: [
+                        { q: "Where does Pip live?", options: ["A. In a house", "B. In a green tree", "C. In a blue box"], correct: 1 },
+                        { q: "How many worms does Pip eat in the morning?", options: ["A. Two", "B. Three", "C. Four"], correct: 1 }
+                    ]
                 },
                 { 
-                    i: "Listen to the story and answer (家長請朗讀一次)", 
-                    q: "【Story】\nMary goes to the beach with her family. She builds a big sandcastle. Her brother finds a small yellow crab near the water.\n\n【Question】\n1. What does Mary build?\n A. A sandcastle  B. A snowman  C. A house\n\n2. What color is the crab?\n A. Red  B. Yellow  C. Green", 
-                    a: "答案：\n1. A (A sandcastle)\n2. B (Yellow)" 
+                    storyText: "Last Saturday, the weather was sunny and warm, so Mary went to the beautiful sandy beach with her family. They packed a big picnic basket with sandwiches, fruits, and cold water. As soon as they arrived, Mary took out her colorful plastic shovel and bucket to build a fantastic sandcastle. She worked very hard to make it tall and decorated it with shiny white seashells she found nearby. Meanwhile, her little brother was exploring the shallow water. Suddenly, he shouted with excitement because he found a small yellow crab walking sideways on the wet sand. The crab looked funny, and they watched it for a long time without touching it, so they wouldn't scare it away. After a few hours of playing and swimming in the clear blue sea, they sat on a large towel, ate their delicious lunch, and enjoyed the wonderful ocean breeze together.", 
+                    questions: [
+                        { q: "What does Mary build?", options: ["A. A sandcastle", "B. A snowman", "C. A house"], correct: 0 },
+                        { q: "What color is the crab?", options: ["A. Red", "B. Yellow", "C. Green"], correct: 1 }
+                    ]
                 },
                 { 
-                    i: "聆聽故事並回答問題 (家長請朗讀一次)", 
-                    q: "【故事】\n放學後，媽媽帶家明去餐廳吃下午茶。家明點了一份三文治和一杯熱朱古力，媽媽點了一件士多啤梨蛋糕。他們有說有笑，非常開心。\n\n【問題】\n1. 家明點了什麼飲品？\n A. 橙汁  B. 熱牛奶  C. 熱朱古力\n\n2. 媽媽吃了什麼口味的蛋糕？\n A. 巧克力  B. 士多啤梨  C. 芒果", 
-                    a: "答案：\n1. C (熱朱古力)\n2. B (士多啤梨)" 
+                    storyText: "放學後，媽媽為了獎勵家明這星期在學校表現乖巧，特別帶他去了一間很有名的西餐廳吃下午茶。餐廳裡播放著輕快的音樂，環境非常舒適。家明看著餐牌，點了一份他最愛吃的火腿雞蛋三文治，還點了一杯香濃的熱朱古力，上面還有棉花糖。媽媽則點了一件賣相精緻的士多啤梨蛋糕和一杯熱茶。他們一邊吃著美味的食物，一邊有說有笑。家明跟媽媽分享了今天在學校上美術課畫了一幅家人的畫像，媽媽聽了非常開心，並稱讚他畫得很棒。", 
+                    questions: [
+                        { q: "家明點了什麼飲品？", options: ["A. 橙汁", "B. 熱牛奶", "C. 熱朱古力"], correct: 2 },
+                        { q: "媽媽吃了什麼口味的蛋糕？", options: ["A. 巧克力", "B. 士多啤梨", "C. 芒果"], correct: 1 }
+                    ]
                 },
                 { 
-                    i: "Listen to the story and answer (家長請朗讀一次)", 
-                    q: "【Story】\nIt is raining today. Peter puts on his yellow raincoat and green boots. He jumps in the puddles and laughs loudly.\n\n【Question】\n1. What is the weather like today?\n A. Sunny  B. Raining  C. Windy\n\n2. What color are Peter's boots?\n A. Yellow  B. Red  C. Green", 
-                    a: "答案：\n1. B (Raining)\n2. C (Green)" 
+                    storyText: "It is raining very heavily outside today, but Peter is not sad at all. In fact, he loves rainy days! He quickly puts on his bright yellow raincoat and his favorite pair of green boots to go outside and play. The streets are wet, and there are many big water puddles everywhere. Peter runs into the garden, jumps right into the biggest puddle he can find, and laughs loudly as the water splashes all around him. He also brings a small paper boat that he made with his father yesterday. He gently places the paper boat on a small stream of rainwater and watches it float away like a real ship. After playing in the rain for about an hour, Peter feels a little bit cold. He goes back inside the warm house, takes off his wet boots, and drinks a cup of hot soup prepared by his lovely grandmother.", 
+                    questions: [
+                        { q: "What is the weather like today?", options: ["A. Sunny", "B. Raining", "C. Windy"], correct: 1 },
+                        { q: "What color are Peter's boots?", options: ["A. Yellow", "B. Red", "C. Green"], correct: 2 }
+                    ]
+                },// === 新增 20 條高難度故事題 (第 1-20 題) ===
+                { 
+                    storyText: "春天到了，微風輕輕吹過草地。小豬胖胖穿著一件藍色的吊帶褲，提著一個黃色的水桶去河邊釣魚。河水清澈見底，胖胖在河邊坐了很久，終於釣到了一條銀色的大魚。他高興地把大魚放進黃色水桶裡，然後哼著歌回家。途中，他遇到了正在採花的小羊，胖胖把釣魚的趣事告訴了小羊，兩人約定明天一起去野餐。", 
+                    questions: [
+                        { q: "胖胖穿著什麼顏色的吊帶褲？", options: ["A. 紅色", "B. 藍色", "C. 黃色"], correct: 1 },
+                        { q: "胖胖在河邊釣到了什麼？", options: ["A. 小蝦", "B. 螃蟹", "C. 大魚"], correct: 2 }
+                    ]
+                },
+                { 
+                    storyText: "星期六的下午，天空突然下起了毛毛雨。小青蛙跳跳拿著一片大大的綠色荷葉當作雨傘，在池塘邊跳來跳去。他發現了一隻躲在石頭下避雨的紅色瓢蟲。跳跳熱心地把荷葉撐在瓢蟲頭上，邀請他一起去荷花中心玩耍。瓢蟲開心地答應了，他們在雨中唱著滴滴答答的歌，度過了一個快樂的下午。", 
+                    questions: [
+                        { q: "小青蛙跳跳用什麼當作雨傘？", options: ["A. 荷葉", "B. 樹葉", "C. 蘑菇"], correct: 0 },
+                        { q: "躲在石頭下避雨的是什麼昆蟲？", options: ["A. 蝴蝶", "B. 瓢蟲", "C. 蜜蜂"], correct: 1 }
+                    ]
+                },
+                { 
+                    storyText: "學校舉辦了秋季旅行，目的地是郊外的植物園。小華背著一個橙色的背包，裡面裝了三個蘋果和兩瓶水。在植物園裡，老師帶領大家參觀了玫瑰園。小華看到一朵非常特別的紫色玫瑰花，他趕緊拿出相機拍了下來。午餐時間，小華和同學分享了他的蘋果，大家坐在綠油油的草地上吃得津津有味。", 
+                    questions: [
+                        { q: "小華的背包是什麼顏色的？", options: ["A. 紅色", "B. 藍色", "C. 橙色"], correct: 2 },
+                        { q: "小華在植物園拍了什麼顏色的玫瑰花？", options: ["A. 紅色", "B. 白色", "C. 紫色"], correct: 2 }
+                    ]
+                },
+                { 
+                    storyText: "冬天到了，外面下著大雪，整個世界都變成了白茫茫的一片。小松鼠奇奇在樹洞裡覺得有點冷，於是他圍上了一條紅色的溫暖圍巾。奇奇從櫃子裡拿出秋天收集的五顆橡果，準備當作今天的早餐。吃飽後，奇奇跑到雪地上，和鄰居小白兔一起堆了一個大大的雪人，還用胡蘿蔔給雪人做了一個長長的鼻子。", 
+                    questions: [
+                        { q: "奇奇圍上的圍巾是什麼顏色的？", options: ["A. 藍色", "B. 紅色", "C. 黃色"], correct: 1 },
+                        { q: "他們用什麼給雪人做鼻子？", options: ["A. 樹枝", "B. 石頭", "C. 胡蘿蔔"], correct: 2 }
+                    ]
+                },
+                { 
+                    storyText: "魔法森林裡住著一位喜歡發明東西的貓頭鷹爺爺。今天，貓頭鷹爺爺發明了一把會發光的綠色掃帚。只要念出咒語，掃帚就能帶人在天空中飛翔。小狐狸剛好路過，爺爺便邀請他一起試飛。他們飛過了高高的瀑布，還穿過了五顏六色的彩虹，小狐狸覺得這簡直是世界上最棒的發明。", 
+                    questions: [
+                        { q: "貓頭鷹爺爺發明了什麼顏色的掃帚？", options: ["A. 綠色", "B. 棕色", "C. 黃色"], correct: 0 },
+                        { q: "他們試飛時穿過了什麼？", options: ["A. 森林和高山", "B. 瀑布和彩虹", "C. 河流和花園"], correct: 1 }
+                    ]
+                },
+                { 
+                    storyText: "週末的時候，媽媽帶妹妹去參觀海洋館。海洋館裡有很多巨大的玻璃水槽。妹妹最喜歡看海豚表演，兩隻灰色的海豚在水面上跳躍，還會用嘴巴頂著紅色的球。表演結束後，她們去了紀念品店，妹妹用自己的零用錢買了一個可愛的企鵝鎖匙扣，打算星期一回學校掛在書包上給同學看。", 
+                    questions: [
+                        { q: "妹妹最喜歡看什麼表演？", options: ["A. 海豹", "B. 海豚", "C. 鯊魚"], correct: 1 },
+                        { q: "妹妹在紀念品店買了什麼？", options: ["A. 企鵝鎖匙扣", "B. 海豚玩具", "C. 海星貼紙"], correct: 0 }
+                    ]
+                },
+                { 
+                    storyText: "小狗汪汪是一位勇敢的消防員。今天早上，警報器突然響起，原來是小鎮的麵包店發生了火災。汪汪立刻戴上黃色的消防帽，駕駛著紅色的消防車趕到現場。他迅速拉出長長的水管，把火撲滅了。麵包店老闆為表示感謝，送給汪汪一個香噴噴的士多啤梨蛋糕，大家都稱讚汪汪是小鎮的英雄。", 
+                    questions: [
+                        { q: "汪汪戴上什麼顏色的消防帽？", options: ["A. 黑色", "B. 紅色", "C. 黃色"], correct: 2 },
+                        { q: "麵包店老闆送給汪汪什麼作為感謝？", options: ["A. 朱古力曲奇", "B. 士多啤梨蛋糕", "C. 牛角包"], correct: 1 }
+                    ]
+                },
+                { 
+                    storyText: "昨晚，家裡突然停電了，四周一片漆黑。爸爸從抽屜裡找出了一個藍色的手電筒，照亮了客廳。媽媽點燃了三根白色的蠟燭，放在餐桌上。弟弟不覺得害怕，反而覺得很有趣。爸爸用手電筒的光在牆上玩起了手影遊戲，變出了一隻小狗和一隻老鷹，弟弟笑得合不攏嘴，這真是一個特別的夜晚。", 
+                    questions: [
+                        { q: "爸爸找出了什麼顏色的手電筒？", options: ["A. 藍色", "B. 黑色", "C. 綠色"], correct: 0 },
+                        { q: "媽媽點燃了多少根蠟燭？", options: ["A. 兩根", "B. 三根", "C. 四根"], correct: 1 }
+                    ]
+                },
+                { 
+                    storyText: "小豬佩佩今天第一次學習騎單車。爸爸給她買了一輛粉紅色的兩輪單車，還配了一個紫色的安全頭盔。剛開始，佩佩總是掌握不到平衡，摔倒了幾次。但她沒有放棄，爸爸在後面扶著單車，鼓勵她慢慢踩踏板。到了下午，佩佩終於可以在公園的小路上自己騎車了，她覺得微風吹在臉上的感覺真舒服。", 
+                    questions: [
+                        { q: "佩佩的單車是什麼顏色的？", options: ["A. 紫色", "B. 粉紅色", "C. 藍色"], correct: 1 },
+                        { q: "佩佩的安全頭盔是什麼顏色的？", options: ["A. 黃色", "B. 粉紅色", "C. 紫色"], correct: 2 }
+                    ]
+                },
+                { 
+                    storyText: "森林圖書館舉辦了秋季閱讀比賽。小猴子、小熊和小鹿都參加了。小猴子讀了五本關於太空的書，小熊讀了三本關於植物的書，而小鹿讀了七本有趣的童話故事。最後，館長長頸鹿先生宣布小鹿獲得了第一名。小鹿得到了一個金色的皇冠獎杯，他開心地答應以後會借更多好看的書給好朋友看。", 
+                    questions: [
+                        { q: "小猴子讀了關於什麼的書？", options: ["A. 植物", "B. 太空", "C. 童話"], correct: 1 },
+                        { q: "誰獲得了閱讀比賽的第一名？", options: ["A. 小猴子", "B. 小熊", "C. 小鹿"], correct: 2 }
+                    ]
+                },
+                { 
+                    storyText: "Once upon a time in a bustling small town, there lived a very brave little dog named Max. Max was a special dog because he worked at the local fire station. He had a shiny red collar with a golden badge shaped like a star. Every morning, Max would wake up early, stretch his legs, and eat a large bowl of crunchy brown kibble to get ready for his busy day. One sunny Tuesday, the loud fire alarm rang through the station. A little kitten was stuck high up in a tall green oak tree in the town park. Max jumped into the bright red fire engine with the firefighters. When they arrived, the firefighters used a long silver ladder. Max barked encouragingly from the ground. Finally, the tiny black kitten was rescued safely. The townspeople clapped their hands, and the baker gave Max a delicious sausage as a reward for being such a good firehouse dog.", 
+                    questions: [
+                        { q: "What color is Max's collar?", options: ["A. Blue", "B. Red", "C. Green"], correct: 1 },
+                        { q: "What did the baker give Max as a reward?", options: ["A. A bone", "B. A biscuit", "C. A sausage"], correct: 2 }
+                    ]
+                },
+                { 
+                    storyText: "Emily is a bright and curious seven-year-old girl who loves exploring the beautiful nature around her house. Last weekend, her parents took her to the grand botanical garden located just outside the city. She wore her favorite purple dress and a large straw hat to protect herself from the strong sunshine. As they walked along the winding stone paths, Emily saw many wonderful plants. However, her absolute favorite was a giant sunflower that was even taller than her father! The sunflower had bright yellow petals and a dark brown center full of seeds. Suddenly, Emily noticed a beautiful blue butterfly resting on a green leaf nearby. She quietly took out her small notebook and drew a lovely picture of the butterfly using her colored pencils. Before leaving the garden, her mother bought her a refreshing strawberry ice cream, making it a perfect and unforgettable day.", 
+                    questions: [
+                        { q: "What color was Emily's dress?", options: ["A. Yellow", "B. Pink", "C. Purple"], correct: 2 },
+                        { q: "What insect did Emily see resting on a leaf?", options: ["A. A ladybug", "B. A butterfly", "C. A bee"], correct: 1 }
+                    ]
+                },
+                { 
+                    storyText: "In the heart of a magical forest, there was a secret bakery run by a friendly old bear named Barnaby. Barnaby was famous for baking the most delicious pastries in the entire animal kingdom. He wore a tall white chef's hat and a green apron every day. One crisp autumn morning, Barnaby decided to bake a special treat: a giant blueberry pie. He carefully mixed the fresh blue berries, sweet honey, and white flour in a large wooden bowl. The wonderful smell of the baking pie floated through the forest, waking up the sleeping animals. Soon, a family of squirrels and a little deer gathered outside his bakery window. Barnaby cheerfully sliced the warm blueberry pie into eight equal pieces and shared them with his hungry neighbors. Everyone agreed that it was the best pie they had ever tasted.", 
+                    questions: [
+                        { q: "What color was Barnaby's apron?", options: ["A. White", "B. Green", "C. Red"], correct: 1 },
+                        { q: "What kind of pie did Barnaby bake?", options: ["A. Apple pie", "B. Blueberry pie", "C. Cherry pie"], correct: 1 }
+                    ]
+                },
+                { 
+                    storyText: "It was a cold and snowy winter morning. The entire neighborhood was covered in a thick blanket of sparkling white snow. Leo and his younger brother, Sam, were extremely excited. They quickly put on their winter clothes: Leo wore a thick blue jacket, and Sam wore a bright orange snowsuit. They grabbed their wooden sled and ran up the steep hill behind their house. The wind was chilly, but they didn't mind at all. They sat on the sled together and zoomed down the slippery hill, laughing and screaming with pure joy. After sliding down the hill five times, they decided to build a snowman. They used two large black buttons for the eyes and a long orange carrot for the nose. To keep the snowman warm, Leo wrapped his old red scarf around its neck.", 
+                    questions: [
+                        { q: "What color was Sam's snowsuit?", options: ["A. Blue", "B. Red", "C. Orange"], correct: 2 },
+                        { q: "What did Leo use to keep the snowman warm?", options: ["A. A red scarf", "B. A blue hat", "C. A green jacket"], correct: 0 }
+                    ]
+                },
+                { 
+                    storyText: "Deep in the ocean, there lived a tiny, glowing jellyfish named Luna. Unlike the other jellyfish who were mostly transparent, Luna glowed with a beautiful, bright pink light. She loved swimming through the colorful coral reefs and playing hide-and-seek with her best friend, a little green sea turtle named Toby. One day, while they were exploring a dark underwater cave, they found an old, mysterious treasure chest lying on the sandy bottom. The chest was covered in slippery green seaweed. Luna used her bright pink light to illuminate the dark cave so Toby could see better. Toby carefully pushed the heavy wooden lid open with his strong flippers. Inside, they didn't find gold coins, but something much better: a collection of shiny, smooth pearls in different colors. They each took one shiny white pearl as a souvenir.", 
+                    questions: [
+                        { q: "What color did Luna the jellyfish glow?", options: ["A. Blue", "B. Pink", "C. Green"], correct: 1 },
+                        { q: "What did they find inside the treasure chest?", options: ["A. Gold coins", "B. Silver crowns", "C. Shiny pearls"], correct: 2 }
+                    ]
+                },
+                { 
+                    storyText: "Oliver the owl was the smartest bird in the whispering woods. He lived in a cozy hole inside a massive ancient oak tree. Every night, when the silver moon was high in the sky, Oliver would put on his round silver reading glasses and open a large dusty book. He loved reading stories about distant planets and twinkling stars. One breezy night, a lost little rabbit named Ruby hopped to the bottom of the oak tree. Ruby was crying because she couldn't find her way back to her burrow. Oliver heard her tiny sobs and swooped down silently. He used his excellent night vision to guide Ruby safely through the dark bushes and tall grass. To thank him, Ruby's mother gave Oliver a basket full of juicy wild berries. Oliver flew back to his tree and enjoyed a delicious midnight snack.", 
+                    questions: [
+                        { q: "What kind of glasses did Oliver wear?", options: ["A. Round silver glasses", "B. Square black glasses", "C. Red reading glasses"], correct: 0 },
+                        { q: "What did Ruby's mother give Oliver?", options: ["A. A bag of carrots", "B. A basket of berries", "C. A warm blanket"], correct: 1 }
+                    ]
+                },
+                { 
+                    storyText: "Tomorrow was the annual school sports day, and little Mia was very excited. She had been practicing for the fifty-meter running race every single evening at the local park. To prepare for the big day, her parents bought her a brand new pair of running shoes. The shoes were bright purple with neon yellow laces, and they felt incredibly light and bouncy on her feet. When the morning of the sports day finally arrived, the weather was sunny with a gentle, cooling breeze. All the children gathered on the large green field. When the gym teacher blew the loud silver whistle, Mia ran as fast as a cheetah. Her purple shoes flashed across the track. She crossed the finish line first and won a shiny gold medal. Her classmates cheered loudly, and she felt extremely proud.", 
+                    questions: [
+                        { q: "What color were Mia's new running shoes?", options: ["A. Purple with yellow laces", "B. Red with white laces", "C. Pink with black laces"], correct: 0 },
+                        { q: "What did Mia win in the running race?", options: ["A. A silver trophy", "B. A gold medal", "C. A blue ribbon"], correct: 1 }
+                    ]
+                },
+                { 
+                    storyText: "In a quiet little village, there was a magical garden that only bloomed at midnight. The gardener was a kind old lady named Mrs. Higgins. She wore a wide-brimmed straw hat and carried a silver watering can. In this special garden, the flowers did not need sunlight; they grew beautifully under the moonlight. The most famous flower was the Midnight Lily, which had glowing blue petals that sparkled like diamonds. One night, a mischievous little fox sneaked into the garden, hoping to dig a hole and hide his stolen apple. When the fox saw the glowing blue lilies, he was so amazed that he dropped the red apple and just stared at them. Mrs. Higgins saw the fox and gently offered him a slice of fresh bread instead of chasing him away.", 
+                    questions: [
+                        { q: "What did Mrs. Higgins carry in the garden?", options: ["A. A silver watering can", "B. A golden shovel", "C. A wooden bucket"], correct: 0 },
+                        { q: "What color were the petals of the Midnight Lily?", options: ["A. Glowing red", "B. Glowing blue", "C. Glowing yellow"], correct: 1 }
+                    ]
+                },
+                { 
+                    storyText: "Charlie was a creative boy who loved building things out of cardboard boxes. His bedroom looked like a small recycling factory, filled with tape, scissors, and empty boxes of all shapes and sizes. Last week, his parents bought a new washing machine, which came in an enormous brown cardboard box. Charlie was thrilled! He spent three whole afternoons transforming that giant box into a magnificent spaceship. He painted the outside silver and drew colorful buttons and control panels on the inside using his thick markers. He even attached two empty plastic bottles to the back to look like rocket boosters. On Saturday, Charlie put on his white astronaut helmet, climbed into his silver spaceship, and pretended to fly to Mars. His loyal dog, Buster, jumped in with him, acting as his brave alien co-pilot.", 
+                    questions: [
+                        { q: "What color did Charlie paint the outside of his spaceship?", options: ["A. White", "B. Brown", "C. Silver"], correct: 2 },
+                        { q: "Who acted as Charlie's alien co-pilot?", options: ["A. His little brother", "B. His dog, Buster", "C. His pet cat"], correct: 1 }
+                    ]
+                },
+                { 
+                    storyText: "The annual town baking competition was the most exciting event of the summer. Everyone in the village gathered at the central plaza to taste the delicious homemade treats. Sarah, a young girl with curly brown hair, decided to enter the competition for the very first time. She wanted to bake her grandmother's famous lemon pound cake. She spent the entire Saturday morning carefully squeezing fresh yellow lemons, measuring white flour, and mixing sweet butter. When she took the cake out of the oven, it smelled absolutely heavenly. She decorated the top with a thick layer of white sugar glaze and a few green mint leaves. The three judges, including the town's grumpy mayor, tasted all the cakes. When the mayor took a bite of Sarah's lemon cake, his grumpy face suddenly turned into a huge smile. Sarah was awarded the first-place blue ribbon.", 
+                    questions: [
+                        { q: "What did Sarah use to decorate the top of the cake?", options: ["A. Chocolate chips", "B. White sugar glaze and mint leaves", "C. Fresh strawberries"], correct: 1 },
+                        { q: "What color ribbon did Sarah win?", options: ["A. Red", "B. Gold", "C. Blue"], correct: 2 }
+                    ]
                 }
             ]
         };
@@ -702,6 +862,8 @@
 
         let currentCategory = 'chi';
         let currentIndex = -1;
+        let currentStoryQuestionIndex = 0; // 記錄故事題答到第幾題
+        let storyUserAnswers = [];         // 記錄小朋友的選擇
 
         // 保存進度到 localStorage
         function saveProgress() {
@@ -748,34 +910,47 @@
             nextQuestion();
         }
 
-        function markBad() {
-            // 答錯無需刪除，直接下一題
+function markBad() {
             nextQuestion();
         }
 
+        // ================= 核心題庫與故事控制 =================
         function nextQuestion() {
             const arr = database[currentCategory];
             updateProgressText();
             
             const btnGood = document.getElementById('btn-good');
             const btnBad = document.getElementById('btn-bad');
+            const readBtn = document.getElementById('read-btn');
+            // 獲取「顯示答案」的按鈕 (它沒有 id，所以用 css selector)
+            const btnShowAns = document.querySelector('.action-btn[onclick="toggleAnswer()"]');
             
+            window.speechSynthesis.cancel(); // 切換題目時停止說話
+
             if (arr.length === 0) {
                 document.getElementById('instruction').innerText = "完成！";
                 document.getElementById('question').innerHTML = "🎉 恭喜！這個類別的題目已經全部答對！<br><span style='font-size: 20px; color: #7F8C8D;'>可以選擇其他類別，或按上方重置按鈕重做。</span>";
-                document.getElementById('answer').innerHTML = "";
                 document.getElementById('answer').style.display = 'none';
                 
-                // 隱藏按鈕
                 btnGood.style.display = 'none';
                 btnBad.style.display = 'none';
+                btnShowAns.style.display = 'none';
+                readBtn.style.display = 'none';
                 currentIndex = -1;
                 return;
             }
 
-            // 顯示按鈕 (以防被隱藏)
+            // 如果是故事模式，進入專屬渲染邏輯
+            if (currentCategory === 'story') {
+                startStoryMode(arr);
+                return;
+            }
+
+            // ================= 一般模式 (非故事) =================
             btnGood.style.display = 'inline-block';
             btnBad.style.display = 'inline-block';
+            btnShowAns.style.display = 'inline-block';
+            readBtn.style.display = 'none'; // 隱藏朗讀按鈕
 
             let newIndex = currentIndex;
             if (arr.length > 1) {
@@ -792,9 +967,154 @@
             document.getElementById('question').innerHTML = item.q.replace(/\n/g, '<br>');
             document.getElementById('answer').innerHTML = item.a.replace(/\n/g, '<br>');
             document.getElementById('answer').style.display = 'none';
+        }
+
+        // ================= 故事模式專屬邏輯 =================
+        function startStoryMode(arr) {
+            document.getElementById('instruction').innerText = "聆聽故事並作答 (只顯示問題與選項)";
+            document.getElementById('answer').style.display = 'none';
             
-            // 新增：每次轉新題目時，自動嘗試朗讀
-            speakText();
+            // 隱藏一般模式的按鈕
+            document.getElementById('btn-good').style.display = 'none';
+            document.getElementById('btn-bad').style.display = 'none';
+            document.querySelector('.action-btn[onclick="toggleAnswer()"]').style.display = 'none';
+            document.getElementById('read-btn').style.display = 'inline-block'; // 顯示朗讀按鈕
+
+            // 隨機抽一條故事
+            let newIndex = currentIndex;
+            if (arr.length > 1) {
+                while (newIndex === currentIndex) {
+                    newIndex = Math.floor(Math.random() * arr.length);
+                }
+            } else {
+                newIndex = 0;
+            }
+            currentIndex = newIndex;
+            
+            // 重置作答進度
+            currentStoryQuestionIndex = 0;
+            storyUserAnswers = [];
+            
+            renderStoryQuestion();
+        }
+
+        function renderStoryQuestion() {
+            const storyData = database['story'][currentIndex];
+            const qData = storyData.questions[currentStoryQuestionIndex];
+            
+            // 畫面只顯示當前題目及按鈕選項
+            let html = `<div>問題 ${currentStoryQuestionIndex + 1}：${qData.q}</div>`;
+            html += `<div style="display: flex; flex-direction: column; gap: 15px; margin-top: 30px; align-items: center;">`;
+            
+            qData.options.forEach((opt, idx) => {
+                html += `<button onclick="submitStoryAnswer(${idx})" style="padding: 15px 25px; font-size: 24px; border-radius: 12px; border: 2px solid var(--primary); background: white; color: var(--text); cursor: pointer; min-width: 300px; text-align: left; transition: 0.2s;">${opt}</button>`;
+            });
+            html += `</div>`;
+            
+            document.getElementById('question').innerHTML = html;
+            
+            // 準備朗讀內容：若是第一題則朗讀「故事+問題」，否則只讀「問題」(不讀選項)
+            let textToRead = "";
+            if (currentStoryQuestionIndex === 0) {
+                textToRead = storyData.storyText + "。 問題一： " + qData.q;
+            } else {
+                textToRead = "問題二： " + qData.q;
+            }
+            
+            speakText(textToRead);
+        }
+
+        function submitStoryAnswer(selectedIdx) {
+            window.speechSynthesis.cancel(); // 按下選項立即停止語音
+            storyUserAnswers.push(selectedIdx);
+            
+            const storyData = database['story'][currentIndex];
+            currentStoryQuestionIndex++;
+            
+            if (currentStoryQuestionIndex < storyData.questions.length) {
+                // 進入下一題
+                renderStoryQuestion();
+            } else {
+                // 題目完結，顯示結果
+                finishStory();
+            }
+        }
+
+        function finishStory() {
+            const storyData = database['story'][currentIndex];
+            let allCorrect = true;
+            let resultHtml = `<div style="font-size: 32px; color: var(--primary); margin-bottom: 20px;">答題結果</div>`;
+            
+            storyData.questions.forEach((q, idx) => {
+                const userAns = storyUserAnswers[idx];
+                const isCorrect = (userAns === q.correct);
+                if (!isCorrect) allCorrect = false;
+                
+                resultHtml += `<div style="text-align: left; margin-bottom: 15px; font-size: 22px; background: #f9f9f9; padding: 15px; border-radius: 10px;">`;
+                resultHtml += `<b>${idx + 1}. ${q.q}</b><br>`;
+                resultHtml += `你的選擇：${q.options[userAns]} ${isCorrect ? '✅' : '❌'}<br>`;
+                if (!isCorrect) {
+                    resultHtml += `<span style="color: #E74C3C;">正確答案：${q.options[q.correct]}</span>`;
+                }
+                resultHtml += `</div>`;
+            });
+            
+            // 判斷是否全部答對
+            if (allCorrect) {
+                resultHtml += `<div style="color: #2ECC71; font-size: 26px; font-weight: bold; margin-top: 20px;">🎉 全中！這篇故事已完成並剔除。</div>`;
+                document.getElementById('question').innerHTML = resultHtml;
+                
+                // 停頓 4 秒讓小朋友看結果，然後自動刪除題目並抽下一題
+                setTimeout(() => {
+                    database['story'].splice(currentIndex, 1);
+                    saveProgress();
+                    currentIndex = -1;
+                    nextQuestion();
+                }, 4000);
+            } else {
+                resultHtml += `<div style="color: #E74C3C; font-size: 26px; font-weight: bold; margin-top: 20px;">繼續努力！這篇故事將會保留。</div>`;
+                resultHtml += `<button onclick="nextQuestion()" class="action-btn" style="background-color: var(--primary); margin-top: 20px;">➡️ 下一篇故事</button>`;
+                document.getElementById('question').innerHTML = resultHtml;
+            }
+            
+            document.getElementById('read-btn').style.display = 'none'; // 顯示結果時隱藏朗讀按鈕
+        }
+
+        // ================= 語音朗讀模組 =================
+        function playCurrentAudio() {
+            if (currentCategory === 'story') {
+                // 手動點擊時，重新朗讀當前題目的設定
+                const storyData = database['story'][currentIndex];
+                const qData = storyData.questions[currentStoryQuestionIndex];
+                if (currentStoryQuestionIndex === 0) {
+                    speakText(storyData.storyText + "。 問題一： " + qData.q);
+                } else {
+                    speakText("問題二： " + qData.q);
+                }
+            } else {
+                speakText();
+            }
+        }
+
+        function speakText(customText = null) {
+            window.speechSynthesis.cancel();
+            
+            let textToRead = customText;
+            if (!textToRead) {
+                textToRead = document.getElementById('question').innerText;
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            const engCount = (textToRead.match(/[a-zA-Z]/g) || []).length;
+            const chiCount = (textToRead.match(/[\u4e00-\u9fa5]/g) || []).length;
+            
+            if (engCount > chiCount) {
+                utterance.lang = 'en-US';
+            } else {
+                utterance.lang = 'zh-HK';
+            }
+            utterance.rate = 0.85; 
+            window.speechSynthesis.speak(utterance);
         }
 
         function toggleAnswer() {
@@ -802,33 +1122,7 @@
             ans.style.display = ans.style.display === 'none' ? 'block' : 'none';
         }
 
-        function speakText() {
-            // 停止當前正在播放的聲音 (避免重疊)
-            window.speechSynthesis.cancel();
-
-            // 獲取畫面上的純文字 (innerText 會自動忽略 HTML 標籤)
-            const textToRead = document.getElementById('question').innerText;
-            
-            // 建立語音物件
-            const utterance = new SpeechSynthesisUtterance(textToRead);
-            
-            // 自動判斷語言：如果英文字母數量多於中文字，就用英文朗讀，否則用廣東話
-            const engCount = (textToRead.match(/[a-zA-Z]/g) || []).length;
-            const chiCount = (textToRead.match(/[\u4e00-\u9fa5]/g) || []).length;
-            
-            if (engCount > chiCount) {
-                utterance.lang = 'en-US'; // 英文
-            } else {
-                utterance.lang = 'zh-HK'; // 廣東話
-            }
-            
-            // 語速調整：0.85 稍微讀慢少少，方便小朋友聆聽 (1 為正常速度)
-            utterance.rate = 0.85; 
-            
-            // 播放語音
-            window.speechSynthesis.speak(utterance);
-        }
-        // 初始化
+        // 系統啟動，載入第一題
         nextQuestion();
     </script>
 </body>
