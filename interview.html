@@ -148,16 +148,27 @@
         <button class="reset-btn" onclick="resetProgress()">🔄 重置所有進度 (全部題目重頭嚟過)</button>
     </div>
 
-    <div class="nav-grid">
+<!-- 主選單 -->
+    <div class="nav-grid" id="main-nav">
         <button class="nav-btn active" onclick="setCategory('chi')">📘 中文認讀</button>
         <button class="nav-btn" onclick="setCategory('eng')">📕 英文認讀</button>
         <button class="nav-btn" onclick="setCategory('grammar')">✏️ 英文文法</button>
         <button class="nav-btn" onclick="setCategory('math')">🧮 數學與邏輯</button>
         <button class="nav-btn" onclick="setCategory('personal')">🗣️ 個人與情境</button>
         <button class="nav-btn" onclick="setCategory('listen')">🎨 聆聽與畫圖</button>
-        <button class="nav-btn" onclick="setCategory('rearrange')">🧩 重組句子</button>
-        <!-- 下面是新增的按鈕 -->
-        <button class="nav-btn" style="background-color: #E8F8F5; border-color: #1ABC9C; color: #1ABC9C;" onclick="setCategory('story')">📖 故事選擇題 (新)</button>
+        <button class="nav-btn" style="background-color: #FFF3E0; border-color: #F5A623; color: #F5A623;" onclick="setCategory('rearrange')">🧩 重組句子</button>
+        <button class="nav-btn" style="background-color: #E8F8F5; border-color: #1ABC9C; color: #1ABC9C;" onclick="setCategory('story')">📖 故事選擇題</button>
+        <!-- 修改：將 onclick 改為呼叫 showSchoolNav -->
+        <button class="nav-btn" style="background-color: #F4ECF7; border-color: #8E44AD; color: #8E44AD;" onclick="showSchoolNav(event)">🏫 聖瑪加利特訓</button>
+    </div>
+
+    <!-- 新增：聖瑪加利專屬子選單 (預設隱藏) -->
+    <div class="nav-grid" id="school-nav-st_margaret" style="display: none; background-color: #F4ECF7; padding: 15px; border-radius: 15px; border: 2px dashed #8E44AD;">
+        <button class="nav-btn school-btn" onclick="setCategory('sm_etiquette', event)">🗣️ 禮貌與對答</button>
+        <button class="nav-btn school-btn" onclick="setCategory('sm_video', event)">👁️ 影片觀察</button>
+        <button class="nav-btn school-btn" onclick="setCategory('sm_chi', event)">📘 中文認讀與看圖</button>
+        <button class="nav-btn school-btn" onclick="setCategory('sm_eng', event)">📕 英文認讀與填充</button>
+        <button class="nav-btn school-btn" onclick="setCategory('sm_math', event)">🧮 生活數學</button>
     </div>
 
     <div class="card">
@@ -1129,6 +1140,93 @@
                         { q: "What did Winston give Pip to help him balance?", options: ["A. Tiny wooden sticks", "B. A pair of gloves", "C. A long scarf"], correct: 0 }
                     ]
                 }
+            ],
+// === 聖瑪加利特訓 (已擴充：每項增加 10 題) ===
+            sm_etiquette: [
+                { q: "What is your name?\n\n(然後追問)\nYou want me to speak in Chinese or English first?", i: "【禮貌對答】請家長扮演老師發問", a: "重點：必須用完整句子及禮貌回應。\n例如：Hello teacher, my name is ___. / Chinese please." },
+                { q: "Could you tell me something that makes you happy?", i: "【個人對答】測試英文表達", a: "重點：用完整英文句子回答。\n例如：Playing with my toys makes me happy because it is fun." },
+                // 新增 10 題
+                { q: "How old are you? When is your birthday?", i: "【個人對答】年齡與生日", a: "例如：I am six years old. My birthday is in May." },
+                { q: "How many people are there in your family? Who are they?", i: "【個人對答】家庭成員", a: "例如：There are four people in my family. They are my father, my mother, my brother, and me." },
+                { q: "What did you eat for breakfast today?", i: "【生活對答】日常觀察", a: "例如：I ate bread and drank some milk for breakfast today." },
+                { q: "What is your favorite color? Why do you like it?", i: "【個人對答】喜好解釋", a: "例如：My favorite color is blue because it looks like the sky." },
+                { q: "What do you like to do in your free time?", i: "【個人對答】興趣愛好", a: "例如：I like drawing pictures and reading books in my free time." },
+                { q: "If you want to borrow an eraser from your friend, what should you say?", i: "【情境對答】禮貌用語", a: "例如：May I borrow your eraser, please? Thank you." },
+                { q: "If you accidentally step on someone's foot, what should you do and say?", i: "【情境對答】禮貌與解難", a: "例如：I should say 'I am sorry, are you okay?'" },
+                { q: "Do you help your parents with housework? What do you do?", i: "【生活對答】自理能力", a: "例如：Yes, I help my mom clean the table and put away my toys." },
+                { q: "Tell me about your favorite animal. Why do you like it?", i: "【個人對答】描述事物", a: "例如：My favorite animal is a dog because it is very cute and friendly." },
+                { q: "Which subject do you like most in kindergarten? Why?", i: "【個人對答】學校生活", a: "例如：I like English the most because I like singing English songs." }
+            ],
+            sm_video: [
+                { q: "【影片觀察模擬】\n(家長讀出情境)：影片裡有一個男孩子和一個女孩子，他們每人手上都拿著蘋果和香蕉，但男孩子手上的蘋果和香蕉是壞了的。\n\n問題：哪一位小朋友手上的水果是壞了的？", i: "【觀察與記憶】測試聆聽細節", a: "答案：男孩子手上的水果。" },
+                // 新增 10 題
+                { q: "【影片觀察模擬】\n(家長讀出情境)：畫面中有兩隻小狗在草地上跑，一隻小貓在樹下睡覺。天空中飛過三隻小鳥。\n\n問題：小貓正在做什麼？", i: "【觀察與記憶】", a: "答案：小貓在樹下睡覺。" },
+                { q: "【影片觀察模擬】\n(家長讀出情境)：媽媽去了超級市場，她買了三個橙和兩個蘋果，然後放進了一個黃色的環保袋裡。\n\n問題：媽媽買了多少個蘋果？", i: "【觀察與記憶】數量細節", a: "答案：兩個蘋果。" },
+                { q: "【影片觀察模擬】\n(家長讀出情境)：下雨了，小明撐著一把紅色的雨傘，小華穿著一件綠色的雨衣在水坑裡跳來跳去。\n\n問題：誰穿著綠色的雨衣？", i: "【觀察與記憶】人物特徵", a: "答案：小華。" },
+                { q: "【影片觀察模擬】\n(家長讀出情境)：桌子上有一個裝滿牛奶的藍色杯子，和一個裝滿果汁的透明玻璃杯。妹妹不小心把藍色杯子打翻了。\n\n問題：哪一種飲料被打翻了？", i: "【觀察與記憶】因果關係", a: "答案：牛奶。" },
+                { q: "【影片觀察模擬】\n(家長讀出情境)：動物園裡，猴子在樹上吃香蕉，大象用長鼻子在河邊喝水，長頸鹿在吃樹頂的葉子。\n\n問題：大象用什麼來喝水？", i: "【觀察與記憶】動作細節", a: "答案：長鼻子。" },
+                { q: "【影片觀察模擬】\n(家長讀出情境)：公園裡有兩架玩具車在比賽，紅色車跑在最前面，藍色車緊跟在後面，黃色車排在最後。\n\n問題：哪種顏色的車跑第一？", i: "【觀察與記憶】順序細節", a: "答案：紅色車。" },
+                { q: "【影片觀察模擬】\n(家長讀出情境)：爸爸坐在梳化上看報紙，媽媽在廚房煮湯，弟弟在地上砌積木。\n\n問題：爸爸在做什麼？", i: "【觀察與記憶】人物動作", a: "答案：看報紙。" },
+                { q: "【影片觀察模擬】\n(家長讀出情境)：麵包師傅烤了五個牛角包。有位客人走進來，買走了兩個牛角包。\n\n問題：客人買走了多少個牛角包？", i: "【觀察與記憶】數量運算", a: "答案：兩個。" },
+                { q: "【影片觀察模擬】\n(家長讀出情境)：小女孩的粉紅色氣球飛走了，卡在樹枝上。一位高高的警察叔叔幫她把氣球拿了下來。\n\n問題：誰幫助了小女孩？", i: "【觀察與記憶】人物身份", a: "答案：警察叔叔。" },
+                { q: "【影片觀察模擬】\n(家長讀出情境)：海灘上，哥哥在堆沙堡，妹妹在撿貝殼，爸爸在海裡游泳。突然有一隻小螃蟹爬過了妹妹的腳。\n\n問題：哥哥在做什麼？", i: "【觀察與記憶】動作細節", a: "答案：堆沙堡。" }
+            ],
+            sm_chi: [
+                { q: "大象 / 獅子 / 我 / 醫院 / 玩沙", i: "【中文認讀】(可要求嘗試用普通話讀出)", a: "測試基本中文字詞認讀及普通話指令反應。" },
+                { q: "我要找爸爸媽媽。", i: "【中文句子】請朗讀", a: "留意小朋友朗讀是否流暢，有沒有跳字。" },
+                { q: "小鳥在天空飛來飛去。", i: "【中文句子】請朗讀", a: "留意小朋友朗讀是否流暢。" },
+                { q: "我和你都知道。", i: "【中文句子】請朗讀", a: "留意小朋友朗讀是否流暢。" },
+                { q: "情境描述：爸爸媽媽為小朋友開生日會。\n\n(請用 3 句中文句子描述這個情境)", i: "【中文看圖說話模擬】", a: "例如：今天是小明的生日。爸爸媽媽買了一個大蛋糕給他。大家都很開心。" },
+                { q: "情境描述：小鳥在天空飛。\n\n(請用 2-3 句中文句子描述)", i: "【中文看圖說話模擬】", a: "例如：早上天氣很好。有幾隻小鳥在藍藍的天空中開心地飛來飛去。" },
+                { q: "情境描述：公園有很多小朋友在玩。\n\n(請用 3 句中文句子描述)", i: "【中文看圖說話模擬】", a: "例如：下午的公園很熱鬧。有些小朋友在玩滑梯，大家玩得滿頭大汗。" },
+                // 新增 10 題
+                { q: "蘋果 / 學校 / 巴士 / 開心 / 唱歌", i: "【中文認讀】詞彙", a: "留意發音是否準確。" },
+                { q: "老師 / 朋友 / 衣服 / 顏色 / 喜歡", i: "【中文認讀】詞彙", a: "留意發音是否準確。" },
+                { q: "今天天氣很好，我和媽媽去公園。", i: "【中文句子】請朗讀", a: "留意斷句是否自然。" },
+                { q: "弟弟在房間裡玩玩具。", i: "【中文句子】請朗讀", a: "留意發音及流暢度。" },
+                { q: "妹妹喜歡吃甜甜的士多啤梨。", i: "【中文句子】請朗讀", a: "留意「士多啤梨」的發音。" },
+                { q: "情境描述：一家人在餐廳吃飯。\n\n(請用 2-3 句中文句子描述)", i: "【中文看圖說話模擬】", a: "例如：今天是星期日。爸爸媽媽帶我到餐廳吃晚餐，食物非常美味。" },
+                { q: "情境描述：小朋友在圖書館安靜地看書。\n\n(請用 2-3 句中文句子描述)", i: "【中文看圖說話模擬】", a: "例如：圖書館裡很安靜。小朋友們都坐在椅子上，專心地看著有趣的故事書。" },
+                { q: "情境描述：下雨天，人們打著雨傘在街上走。\n\n(請用 2-3 句中文句子描述)", i: "【中文看圖說話模擬】", a: "例如：今天下著大雨。街上的人都撐著五顏六色的雨傘，小心地走路。" },
+                { q: "情境描述：超級市場裡有很多人在買東西。\n\n(請用 2-3 句中文句子描述)", i: "【中文看圖說話模擬】", a: "例如：超級市場裡非常熱鬧。媽媽推著手推車，挑選了很多新鮮的水果和蔬菜。" },
+                { q: "情境描述：哥哥教弟弟踏單車。\n\n(請用 2-3 句中文句子描述)", i: "【中文看圖說話模擬】", a: "例如：哥哥在公園教弟弟踏單車。弟弟戴著頭盔，哥哥在後面扶著他，鼓勵他向前踩。" }
+            ],
+            sm_eng: [
+                { q: "home / You / bird / milk / are", i: "【英文生字】請朗讀", a: "測試基本英文字詞發音。" },
+                { q: "I see an elephant in the zoo.", i: "【英文句子】請朗讀", a: "留意發音及句子流暢度。" },
+                { q: "I go to school by school bus.", i: "【英文句子】請朗讀", a: "留意發音及句子流暢度。" },
+                { q: "I like running and swimming.", i: "【英文句子】請朗讀", a: "留意發音及句子流暢度。" },
+                { q: "______ sun in the sky.\n\n(選項：A / An / The)", i: "【英文填充】(家長可口述選項)", a: "答案：The (The sun in the sky.)" },
+                { q: "I have ______ apple.\n\n(選項：a / an / the)", i: "【英文填充】(家長可口述選項)", a: "答案：an (I have an apple.)" },
+                { q: "Situation: A dog wants to swim. It jumps into the swimming pool.\n\n(請小朋友用英文簡單描述情境)", i: "【英文看圖說話模擬】", a: "例如：The dog is hot. It jumps into the swimming pool to swim." },
+                { q: "Situation: A family is at the beach. Someone is eating ice cream, someone is building a sandcastle.\n\n(請小朋友用英文簡單描述情境)", i: "【英文看圖說話模擬】", a: "例如：The family is at the beach. The boy is eating yummy ice cream." },
+                // 新增 10 題
+                { q: "school / apple / jump / water / happy", i: "【英文生字】請朗讀", a: "留意發音準確度。" },
+                { q: "blue / tiger / read / family / good", i: "【英文生字】請朗讀", a: "留意發音準確度。" },
+                { q: "The dog is playing with a red ball.", i: "【英文句子】請朗讀", a: "留意發音及句子流暢度。" },
+                { q: "My mother cooks yummy food for me.", i: "【英文句子】請朗讀", a: "留意發音及句子流暢度。" },
+                { q: "The book is ______ the table.\n\n(選項：in / on / under)", i: "【英文填充】Prepositions", a: "答案：on (The book is on the table.)" },
+                { q: "She ______ playing the piano.\n\n(選項：am / is / are)", i: "【英文填充】Verb to be", a: "答案：is (She is playing the piano.)" },
+                { q: "I have two ______.\n\n(選項：cat / cats / a cat)", i: "【英文填充】Plurals", a: "答案：cats (I have two cats.)" },
+                { q: "Situation: A boy is riding a bicycle in the park.\n\n(請小朋友用英文簡單描述情境)", i: "【英文看圖說話模擬】", a: "例如：The boy is in the park. He is riding a red bicycle happily." },
+                { q: "Situation: A cat is sleeping on a comfortable sofa.\n\n(請小朋友用英文簡單描述情境)", i: "【英文看圖說話模擬】", a: "例如：The cat is tired. It is sleeping on the big sofa." },
+                { q: "Situation: Children are playing on the slide in the playground.\n\n(請小朋友用英文簡單描述情境)", i: "【英文看圖說話模擬】", a: "例如：The children are in the playground. They are playing on the yellow slide." }
+            ],
+            sm_math: [
+                { q: "桌子上有 $1, $2, $5, $10 的硬幣。\n\n請小朋友找出合共「$16」的硬幣。", i: "【數學操作】(家長請準備真硬幣)", a: "答案：$10 + $5 + $1 (觀察算術能力及手眼協調)。" },
+                { q: "請找出缺失的數字：\n13 , 15 , ( ? ) , 19", i: "【數字排序】", a: "答案：17 (單數/加2跳數)" },
+                { q: "請找出缺失的數字：\n24 , 26 , ( ? ) , ( ? )", i: "【數字排序】", a: "答案：28 , 30 (雙數/加2跳數)" },
+                // 新增 10 題
+                { q: "桌子上有 $1, $2, $5, $10 的硬幣。\n\n請找出合共「$8」的硬幣。", i: "【數學操作】硬幣組合", a: "答案：$5 + $2 + $1 (或四個$2等組合)。" },
+                { q: "桌子上有 $1, $2, $5, $10 的硬幣。\n\n請找出合共「$12」的硬幣。", i: "【數學操作】硬幣組合", a: "答案：$10 + $2。" },
+                { q: "桌子上有 $1, $2, $5, $10 的硬幣。\n\n請「只用兩個硬幣」拼出 $20。", i: "【數學操作】條件限制", a: "答案：$10 + $10。" },
+                { q: "請找出缺失的數字：\n2 , 4 , 6 , ( ? ) , 10", i: "【數字排序】雙數跳數", a: "答案：8" },
+                { q: "請找出缺失的數字：\n10 , 20 , ( ? ) , 40 , ( ? )", i: "【數字排序】10的倍數", a: "答案：30 , 50" },
+                { q: "請找出缺失的數字：\n5 , 10 , 15 , ( ? ) , 25", i: "【數字排序】5的倍數", a: "答案：20" },
+                { q: "請找出缺失的數字：\n9 , 8 , 7 , ( ? ) , 5", i: "【數字排序】倒數", a: "答案：6" },
+                { q: "口頭應用題：\n你有 5 個蘋果，吃掉了 2 個，還剩下多少個蘋果？", i: "【生活數學】減法", a: "答案：3 個 (5 - 2 = 3)" },
+                { q: "口頭應用題：\n樹上有 4 隻雀仔，後來又有 3 隻雀仔飛過來，現在樹上一共有多少隻雀仔？", i: "【生活數學】加法", a: "答案：7 隻 (4 + 3 = 7)" },
+                { q: "邏輯推理：\n請問是一本書比較重，還是一張紙比較重？", i: "【生活常識】比較輕重", a: "答案：一本書比較重。" }
             ]
         };
 
@@ -1170,10 +1268,35 @@
             document.getElementById('progress').innerText = `剩餘: ${count} 題`;
         }
 
-        function setCategory(cat) {
-            currentCategory = cat;
-            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+function showSchoolNav(event) {
+            // 取消主選單其他按鈕的反白，高亮當前按鈕
+            document.querySelectorAll('#main-nav .nav-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
+            
+            // 顯示聖瑪加利子選單
+            document.getElementById('school-nav-st_margaret').style.display = 'flex';
+            
+            // 自動點擊子選單的第一個按鈕進入題庫
+            document.querySelector('#school-nav-st_margaret .school-btn').click();
+        }
+
+        function setCategory(cat, event) {
+            currentCategory = cat;
+            
+            // 如果點擊的是一般主選單項目，隱藏學校子選單
+            if (!cat.startsWith('sm_')) {
+                document.getElementById('school-nav-st_margaret').style.display = 'none';
+                document.querySelectorAll('#main-nav .nav-btn').forEach(btn => btn.classList.remove('active'));
+                if (event && event.target) {
+                    event.target.classList.add('active');
+                }
+            } else {
+                // 如果點擊的是子選單項目，只更新子選單的按鈕高亮
+                document.querySelectorAll('#school-nav-st_margaret .school-btn').forEach(btn => btn.classList.remove('active'));
+                if (event && event.target) {
+                    event.target.classList.add('active');
+                }
+            }
             
             currentIndex = -1; 
             nextQuestion();
