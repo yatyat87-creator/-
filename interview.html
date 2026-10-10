@@ -1756,7 +1756,8 @@ function markBad() {
         }
 
         function renderStoryQuestion() {
-            const storyData = database['story'][currentIndex];
+            // 動態讀取當前類別的故事數據
+            const storyData = database[currentCategory][currentIndex];
             const qData = storyData.questions[currentStoryQuestionIndex];
             
             // 畫面只顯示當前題目及按鈕選項
@@ -1785,7 +1786,8 @@ function markBad() {
             window.speechSynthesis.cancel(); // 按下選項立即停止語音
             storyUserAnswers.push(selectedIdx);
             
-            const storyData = database['story'][currentIndex];
+            // 動態讀取當前類別的故事數據
+            const storyData = database[currentCategory][currentIndex];
             currentStoryQuestionIndex++;
             
             if (currentStoryQuestionIndex < storyData.questions.length) {
@@ -1798,7 +1800,8 @@ function markBad() {
         }
 
         function finishStory() {
-            const storyData = database['story'][currentIndex];
+            // 動態讀取當前類別的故事數據
+            const storyData = database[currentCategory][currentIndex];
             let allCorrect = true;
             let resultHtml = `<div style="font-size: 32px; color: var(--primary); margin-bottom: 20px;">答題結果</div>`;
             
@@ -1823,7 +1826,8 @@ function markBad() {
                 
                 // 停頓 4 秒讓小朋友看結果，然後自動刪除題目並抽下一題
                 setTimeout(() => {
-                    database['story'].splice(currentIndex, 1);
+                    // 動態刪除當前類別的題目
+                    database[currentCategory].splice(currentIndex, 1);
                     saveProgress();
                     currentIndex = -1;
                     nextQuestion();
