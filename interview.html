@@ -2760,6 +2760,7 @@ function markBad() {
         }
 
 function speakText(customText = null, forceLang = null) {
+            // 先停止所有正在播放的系統語音
             window.speechSynthesis.cancel();
             
             let textToRead = customText;
@@ -2767,59 +2768,38 @@ function speakText(customText = null, forceLang = null) {
                 textToRead = document.getElementById('question').innerText;
             }
             
+            // 🌟 終極絕招：如果是普通話，直接呼叫 Google 雲端標準發音，徹底繞過 iPad 系統！
+            if (forceLang === 'zh-CN') {
+                const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-CN&q=${encodeURIComponent(textToRead)}`;
+                const audio = new Audio(url);
+                audio.play().catch(error => {
+                    console.log("雲端發音播放失敗，可能需要網絡連接:", error);
+                    // 如果斷網，作為最後備用才勉強叫 iPad 自己讀
+                    let fallbackUtterance = new SpeechSynthesisUtterance(textToRead);
+                    fallbackUtterance.lang = 'zh-CN';
+                    window.speechSynthesis.speak(fallbackUtterance);
+                });
+                return; // 播放完畢直接退出，不再執行下面的代碼
+            }
+
+            // ================= 英文與廣東話部分 (保留原本的系統發音) =================
             const utterance = new SpeechSynthesisUtterance(textToRead);
             const engCount = (textToRead.match(/[a-zA-Z]/g) || []).length;
             const chiCount = (textToRead.match(/[\u4e00-\u9fa5]/g) || []).length;
             
-            // 每次發音前確保獲取最新語音庫
-            let voices = window.speechSynthesis.getVoices();
-            if (voices.length === 0 && systemVoices.length > 0) {
-                voices = systemVoices;
-            }
-            
-            if (forceLang === 'zh-CN') {
-                // 先嘗試設定標準的普通話代碼
-                utterance.lang = 'zh-CN'; 
-                
-                // 暴力鎖定任何可能的普通話/國語語音 (包含大陸、台灣，以及特定名稱)
-                const mandarinVoice = voices.find(v => 
-                    v.lang === 'zh-CN' || 
-                    v.lang === 'zh_CN' || 
-                    v.lang === 'zh-Hans-CN' ||
-                    v.lang === 'zh-TW' || // 加入台灣國語作為後備
-                    v.lang === 'zh-HK' && v.name.includes('Ting-Ting') || // 某些iOS版本會將Ting-Ting誤標為zh-HK
-                    v.name.includes('Ting-Ting') || 
-                    v.name.includes('Lili') || 
-                    v.name.includes('Yu-shu') || 
-                    v.name.includes('Mei-Jia') ||
-                    v.name.includes('Mandarin') ||
-                    v.name.includes('Chinese (China)') ||
-                    v.name.includes('Chinese (Taiwan)')
-                );
-                
-                if (mandarinVoice) {
-                    utterance.voice = mandarinVoice;
-                    // 如果找到了特定語音，同時將 lang 設為該語音的 lang，增加成功率
-                    utterance.lang = mandarinVoice.lang;
-                } else {
-                    // 如果真的什麼都找不到，退而求其次使用 zh-TW (國語)
-                    utterance.lang = 'zh-TW'; 
-                }
-            } else if (engCount > chiCount) {
+            if (engCount > chiCount) {
                 utterance.lang = 'en-US';
             } else {
                 utterance.lang = 'zh-HK'; // 預設廣東話
                 
-                // 確保廣東話不會讀成普通話 (鎖定 Sin-Ji 或廣東話代碼)
+                // 盡量鎖定廣東話語音
+                let voices = window.speechSynthesis.getVoices();
                 const cantoneseVoice = voices.find(v => 
                     v.lang === 'zh-HK' || 
                     v.name.includes('Sin-Ji') || 
-                    v.name.includes('Cantonese') ||
-                    v.name.includes('Chinese (Hong Kong)')
+                    v.name.includes('Cantonese')
                 );
-                if (cantoneseVoice) {
-                    utterance.voice = cantoneseVoice;
-                }
+                if (cantoneseVoice) utterance.voice = cantoneseVoice;
             }
             
             utterance.rate = 0.85; 
