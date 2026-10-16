@@ -2686,28 +2686,44 @@ function markBad() {
          }
      }
 
-    function speakText(customText = null, forceLang = null) {
-         window.speechSynthesis.cancel();
-
-         let textToRead = customText;
-         if (!textToRead) {
-             textToRead = document.getElementById('question').innerText;
-         }
-
-         const utterance = new SpeechSynthesisUtterance(textToRead);
-         const engCount = (textToRead.match(/[a-zA-Z]/g) || []).length;
-         const chiCount = (textToRead.match(/[\u4e00-\u9fa5]/g) || []).length;
-
-         if (forceLang) {
-             utterance.lang = forceLang;
-         } else if (engCount > chiCount) {
-             utterance.lang = 'en-US';
-         } else {
-             utterance.lang = 'zh-HK';
-         }
-         utterance.rate = 0.85; 
-         window.speechSynthesis.speak(utterance);
-     }
+        function speakText(customText = null, forceLang = null) {
+            window.speechSynthesis.cancel();
+            
+            let textToRead = customText;
+            if (!textToRead) {
+                textToRead = document.getElementById('question').innerText;
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            const engCount = (textToRead.match(/[a-zA-Z]/g) || []).length;
+            const chiCount = (textToRead.match(/[\u4e00-\u9fa5]/g) || []).length;
+            
+            if (forceLang) {
+                utterance.lang = forceLang; // 設定為 'zh-CN'
+                
+                // 【針對 iPad 的強制普通話設定】
+                // 尋找設備內建的普通話語音包並強制套用
+                const voices = window.speechSynthesis.getVoices();
+                const mandarinVoice = voices.find(v => 
+                    v.lang.includes('zh-CN') || 
+                    v.lang.includes('zh_CN') || 
+                    v.name.includes('Ting-Ting') || 
+                    v.name.includes('Mandarin') ||
+                    v.lang.includes('zh-Hans')
+                );
+                
+                if (mandarinVoice) {
+                    utterance.voice = mandarinVoice;
+                }
+            } else if (engCount > chiCount) {
+                utterance.lang = 'en-US';
+            } else {
+                utterance.lang = 'zh-HK'; // 預設廣東話
+            }
+            
+            utterance.rate = 0.85; 
+            window.speechSynthesis.speak(utterance);
+        }
 
         function toggleAnswer() {
             const ans = document.getElementById('answer');
