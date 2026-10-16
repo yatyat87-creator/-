@@ -2668,23 +2668,29 @@ function markBad() {
         }
 
         // ================= 語音朗讀模組 =================
-    function playCurrentAudio() {
-         if (currentCategory === 'story' || currentCategory === 'sm_video') {
-             const storyData = database[currentCategory][currentIndex];
-             const qData = storyData.questions[currentStoryQuestionIndex];
-             if (currentStoryQuestionIndex === 0) {
-                 speakText(storyData.storyText + "。 問題一： " + qData.q);
-             } else {
-                 speakText("問題二： " + qData.q);
-             }
-         } else if (currentCategory === 'pth_mc') {
-             // 普通話模式重讀目標詞語
-             const item = database[currentCategory][currentIndex];
-             speakText(item.w, 'zh-CN');
-         } else {
-             speakText();
-         }
-     }
+        
+        // 【新增】預先載入 iPad/Safari 語音包，防止系統慢半拍找不到普通話
+        let systemVoices = [];
+        window.speechSynthesis.onvoiceschanged = () => {
+            systemVoices = window.speechSynthesis.getVoices();
+        };
+
+        function playCurrentAudio() {
+            if (currentCategory === 'story' || currentCategory === 'sm_video') {
+                const storyData = database[currentCategory][currentIndex];
+                const qData = storyData.questions[currentStoryQuestionIndex];
+                if (currentStoryQuestionIndex === 0) {
+                    speakText(storyData.storyText + "。 問題一： " + qData.q);
+                } else {
+                    speakText("問題二： " + qData.q);
+                }
+            } else if (currentCategory === 'pth_mc') {
+                const item = database[currentCategory][currentIndex];
+                speakText(item.w, 'zh-CN');
+            } else {
+                speakText();
+            }
+        }
 
         function speakText(customText = null, forceLang = null) {
             window.speechSynthesis.cancel();
@@ -2698,18 +2704,25 @@ function markBad() {
             const engCount = (textToRead.match(/[a-zA-Z]/g) || []).length;
             const chiCount = (textToRead.match(/[\u4e00-\u9fa5]/g) || []).length;
             
-            if (forceLang) {
-                utterance.lang = forceLang; // 設定為 'zh-CN'
+            if (forceLang === 'zh-CN') {
+                // 強制設定為簡體中文/普通話代碼 (涵蓋舊版和新版 iOS)
+                utterance.lang = 'zh-Hans-CN'; 
                 
-                // 【針對 iPad 的強制普通話設定】
-                // 尋找設備內建的普通話語音包並強制套用
-                const voices = window.speechSynthesis.getVoices();
+                // 每次發音前確保獲取最新語音庫
+                let voices = window.speechSynthesis.getVoices();
+                if (voices.length === 0 && systemVoices.length > 0) {
+                    voices = systemVoices;
+                }
+                
+                // 暴力鎖定蘋果專用普通話語音 (Ting-Ting, Lili, Yu-shu, 或任何標記為 zh-CN 的聲音)
                 const mandarinVoice = voices.find(v => 
-                    v.lang.includes('zh-CN') || 
-                    v.lang.includes('zh_CN') || 
+                    v.lang === 'zh-CN' || 
+                    v.lang === 'zh_CN' || 
+                    v.lang === 'zh-Hans-CN' ||
                     v.name.includes('Ting-Ting') || 
-                    v.name.includes('Mandarin') ||
-                    v.lang.includes('zh-Hans')
+                    v.name.includes('Lili') || 
+                    v.name.includes('Yu-shu') || 
+                    v.name.includes('Mandarin')
                 );
                 
                 if (mandarinVoice) {
