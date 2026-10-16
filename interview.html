@@ -213,6 +213,17 @@
     </div>
 
     <script>
+        // 【新增】建立全域音效播放器，破解 iPad 自動播放限制
+        const pthAudio = new Audio();
+        
+        // 當畫面被點擊第一次時，永久解鎖這個播放器
+        const unlockAudio = () => {
+            pthAudio.play().catch(() => {});
+            document.removeEventListener('touchstart', unlockAudio);
+            document.removeEventListener('click', unlockAudio);
+        };
+        document.addEventListener('touchstart', unlockAudio);
+        document.addEventListener('click', unlockAudio);
         // 預設的完整題庫
         const defaultDatabase = {
             chi: [
@@ -2759,8 +2770,7 @@ function markBad() {
             }
         }
 
-function speakText(customText = null, forceLang = null) {
-            // 先停止所有正在播放的系統語音
+        function speakText(customText = null, forceLang = null) {
             window.speechSynthesis.cancel();
             
             let textToRead = customText;
@@ -2768,21 +2778,17 @@ function speakText(customText = null, forceLang = null) {
                 textToRead = document.getElementById('question').innerText;
             }
             
-            // 🌟 終極絕招：如果是普通話，直接呼叫 Google 雲端標準發音，徹底繞過 iPad 系統！
+            // 🌟 終極絕招：如果是普通話，呼叫 Google 雲端標準發音，並使用已解鎖的 pthAudio 播放
             if (forceLang === 'zh-CN') {
                 const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=zh-CN&q=${encodeURIComponent(textToRead)}`;
-                const audio = new Audio(url);
-                audio.play().catch(error => {
-                    console.log("雲端發音播放失敗，可能需要網絡連接:", error);
-                    // 如果斷網，作為最後備用才勉強叫 iPad 自己讀
-                    let fallbackUtterance = new SpeechSynthesisUtterance(textToRead);
-                    fallbackUtterance.lang = 'zh-CN';
-                    window.speechSynthesis.speak(fallbackUtterance);
+                pthAudio.src = url;
+                pthAudio.play().catch(error => {
+                    console.log("iPad 播放被阻擋:", error);
                 });
                 return; // 播放完畢直接退出，不再執行下面的代碼
             }
 
-            // ================= 英文與廣東話部分 (保留原本的系統發音) =================
+            // ================= 英文與廣東話部分 (保留系統發音) =================
             const utterance = new SpeechSynthesisUtterance(textToRead);
             const engCount = (textToRead.match(/[a-zA-Z]/g) || []).length;
             const chiCount = (textToRead.match(/[\u4e00-\u9fa5]/g) || []).length;
@@ -2791,8 +2797,6 @@ function speakText(customText = null, forceLang = null) {
                 utterance.lang = 'en-US';
             } else {
                 utterance.lang = 'zh-HK'; // 預設廣東話
-                
-                // 盡量鎖定廣東話語音
                 let voices = window.speechSynthesis.getVoices();
                 const cantoneseVoice = voices.find(v => 
                     v.lang === 'zh-HK' || 
