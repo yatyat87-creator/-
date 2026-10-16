@@ -158,6 +158,8 @@
         <button class="nav-btn" onclick="setCategory('listen')">🎨 聆聽與畫圖</button>
         <button class="nav-btn" style="background-color: #FFF3E0; border-color: #F5A623; color: #F5A623;" onclick="setCategory('rearrange')">🧩 重組句子</button>
         <button class="nav-btn" style="background-color: #E8F8F5; border-color: #1ABC9C; color: #1ABC9C;" onclick="setCategory('story')">📖 故事選擇題</button>
+        <!-- 新增：普通話特訓模式按鈕 -->
+        <button class="nav-btn" style="background-color: #FEF9E7; border-color: #F1C40F; color: #D4AC0D;" onclick="setCategory('pth_mc')">🇨🇳 普通話聽力 (四選一)</button>
         <!-- 修改：將原本的聖瑪加利按鈕換成以下兩個學校按鈕 -->
         <button class="nav-btn" style="background-color: #F4ECF7; border-color: #8E44AD; color: #8E44AD;" onclick="showSchoolNav(event, 'st_margaret')">🏫 聖瑪加利特訓</button>
         <button class="nav-btn" style="background-color: #FDEDEC; border-color: #E74C3C; color: #E74C3C;" onclick="showSchoolNav(event, 'pui_kiu')">🏫 培僑特訓</button>
@@ -282,6 +284,59 @@
                 { q: "eyes / ears / mouth / nose", i: "指令：Read the 1st and 4th words", a: "答案：eyes, nose。" },
                 { q: "boy / girl / man / woman", i: "指令：Read in order", a: "注意 woman 的發音。" },
                 { q: "sun / moon / star / sky", i: "指令：Read the words in order", a: "自然詞彙認讀。" }
+            ],
+            // === 新增：普通話特訓 (四選一，累積答對3次過關) ===
+            pth_mc: [
+                { w: "學校", opts: ["公園", "醫院", "學校", "圖書館"], c: 0 },
+                { w: "老師", opts: ["醫生", "警察", "老師", "司機"], c: 0 },
+                { w: "朋友", opts: ["同學", "朋友", "家人", "鄰居"], c: 0 },
+                { w: "喜歡", opts: ["討厭", "開心", "喜歡", "生氣"], c: 0 },
+                { w: "蘋果", opts: ["香蕉", "西瓜", "橙子", "蘋果"], c: 0 },
+                { w: "巴士", opts: ["的士", "巴士", "火車", "飛機"], c: 0 },
+                { w: "顏色", opts: ["形狀", "大小", "顏色", "長短"], c: 0 },
+                { w: "畫畫", opts: ["唱歌", "跳舞", "畫畫", "寫字"], c: 0 },
+                { w: "早上", opts: ["中午", "下午", "晚上", "早上"], c: 0 },
+                { w: "睡覺", opts: ["起床", "洗澡", "刷牙", "睡覺"], c: 0 },
+                { w: "衣服", opts: ["褲子", "裙子", "衣服", "襪子"], c: 0 },
+                { w: "鞋子", opts: ["帽子", "手套", "鞋子", "頸巾"], c: 0 },
+                { w: "眼睛", opts: ["耳朵", "鼻子", "嘴巴", "眼睛"], c: 0 },
+                { w: "雙手", opts: ["雙腳", "雙手", "頭部", "肚子"], c: 0 },
+                { w: "遊戲", opts: ["功課", "圖書", "遊戲", "考試"], c: 0 },
+                { w: "玩具", opts: ["文具", "餐具", "工具", "玩具"], c: 0 },
+                { w: "閱讀", opts: ["寫字", "聆聽", "閱讀", "說話"], c: 0 },
+                { w: "鉛筆", opts: ["擦膠", "間尺", "鉛筆", "筆盒"], c: 0 },
+                { w: "書包", opts: ["水樽", "書包", "飯盒", "雨傘"], c: 0 },
+                { w: "港鐵", opts: ["巴士", "小巴", "的士", "港鐵"], c: 0 },
+                { w: "晴天", opts: ["雨天", "陰天", "雪天", "晴天"], c: 0 },
+                { w: "春天", opts: ["夏天", "秋天", "冬天", "春天"], c: 0 },
+                { w: "麵包", opts: ["蛋糕", "餅乾", "麵包", "麵條"], c: 0 },
+                { w: "牛奶", opts: ["果汁", "汽水", "清水", "牛奶"], c: 0 },
+                { w: "開心", opts: ["傷心", "害怕", "開心", "憤怒"], c: 0 },
+                { w: "謝謝", opts: ["對不起", "沒關係", "再見", "謝謝"], c: 0 },
+                { w: "花朵", opts: ["樹木", "小草", "花朵", "泥土"], c: 0 },
+                { w: "蝴蝶", opts: ["蜜蜂", "蜻蜓", "螞蟻", "蝴蝶"], c: 0 },
+                { w: "唱歌", opts: ["跳舞", "彈琴", "唱歌", "畫畫"], c: 0 },
+                { w: "動物", opts: ["植物", "昆蟲", "動物", "怪物"], c: 0 },
+                { w: "貓咪", opts: ["小狗", "兔子", "貓咪", "金魚"], c: 0 },
+                { w: "桌子", opts: ["椅子", "沙發", "床鋪", "桌子"], c: 0 },
+                { w: "電視", opts: ["冷氣", "雪櫃", "電視", "風扇"], c: 0 },
+                { w: "超級市場", opts: ["公園", "圖書館", "超級市場", "醫院"], c: 0 },
+                { w: "洗手", opts: ["洗臉", "洗澡", "刷牙", "洗手"], c: 0 },
+                { w: "生日", opts: ["節日", "假日", "生日", "新年"], c: 0 },
+                { w: "分享", opts: ["搶奪", "分享", "幫忙", "吵架"], c: 0 },
+                { w: "排隊", opts: ["打尖", "推撞", "排隊", "奔跑"], c: 0 },
+                { w: "垃圾桶", opts: ["回收箱", "信箱", "垃圾桶", "水桶"], c: 0 },
+                { w: "保護", opts: ["破壞", "傷害", "保護", "遺失"], c: 0 },
+                { w: "美麗", opts: ["醜陋", "美麗", "乾淨", "骯髒"], c: 0 },
+                { w: "安靜", opts: ["吵鬧", "安靜", "大聲", "熱鬧"], c: 0 },
+                { w: "幫助", opts: ["欺負", "嘲笑", "幫助", "討厭"], c: 0 },
+                { w: "紅綠燈", opts: ["斑馬線", "天橋", "隧道", "紅綠燈"], c: 0 },
+                { w: "過馬路", opts: ["行山", "跑步", "散步", "過馬路"], c: 0 },
+                { w: "小心", opts: ["隨便", "大意", "小心", "勇敢"], c: 0 },
+                { w: "快樂", opts: ["傷心", "生氣", "快樂", "害怕"], c: 0 },
+                { w: "聰明", opts: ["愚笨", "聰明", "懶惰", "勤力"], c: 0 },
+                { w: "禮貌", opts: ["粗魯", "禮貌", "頑皮", "乖巧"], c: 0 },
+                { w: "進步", opts: ["退步", "放棄", "進步", "失敗"], c: 0 }
             ],
             grammar: [
                 { q: "_____ girl is cycling.", i: "Fill in the blank (They / The / She)", a: "答案：The (The girl is cycling.)" },
@@ -2235,7 +2290,7 @@
             
             // 【防撞車機制】檢查舊紀錄是否有最新的題庫分類，如果沒有則自動重置
             let needReset = false;
-            if (!database['sm_video'] || !database['pk_speech'] || !database['fj_eng_read']) needReset = true;
+            if (!database['sm_video'] || !database['pk_speech'] || !database['fj_eng_read'] || !database['pth_mc']) needReset = true;
             if (database['story'] && database['story'].length > 0 && !database['story'][0].questions) needReset = true;
             
             if (needReset) {
@@ -2362,11 +2417,17 @@ function markBad() {
                 return;
             }
 
-            // 如果是故事或影片觀察模式，進入專屬渲染邏輯
-            if (currentCategory === 'story' || currentCategory === 'sm_video') {
-                startStoryMode(arr);
-                return;
-            }
+        // 如果是故事或影片觀察模式，進入專屬渲染邏輯
+         if (currentCategory === 'story' || currentCategory === 'sm_video') {
+             startStoryMode(arr);
+             return;
+         }
+
+         // 【新增】如果是普通話聽力模式，進入普通話專屬邏輯
+         if (currentCategory === 'pth_mc') {
+             startPthMode(arr);
+             return;
+         }
 
             // ================= 一般模式 (非故事) =================
             btnGood.style.display = 'inline-block';
@@ -2516,43 +2577,137 @@ function markBad() {
             
             document.getElementById('read-btn').style.display = 'none'; // 顯示結果時隱藏朗讀按鈕
         }
+        // ================= 普通話特訓模式 (四選一) =================
+        function startPthMode(arr) {
+            document.getElementById('instruction').innerText = "【普通話聽力】請聆聽發音，選出正確的詞語";
+            document.getElementById('answer').style.display = 'none';
+            document.getElementById('question-image').style.display = 'none';
+            
+            // 隱藏一般按鈕，顯示朗讀按鈕
+            document.getElementById('btn-good').style.display = 'none';
+            document.getElementById('btn-bad').style.display = 'none';
+            document.querySelector('.action-btn[onclick="toggleAnswer()"]').style.display = 'none';
+            document.getElementById('read-btn').style.display = 'inline-block';
 
-        // ================= 語音朗讀模組 =================
-        function playCurrentAudio() {
-            if (currentCategory === 'story' || currentCategory === 'sm_video') {
-                // 手動點擊時，重新朗讀當前題目的設定
-                const storyData = database[currentCategory][currentIndex];
-                const qData = storyData.questions[currentStoryQuestionIndex];
-                if (currentStoryQuestionIndex === 0) {
-                    speakText(storyData.storyText + "。 問題一： " + qData.q);
-                } else {
-                    speakText("問題二： " + qData.q);
+            // 隨機抽一題
+            let newIndex = currentIndex;
+            if (arr.length > 1) {
+                while (newIndex === currentIndex) {
+                    newIndex = Math.floor(Math.random() * arr.length);
                 }
             } else {
-                speakText();
+                newIndex = 0;
+            }
+            currentIndex = newIndex;
+
+            // 打亂選項順序 (Shuffle)
+            const item = arr[currentIndex];
+            let options = [...item.opts];
+            options.sort(() => Math.random() - 0.5); 
+            item.currentOpts = options;
+
+            renderPthQuestion();
+            
+            // 自動用普通話 (zh-CN) 朗讀詞語
+            setTimeout(() => {
+                speakText(item.w, 'zh-CN');
+            }, 300);
+        }
+
+        function renderPthQuestion() {
+            const item = database[currentCategory][currentIndex];
+            let html = `<div style="font-size: 26px; color: #7F8C8D; margin-bottom: 20px;">🔊 聽一聽，這是哪一個詞語？</div>`;
+            html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 100%; max-width: 600px; margin: 0 auto;">`;
+            
+            item.currentOpts.forEach((opt) => {
+                html += `<button onclick="submitPthAnswer('${opt}')" style="padding: 30px; font-size: 40px; font-weight: bold; border-radius: 20px; border: 3px solid var(--primary); background: white; color: var(--text); cursor: pointer; transition: 0.2s;">${opt}</button>`;
+            });
+            html += `</div>`;
+
+            // 顯示當前進度 (滿3次消除)
+            let currentCount = item.c || 0;
+            html += `<div style="margin-top: 20px; font-size: 20px; color: #27AE60; font-weight: bold;">⭐ 目前累積答對：${currentCount} / 3 次</div>`;
+
+            document.getElementById('question').innerHTML = html;
+        }
+
+        function submitPthAnswer(selectedOpt) {
+            const arr = database[currentCategory];
+            const item = arr[currentIndex];
+
+            if (selectedOpt === item.w) {
+                // 答對邏輯
+                item.c = (item.c || 0) + 1; // 增加答對次數
+                
+                let feedbackHtml = `<div style="color: #2ECC71; font-size: 50px; font-weight: bold; padding: 40px;">✅ 答對了！<br><span style="font-size: 28px; color: #666;">這是「${item.w}」</span><br><span style="font-size: 24px; color: #27AE60; margin-top: 10px; display: block;">累積過關：${item.c}/3 次</span></div>`;
+                
+                // 如果累積滿3次，從陣列中剔除
+                if (item.c >= 3) {
+                    arr.splice(currentIndex, 1);
+                    currentIndex = -1;
+                    feedbackHtml = `<div style="color: #F1C40F; font-size: 50px; font-weight: bold; padding: 40px;">🌟 太棒了！<br><span style="font-size: 28px; color: #666;">「${item.w}」已滿 3 次，完美過關！</span></div>`;
+                }
+                
+                saveProgress();
+                document.getElementById('question').innerHTML = feedbackHtml;
+                
+                // 1.5秒後自動下一題
+                setTimeout(() => {
+                    nextQuestion();
+                }, 1500);
+
+            } else {
+                // 答錯邏輯
+                document.getElementById('question').innerHTML = `<div style="color: #E74C3C; font-size: 50px; font-weight: bold; padding: 40px;">❌ 不對喔<br><span style="font-size: 28px; color: #666;">剛剛讀的是：<b>${item.w}</b></span></div>`;
+                
+                // 2秒後自動下一題 (不扣分，也不加分)
+                setTimeout(() => {
+                    nextQuestion();
+                }, 2000);
             }
         }
 
-        function speakText(customText = null) {
-            window.speechSynthesis.cancel();
-            
-            let textToRead = customText;
-            if (!textToRead) {
-                textToRead = document.getElementById('question').innerText;
-            }
-            
-            const utterance = new SpeechSynthesisUtterance(textToRead);
-            const engCount = (textToRead.match(/[a-zA-Z]/g) || []).length;
-            const chiCount = (textToRead.match(/[\u4e00-\u9fa5]/g) || []).length;
-            
-            if (engCount > chiCount) {
-                utterance.lang = 'en-US';
-            } else {
-                utterance.lang = 'zh-HK';
-            }
-            utterance.rate = 0.85; 
-            window.speechSynthesis.speak(utterance);
-        }
+        // ================= 語音朗讀模組 =================
+    function playCurrentAudio() {
+         if (currentCategory === 'story' || currentCategory === 'sm_video') {
+             const storyData = database[currentCategory][currentIndex];
+             const qData = storyData.questions[currentStoryQuestionIndex];
+             if (currentStoryQuestionIndex === 0) {
+                 speakText(storyData.storyText + "。 問題一： " + qData.q);
+             } else {
+                 speakText("問題二： " + qData.q);
+             }
+         } else if (currentCategory === 'pth_mc') {
+             // 普通話模式重讀目標詞語
+             const item = database[currentCategory][currentIndex];
+             speakText(item.w, 'zh-CN');
+         } else {
+             speakText();
+         }
+     }
+
+    function speakText(customText = null, forceLang = null) {
+         window.speechSynthesis.cancel();
+
+         let textToRead = customText;
+         if (!textToRead) {
+             textToRead = document.getElementById('question').innerText;
+         }
+
+         const utterance = new SpeechSynthesisUtterance(textToRead);
+         const engCount = (textToRead.match(/[a-zA-Z]/g) || []).length;
+         const chiCount = (textToRead.match(/[\u4e00-\u9fa5]/g) || []).length;
+
+         if (forceLang) {
+             utterance.lang = forceLang;
+         } else if (engCount > chiCount) {
+             utterance.lang = 'en-US';
+         } else {
+             utterance.lang = 'zh-HK';
+         }
+         utterance.rate = 0.85; 
+         window.speechSynthesis.speak(utterance);
+     }
 
         function toggleAnswer() {
             const ans = document.getElementById('answer');
