@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo 遊戲生成與呼叫器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Print Styles */
+        @page { size: A4 landscape; margin: 10mm; }
+        @media print {
+            body { background: white; margin: 0; padding: 0; }
+            body * {
+                visibility: hidden;
+            }
+            #print-area, #print-area * {
+                visibility: visible;
+            }
+            #print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 15px;
+                padding: 0;
+            }
+            .bingo-card-container {
+                width: 32%;
+                break-inside: avoid;
+                border: 2px solid #000;
+                padding: 10px;
+                border-radius: 8px;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .bingo-cell {
+                border: 2px solid #000 !important;
+                font-size: 12px !important;
+                line-height: 1.2 !important;
+                color: #000 !important;
+                background-color: transparent !important;
+                aspect-ratio: 1 / 1;
+                padding: 2px !important;
+                overflow: hidden !important;
+                word-wrap: break-word !important;
+            }
+            .card-theme-title {
+                font-size: 24px !important;
+                margin-bottom: 10px !important;
+                color: #000 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 p-4 sm:p-8">
+
+    <div class="max-w-4xl mx-auto">
+        <!-- Header Controls (Hidden during print) -->
+        <div class="no-print bg-white p-6 rounded-xl shadow-md mb-8">
+            <h1 class="text-3xl font-bold text-center text-indigo-600 mb-6">Bingo 遊戲中心</h1>
+            
+            <div class="flex flex-col sm:flex-row gap-4 items-center justify-center">
+                <div class="w-full sm:w-1/3">
+                    <label for="theme-select" class="block text-sm font-medium text-gray-700 mb-1">選擇主題</label>
+                    <select id="theme-select" class="w-full border-gray-300 border rounded-md shadow-sm p-3 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="animals">動物 (Animals)</option>
+                        <option value="food">食物 (Food)</option>
+                        <option value="colors">顏色 (Colors)</option>
+                        <option value="sports">運動 (Sports)</option>
+                        <option value="occupations">職業 (Occupations)</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 w-full sm:w-auto mt-4 sm:mt-6">
+                    <button onclick="initCardGenerator()" class="flex-1 sm:flex-none bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-3 px-6 rounded-md transition duration-200">
+                        生成3張遊戲紙
+                    </button>
+                    <button onclick="initBingoCaller()" class="flex-1 sm:flex-none bg-purple-500 hover:bg-purple-600 text-white font-semibold py-3 px-6 rounded-md transition duration-200">
+                        開始遊戲 (抽字)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="main-content" class="bg-white p-6 rounded-xl shadow-md min-h-[400px] flex flex-col items-center justify-center relative">
+            
+            <!-- Default Welcome -->
+            <div id="welcome-view" class="text-center no-print">
+                <h2 class="text-2xl font-semibold text-gray-500">請在上方選擇模式開始！</h2>
+                <p class="text-gray-400 mt-2">生成環保列印的 Bingo 遊戲紙或開始隨機抽字。</p>
+            </div>
+
+            <!-- Card Generator View -->
+            <div id="card-view" class="hidden w-full flex flex-col items-center">
+                <div id="print-area" class="w-full flex flex-col md:flex-row gap-4 justify-between mb-8">
+                    <!-- Cards will be injected here -->
+                </div>
+                <button onclick="window.print()" class="no-print bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-8 rounded-md transition duration-200 shadow-sm flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    列印遊戲紙 (A4 橫向)
+                </button>
+            </div>
+
+            <!-- Bingo Caller View -->
+            <div id="caller-view" class="hidden w-full no-print flex flex-col items-center">
+                <div class="flex justify-between w-full items-center mb-6 border-b pb-4">
+                    <h2 id="caller-theme-title" class="text-2xl font-bold text-gray-700">主題呼叫器</h2>
+                    <button onclick="resetCaller()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded transition duration-200">
+                        重新開始
+                    </button>
+                </div>
+
+                <div class="bg-indigo-50 w-full rounded-2xl p-8 text-center shadow-inner mb-8 min-h-[200px] flex flex-col justify-center items-center">
+                    <p class="text-sm font-semibold text-indigo-400 uppercase tracking-wide mb-2">當前抽中</p>
+                    <h3 id="current-word-display" class="text-5xl sm:text-6xl font-bold text-indigo-700 break-words w-full">準備就緒！</h3>
+                    <p id="game-over-msg" class="text-xl text-green-600 font-bold mt-4 hidden">遊戲結束 / 所有詞語已抽出！</p>
+                </div>
+
+                <button id="draw-btn" onclick="drawNextWord()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xl font-bold py-4 px-10 rounded-full shadow-lg transition duration-200 transform hover:scale-105 mb-8">
+                    抽取下一個
+                </button>
+
+                <div class="w-full">
+                    <h4 class="text-lg font-semibold text-gray-600 mb-3 border-b pb-2">已抽出的詞語 (<span id="called-count">0</span>/16)</h4>
+                    <div id="called-words-list" class="flex flex-wrap gap-2">
+                        <!-- Called words injected here -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // 1. Data Structure: Themes and their 16 words
+        const themesData = {
+            animals: ["Lion", "Tiger", "Bear", "Elephant", "Giraffe", "Monkey", "Zebra", "Kangaroo", "Panda", "Penguin", "Dolphin", "Shark", "Eagle", "Owl", "Rabbit", "Turtle"],
+            food: ["Pizza", "Burger", "Pasta", "Sushi", "Taco", "Salad", "Steak", "Soup", "Sandwich", "Curry", "Bread", "Cheese", "Cake", "Ice Cream", "Cookie", "Donut"],
+            colors: ["Red", "Blue", "Green", "Yellow", "Orange", "Purple", "Pink", "Black", "White", "Brown", "Gray", "Cyan", "Magenta", "Maroon", "Navy", "Olive"],
+            sports: ["Soccer", "Basketball", "Tennis", "Baseball", "Golf", "Swimming", "Volleyball", "Rugby", "Cricket", "Boxing", "Cycling", "Skiing", "Surfing", "Hockey", "Badminton", "Judo"],
+            occupations: ["Doctor", "Nurse", "Teacher", "Police", "Firefighter", "Pilot", "Chef", "Artist", "Singer", "Actor", "Farmer", "Driver", "Baker", "Builder", "Vet", "Judge"]
+        };
+
+        // State variables for Caller mode
+        let remainingWords = [];
+        let calledWords = [];
+
+        // Utility: Fisher-Yates Shuffle
+        function shuffleArray(array) {
+            let shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        // View Management
+        function showView(viewId) {
+            document.getElementById('welcome-view').classList.add('hidden');
+            document.getElementById('card-view').classList.add('hidden');
+            document.getElementById('caller-view').classList.add('hidden');
+            document.getElementById(viewId).classList.remove('hidden');
+        }
+
+        // --- Card Generator Mode ---
+        function initCardGenerator() {
+            showView('card-view');
+            const themeKey = document.getElementById('theme-select').value;
+            const themeWords = themesData[themeKey];
+            
+            const printArea = document.getElementById('print-area');
+            printArea.innerHTML = ''; // Clear previous
+
+            // Generate exactly 3 Bingo Cards
+            for(let i = 0; i < 3; i++) {
+                const shuffled = shuffleArray(themeWords);
+                
+                const cardContainer = document.createElement('div');
+                cardContainer.className = "bingo-card-container flex-1 bg-white p-2 border-2 sm:border-gray-200 rounded-lg text-center shadow-sm";
+                
+                const title = document.createElement('h2');
+                title.className = "card-theme-title text-2xl font-bold text-gray-800 mb-4 uppercase tracking-widest";
+                title.innerText = "BINGO";
+                cardContainer.appendChild(title);
+
+                const gridContainer = document.createElement('div');
+                gridContainer.className = "grid grid-cols-4 gap-1";
+
+                shuffled.forEach(word => {
+                    const cell = document.createElement('div');
+                    cell.className = "bingo-cell flex items-center justify-center p-1 bg-indigo-50 border border-indigo-100 rounded text-xs md:text-sm font-bold text-gray-700 text-center break-words overflow-hidden aspect-square leading-tight";
+                    cell.innerText = word;
+                    gridContainer.appendChild(cell);
+                });
+
+                cardContainer.appendChild(gridContainer);
+                printArea.appendChild(cardContainer);
+            }
+        }
+
+        // --- Bingo Caller Mode ---
+        function initBingoCaller() {
+            showView('caller-view');
+            resetCaller();
+        }
+
+        function resetCaller() {
+            const themeKey = document.getElementById('theme-select').value;
+            remainingWords = [...themesData[themeKey]];
+            calledWords = [];
+            
+            // Reset UI
+            const themeSelect = document.getElementById('theme-select');
+            const themeTitleDisplay = themeSelect.options[themeSelect.selectedIndex].text;
+            document.getElementById('caller-theme-title').innerText = `${themeTitleDisplay} 呼叫器`;
+            document.getElementById('current-word-display').innerText = '準備就緒！';
+            document.getElementById('current-word-display').classList.remove('text-gray-400');
+            document.getElementById('current-word-display').classList.add('text-indigo-700');
+            document.getElementById('called-words-list').innerHTML = '';
+            document.getElementById('called-count').innerText = '0';
+            document.getElementById('game-over-msg').classList.add('hidden');
+            
+            const drawBtn = document.getElementById('draw-btn');
+            drawBtn.disabled = false;
+            drawBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+            // Stop any ongoing speech when resetting
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        }
+
+        function drawNextWord() {
+            if (remainingWords.length === 0) return;
+
+            // Pick a random word
+            const randomIndex = Math.floor(Math.random() * remainingWords.length);
+            const word = remainingWords.splice(randomIndex, 1)[0];
+            
+            // Text-to-Speech: Read the word aloud
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.lang = 'en-US'; // 確保使用英文發音
+                window.speechSynthesis.cancel(); // 停止先前的朗讀，避免重疊
+                window.speechSynthesis.speak(utterance);
+            }
+
+            // Update state
+            calledWords.push(word);
+
+            // Update UI: Current Word
+            document.getElementById('current-word-display').innerText = word;
+
+            // Update UI: Called List
+            const listContainer = document.getElementById('called-words-list');
+            const wordBadge = document.createElement('span');
+            wordBadge.className = "bg-green-100 text-green-800 text-sm font-medium px-3 py-1 rounded-full border border-green-200 animate-fade-in";
+            wordBadge.innerText = word;
+            listContainer.appendChild(wordBadge);
+            
+            document.getElementById('called-count').innerText = calledWords.length;
+
+            // Check Game Over
+            if (remainingWords.length === 0) {
+                const drawBtn = document.getElementById('draw-btn');
+                drawBtn.disabled = true;
+                drawBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                document.getElementById('game-over-msg').classList.remove('hidden');
+                document.getElementById('current-word-display').classList.add('text-gray-400');
+                document.getElementById('current-word-display').classList.remove('text-indigo-700');
+            }
+        }
+    </script>
+</body>
+</html>
