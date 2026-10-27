@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>數學運算練習生成器 (綜合版)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-break { page-break-after: always; }
+            body { background-color: white; padding: 0; }
+            .content-box { border: none; box-shadow: none; width: 100%; max-width: none; }
+            
+            /* 新增這行：防止題目在列印時被切斷跨頁 */
+            .avoid-break { 
+                page-break-inside: avoid; 
+                break-inside: avoid; 
+            }
+        }
+        .math-font {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+        }
+        /* 新增直式運算的專屬樣式 */
+        .vertical-math {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: flex-end;
+            margin: 0 auto;
+        }
+        .vertical-math .row {
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+            letter-spacing: 0.2rem; /* 讓數字對齊更清晰 */
+        }
+        .vertical-math .bottom-row {
+            border-bottom: 2px solid #374151; /* 運算底線 */
+            padding-bottom: 4px;
+            margin-bottom: 4px;
+            gap: 1rem; /* 符號與數字的間距 */
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen py-8 px-4">
+
+    <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-xl p-6 content-box border border-gray-200">
+        <div class="text-center mb-6">
+            <h1 id="main-title" class="text-3xl font-bold text-blue-600 mb-2">數學練習工作紙</h1>
+            <p class="text-gray-500 text-lg">姓名：__________ 日期：__________ 得分：__________</p>
+        </div>
+
+        <div class="no-print bg-blue-50 p-6 rounded-lg mb-8 border border-blue-100 shadow-inner">
+            
+            <div class="flex justify-center mb-6 border-b border-blue-200 pb-4">
+                <div class="inline-flex bg-white rounded-lg p-1 shadow-sm border border-gray-200">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="mainMode" value="basic" checked onchange="updateUI()" class="peer sr-only">
+                        <div class="px-6 py-2 rounded-md text-gray-600 font-bold peer-checked:bg-blue-500 peer-checked:text-white transition">
+                            基礎雙數運算
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="mainMode" value="multi" onchange="updateUI()" class="peer sr-only">
+                        <div class="px-6 py-2 rounded-md text-gray-600 font-bold peer-checked:bg-blue-500 peer-checked:text-white transition">
+                            多數連環運算
+                        </div>
+                    </label>
+                    <!-- 原本的「多數連環運算」label 結尾之後插入以下代碼 -->
+                    <label class="cursor-pointer">
+                        <input type="radio" name="mainMode" value="twoPlusOne" onchange="updateUI()" class="peer sr-only">
+                        <div class="px-6 py-2 rounded-md text-gray-600 font-bold peer-checked:bg-blue-500 peer-checked:text-white transition">
+                            兩位與一位數
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6">
+                
+                <div id="basic-config" class="space-y-4">
+                    <div class="flex items-center gap-3">
+                        <label for="rangeMax" class="font-bold text-gray-700 whitespace-nowrap">範圍上限 (5-9999)：</label>
+                        <input type="number" id="rangeMax" min="5" max="9999" value="10" 
+                               onchange="validateAndGenerate()"
+                               class="w-24 border border-blue-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-400 outline-none">
+                    </div>
+                    
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <span class="font-bold text-gray-700">運算類型：</span>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="opType" value="add" onchange="updateUI()" class="form-radio text-blue-600">
+                            <span class="ml-2">加法 (+)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="opType" value="sub" onchange="updateUI()" class="form-radio text-blue-600">
+                            <span class="ml-2">減法 (-)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="opType" value="mixedOp" checked onchange="updateUI()" class="form-radio text-blue-600">
+                            <span class="ml-2">加減混合 (+/-)</span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <span class="font-bold text-gray-700">進退位設定：</span>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="mode" value="simple" checked onchange="updateUI()" class="form-radio text-blue-600">
+                            <span id="label-simple" class="ml-2">不退位</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="mode" value="complex" onchange="updateUI()" class="form-radio text-blue-600">
+                            <span id="label-complex" class="ml-2">退位減法</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="mode" value="mixed" onchange="updateUI()" class="form-radio text-blue-600">
+                            <span id="label-mixed" class="ml-2">混合模式</span>
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-4 flex-wrap pt-2">
+                        <span class="font-bold text-gray-700">顯示格式：</span>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="layoutType" value="horizontal" checked onchange="generateTasks()" class="form-radio text-blue-600">
+                            <span class="ml-2">橫式</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="layoutType" value="vertical" onchange="generateTasks()" class="form-radio text-blue-600">
+                            <span class="ml-2">直式</span>
+                        </label>
+                    </div>
+                    <div class="flex items-center gap-4 flex-wrap pt-2">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="useFixedNum" onchange="updateUI()" class="form-checkbox text-blue-600 h-5 w-5">
+                            <span class="ml-2 font-bold text-gray-700">啟用固定數字：</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-700">必出數字</span>
+                            <input type="number" id="fixedNum" min="0" max="9999" value="5" 
+                                   onchange="validateAndGenerate()" disabled
+                                   class="w-20 border border-blue-300 rounded px-2 py-1 focus:ring-2 focus:ring-blue-400 outline-none disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-300">
+                        </div>
+                        <span class="text-sm text-gray-500 w-full ml-7">（開啟後，每題必定包含上述指定的數字）</span>
+                    </div>
+                </div>
+
+                <div id="multi-config" class="space-y-4 hidden">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="flex items-center gap-3">
+                            <label for="numCount" class="font-bold text-gray-700 whitespace-nowrap">參與數字數量：</label>
+                            <input type="number" id="numCount" min="2" max="6" value="3" onchange="updateUI()"
+                                   class="w-20 border border-emerald-300 rounded px-2 py-1 focus:ring-2 focus:ring-emerald-400 outline-none">
+                            <span class="text-sm text-gray-500">(2~6)</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <label for="maxValueMulti" class="font-bold text-gray-700 whitespace-nowrap">單一數字最大值：</label>
+                            <input type="number" id="maxValueMulti" min="5" max="9999" value="50" onchange="updateUI()"
+                                   class="w-24 border border-emerald-300 rounded px-2 py-1 focus:ring-2 focus:ring-emerald-400 outline-none">
+                        </div>
+                        <div class="flex items-center gap-3 sm:col-span-2">
+                            <label for="maxAnswer" class="font-bold text-gray-700 whitespace-nowrap">最後答案最大值：</label>
+                            <input type="number" id="maxAnswer" min="10" max="9999" value="100" onchange="updateUI()"
+                                   class="w-24 border border-emerald-300 rounded px-2 py-1 focus:ring-2 focus:ring-emerald-400 outline-none">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <span class="font-bold text-gray-700">運算類型：</span>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="opTypeMulti" value="add" onchange="updateUI()" class="form-radio text-emerald-600">
+                            <span class="ml-2">連加 (+)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="opTypeMulti" value="sub" onchange="updateUI()" class="form-radio text-emerald-600">
+                            <span class="ml-2">連減 (-)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="opTypeMulti" value="mix" checked onchange="updateUI()" class="form-radio text-emerald-600">
+                            <span class="ml-2">加減混合 (+/-)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="opTypeMulti" value="mix_pure" onchange="updateUI()" class="form-radio text-emerald-600">
+                            <span class="ml-2">純加/純減混合</span>
+                        </label>
+                    </div>
+                </div>
+                <!-- 在 multi-config 結尾的 </div> 下方插入 -->
+                <div id="twoPlusOne-config" class="space-y-4 hidden">
+                    <div class="flex items-center gap-3">
+                        <label for="rangeMaxTwo" class="font-bold text-gray-700 whitespace-nowrap">兩位數範圍上限 (10-99)：</label>
+                        <input type="number" id="rangeMaxTwo" min="10" max="99" value="99" 
+                               onchange="validateAndGenerate()"
+                               class="w-24 border border-purple-300 rounded px-2 py-1 focus:ring-2 focus:ring-purple-400 outline-none">
+                    </div>
+                    
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <span class="font-bold text-gray-700">運算類型：</span>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="opTypeTwo" value="add" onchange="updateUI()" class="form-radio text-purple-600">
+                            <span class="ml-2">加法 (+)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="opTypeTwo" value="sub" onchange="updateUI()" class="form-radio text-purple-600">
+                            <span class="ml-2">減法 (-)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="opTypeTwo" value="mixed" checked onchange="updateUI()" class="form-radio text-purple-600">
+                            <span class="ml-2">加減混合 (+/-)</span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center gap-4 flex-wrap">
+                        <span class="font-bold text-gray-700">進退位設定：</span>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="modeTwo" value="simple" checked onchange="updateUI()" class="form-radio text-purple-600">
+                            <span id="label-simple-two" class="ml-2">不退位</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="modeTwo" value="complex" onchange="updateUI()" class="form-radio text-purple-600">
+                            <span id="label-complex-two" class="ml-2">退位減法</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="modeTwo" value="mixed" onchange="updateUI()" class="form-radio text-purple-600">
+                            <span id="label-mixed-two" class="ml-2">混合模式</span>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center gap-4 flex-wrap pt-2">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="useFixedNumTwo" onchange="updateUI()" class="form-checkbox text-purple-600 h-5 w-5">
+                            <span class="ml-2 font-bold text-gray-700">啟用固定數字：</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span class="text-gray-700">必出一位數</span>
+                            <input type="number" id="fixedNumTwo" min="1" max="9" value="5" 
+                                   onchange="validateAndGenerate()" disabled
+                                   class="w-20 border border-purple-300 rounded px-2 py-1 focus:ring-2 focus:ring-purple-400 outline-none disabled:bg-gray-200 disabled:text-gray-400 disabled:border-gray-300">
+                        </div>
+                        <span class="text-sm text-gray-500 w-full ml-7">（開啟後，每題必定包含上述指定的一位數）</span>
+                    </div>
+                </div>
+
+                <div class="border-t border-blue-200 pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="allowDuplicates" onchange="generateTasks()" class="form-checkbox text-blue-600 h-5 w-5">
+                        <span class="ml-2 font-bold text-gray-700 bg-yellow-100 px-2 py-1 rounded">允許題目重複</span>
+                    </label>
+
+                    <div class="flex gap-2">
+                        <button onclick="generateTasks()" class="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg transition shadow-md font-medium">
+                            重新生成
+                        </button>
+                        <button onclick="toggleAnswers()" id="toggleBtn" class="bg-green-500 hover:bg-green-600 text-white px-5 py-2 rounded-lg transition shadow-md font-medium">
+                            顯示答案
+                        </button>
+                        <button onclick="window.print()" class="bg-gray-700 hover:bg-gray-800 text-white px-5 py-2 rounded-lg transition shadow-md font-medium">
+                            列印
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="quiz-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-8 math-font text-xl md:text-2xl">
+        </div>
+
+        <div class="mt-12 pt-6 border-t border-gray-100">
+            <div class="text-center text-gray-400 text-sm italic mb-2">
+                <span id="logic-desc">※ 不退位：每一位數（個、十、百...）皆足以直接相減。</span>
+            </div>
+            <div class="flex justify-between text-xs text-gray-400">
+                <span id="info-range">出題範圍：0 - 10</span>
+                <span id="info-duplicate">無重複題目生成器</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let showAnswer = false;
+
+        function validateAndGenerate() {
+            // 基礎模式驗證
+            const inputMax = document.getElementById('rangeMax');
+            let maxVal = parseInt(inputMax.value);
+            if (isNaN(maxVal) || maxVal < 5) inputMax.value = 10;
+            if (maxVal > 9999) inputMax.value = 9999;
+            maxVal = parseInt(inputMax.value);
+
+            const inputFixed = document.getElementById('fixedNum');
+            let fixedVal = parseInt(inputFixed.value);
+            if (isNaN(fixedVal) || fixedVal < 0) inputFixed.value = 0;
+            if (fixedVal > maxVal) inputFixed.value = maxVal; 
+
+            // 連算模式驗證
+            const inputNumCount = document.getElementById('numCount');
+            let numCount = parseInt(inputNumCount.value);
+            if (isNaN(numCount) || numCount < 2) inputNumCount.value = 2;
+            if (numCount > 6) inputNumCount.value = 6;
+
+            // 兩位數加一位數驗證
+            const inputMaxTwo = document.getElementById('rangeMaxTwo');
+            if (inputMaxTwo) {
+                let maxValTwo = parseInt(inputMaxTwo.value);
+                if (isNaN(maxValTwo) || maxValTwo < 10) inputMaxTwo.value = 10;
+                if (maxValTwo > 99) inputMaxTwo.value = 99;
+            }
+            const inputFixedTwo = document.getElementById('fixedNumTwo');
+            if (inputFixedTwo) {
+                let fixedValTwo = parseInt(inputFixedTwo.value);
+                if (isNaN(fixedValTwo) || fixedValTwo < 1) inputFixedTwo.value = 1;
+                if (fixedValTwo > 9) inputFixedTwo.value = 9; 
+            }
+
+            updateUI();
+        }
+
+        function updateUI() {
+            const mainMode = document.querySelector('input[name="mainMode"]:checked').value;
+            const basicConfig = document.getElementById('basic-config');
+            const multiConfig = document.getElementById('multi-config');
+            const twoPlusOneConfig = document.getElementById('twoPlusOne-config'); // 加入這行來定義變數
+            
+            const title = document.getElementById('main-title');
+            const desc = document.getElementById('logic-desc');
+            const info = document.getElementById('info-range');
+            
+            const allowDuplicates = document.getElementById('allowDuplicates').checked;
+            document.getElementById('info-duplicate').innerText = allowDuplicates ? "允許重複題目" : "無重複題目生成器";
+
+            if (mainMode === 'basic') {
+                basicConfig.classList.remove('hidden');
+                multiConfig.classList.add('hidden');
+                twoPlusOneConfig.classList.add('hidden'); // 新增這行
+                
+                const opType = document.querySelector('input[name="opType"]:checked').value;
+                const mode = document.querySelector('input[name="mode"]:checked').value;
+                const max = document.getElementById('rangeMax').value;
+                
+                const useFixed = document.getElementById('useFixedNum').checked;
+                document.getElementById('fixedNum').disabled = !useFixed;
+
+                const labelSimple = document.getElementById('label-simple');
+                const labelComplex = document.getElementById('label-complex');
+                const labelMixed = document.getElementById('label-mixed');
+                
+                info.innerText = `出題範圍：0 - ${max}`;
+                
+                if (opType === 'add') {
+                    labelSimple.innerText = "不進位";
+                    labelComplex.innerText = "進位加法";
+                    labelMixed.innerText = "混合加法";
+                    if (mode === 'complex') {
+                        title.innerText = `0-${max} 進位加法練習`;
+                        desc.innerText = '※ 進位加法：至少有一個數位在相加後會產生進位（總和 > 9）。';
+                    } else if (mode === 'simple') {
+                        title.innerText = `0-${max} 不進位加法練習`;
+                        desc.innerText = '※ 不進位加法：每一位數位在相加後都不會產生進位（總和 ≤ 9）。';
+                    } else {
+                        title.innerText = `0-${max} 混合加法練習`;
+                        desc.innerText = '※ 混合加法：隨機包含需要進位與不需進位的題目。';
+                    }
+                } else if (opType === 'sub') {
+                    labelSimple.innerText = "不退位";
+                    labelComplex.innerText = "退位減法";
+                    labelMixed.innerText = "混合減法";
+                    if (mode === 'complex') {
+                        title.innerText = `0-${max} 退位減法練習`;
+                        desc.innerText = '※ 退位減法：至少有一個數位需要向前一位借位。';
+                    } else if (mode === 'simple') {
+                        title.innerText = `0-${max} 不退位減法練習`;
+                        desc.innerText = '※ 不退位減法：每一位數位皆大於或等於減數對應的數位。';
+                    } else {
+                        title.innerText = `0-${max} 混合減法練習`;
+                        desc.innerText = '※ 混合減法：隨機包含需要退位與不需退位的題目。';
+                    }
+                } else {
+                    labelSimple.innerText = "不進/退位";
+                    labelComplex.innerText = "進/退位";
+                    labelMixed.innerText = "全混合";
+                    if (mode === 'complex') {
+                        title.innerText = `0-${max} 進退位混合練習`;
+                        desc.innerText = '※ 進退位混合：包含需要進位的加法與需要退位的減法。';
+                    } else if (mode === 'simple') {
+                        title.innerText = `0-${max} 不進/退位混合練習`;
+                        desc.innerText = '※ 不進/退位混合：包含不需要進位的加法與不需要退位的減法。';
+                    } else {
+                        title.innerText = `0-${max} 加減全混合練習`;
+                        desc.innerText = '※ 加減全混合：隨機包含各種加減法（含進退位與不進退位）。';
+                    }
+                }
+                } else if (mainMode === 'multi') { // 將原本的 else 改為 else if
+                basicConfig.classList.add('hidden');
+                multiConfig.classList.remove('hidden');
+                twoPlusOneConfig.classList.add('hidden'); // 新增這行
+
+                const opTypeMulti = document.querySelector('input[name="opTypeMulti"]:checked').value;
+                const numCount = document.getElementById('numCount').value;
+                const maxAnswer = document.getElementById('maxAnswer').value;
+                
+                info.innerText = `數字數量: ${numCount} | 答案上限: ${maxAnswer}`;
+
+                if(opTypeMulti === 'add') {
+                    title.innerText = `${numCount}數連加法練習`;
+                    desc.innerText = '※ 連加法：多個數字連續相加。';
+                } else if(opTypeMulti === 'sub') {
+                    title.innerText = `${numCount}數連減法練習`;
+                    desc.innerText = '※ 連減法：從一個大數連續減去多個數字（保證過程不出現負數）。';
+                } else if(opTypeMulti === 'mix') {
+                    title.innerText = `${numCount}數加減混合練習`;
+                    desc.innerText = '※ 加減混合：隨機包含加法與減法（保證過程不出現負數）。';
+                } else {
+                    title.innerText = `${numCount}數純加與純減混合`;
+                    desc.innerText = '※ 每一題皆為單純的連加或單純的連減。';
+                }
+            } else if (mainMode === 'twoPlusOne') {
+                basicConfig.classList.add('hidden');
+                multiConfig.classList.add('hidden');
+                twoPlusOneConfig.classList.remove('hidden');
+                
+                const opTypeTwo = document.querySelector('input[name="opTypeTwo"]:checked').value;
+                const modeTwo = document.querySelector('input[name="modeTwo"]:checked').value;
+                const maxTwo = document.getElementById('rangeMaxTwo').value;
+                
+                const useFixedTwo = document.getElementById('useFixedNumTwo').checked;
+                document.getElementById('fixedNumTwo').disabled = !useFixedTwo;
+
+                const labelSimpleTwo = document.getElementById('label-simple-two');
+                const labelComplexTwo = document.getElementById('label-complex-two');
+                const labelMixedTwo = document.getElementById('label-mixed-two');
+                
+                info.innerText = `出題範圍：10-${maxTwo} 與一位數`;
+                
+                if (opTypeTwo === 'add') {
+                    labelSimpleTwo.innerText = "不進位";
+                    labelComplexTwo.innerText = "進位加法";
+                    labelMixedTwo.innerText = "混合加法";
+                    if (modeTwo === 'complex') {
+                        title.innerText = `兩位數加一位數 (進位) 練習`;
+                        desc.innerText = '※ 兩位數加一位數：個位數相加後產生進位。';
+                    } else if (modeTwo === 'simple') {
+                        title.innerText = `兩位數加一位數 (不進位) 練習`;
+                        desc.innerText = '※ 兩位數加一位數：個位數相加後不產生進位。';
+                    } else {
+                        title.innerText = `兩位數加一位數混合練習`;
+                        desc.innerText = '※ 兩位數加一位數：隨機包含進位與不進位。';
+                    }
+                } else if (opTypeTwo === 'sub') {
+                    labelSimpleTwo.innerText = "不退位";
+                    labelComplexTwo.innerText = "退位減法";
+                    labelMixedTwo.innerText = "混合減法";
+                    if (modeTwo === 'complex') {
+                        title.innerText = `兩位數減一位數 (退位) 練習`;
+                        desc.innerText = '※ 兩位數減一位數：個位數不夠減，需向十位借位。';
+                    } else if (modeTwo === 'simple') {
+                        title.innerText = `兩位數減一位數 (不退位) 練習`;
+                        desc.innerText = '※ 兩位數減一位數：個位數足夠相減，不需借位。';
+                    } else {
+                        title.innerText = `兩位數減一位數混合練習`;
+                        desc.innerText = '※ 兩位數減一位數：隨機包含退位與不退位。';
+                    }
+                } else {
+                    labelSimpleTwo.innerText = "不進/退位";
+                    labelComplexTwo.innerText = "進/退位";
+                    labelMixedTwo.innerText = "全混合";
+                    if (modeTwo === 'complex') {
+                        title.innerText = `兩位數與一位數 (進退位) 混合練習`;
+                        desc.innerText = '※ 包含需要進位的加法與需要退位的減法。';
+                    } else if (modeTwo === 'simple') {
+                        title.innerText = `兩位數與一位數 (不進/退位) 混合練習`;
+                        desc.innerText = '※ 包含不需要進位的加法與不需要退位的減法。';
+                    } else {
+                        title.innerText = `兩位數與一位數加減全混合練習`;
+                        desc.innerText = '※ 隨機包含兩位數與一位數各種加減法。';
+                    }
+                }
+            }
+
+            generateTasks();
+        }
+
+        function checkCarryNeeded(a, b) {
+            let tempA = a; let tempB = b;
+            while (tempA > 0 || tempB > 0) {
+                if ((tempA % 10) + (tempB % 10) > 9) return true;
+                tempA = Math.floor(tempA / 10);
+                tempB = Math.floor(tempB / 10);
+            }
+            return false;
+        }
+
+        function checkBorrowNeeded(m, s) {
+            let tempM = m; let tempS = s;
+            while (tempM > 0 || tempS > 0) {
+                if ((tempM % 10) < (tempS % 10)) return true;
+                tempM = Math.floor(tempM / 10);
+                tempS = Math.floor(tempS / 10);
+            }
+            return false;
+        }
+
+        function generateTasks() {
+            const container = document.getElementById('quiz-container');
+            const mainMode = document.querySelector('input[name="mainMode"]:checked').value;
+            const allowDuplicates = document.getElementById('allowDuplicates').checked;
+            
+            container.innerHTML = '';
+            const usedQuestions = new Set();
+            const targetCount = 30;
+            let questionsGenerated = 0;
+            let attempts = 0;
+            const maxAttempts = 15000;
+
+            if (mainMode === 'basic') {
+                // =============== 基礎雙數生成邏輯 ===============
+                const opType = document.querySelector('input[name="opType"]:checked').value;
+                const mode = document.querySelector('input[name="mode"]:checked').value;
+                const maxLimit = parseInt(document.getElementById('rangeMax').value);
+                const useFixed = document.getElementById('useFixedNum').checked;
+                const fixedNum = parseInt(document.getElementById('fixedNum').value);
+                // 【新增這行】取得目前的顯示格式
+                    const layoutType = document.querySelector('input[name="layoutType"]:checked').value; 
+
+                    while (questionsGenerated < targetCount && attempts < maxAttempts) {
+                    attempts++;
+                    let currentOp = opType;
+                    if (opType === 'mixedOp') currentOp = Math.random() > 0.5 ? 'add' : 'sub';
+
+                    const opSymbol = currentOp === 'add' ? '+' : '-';
+                    let n1, n2, isValid = false;
+
+                    if (currentOp === 'add') {
+                        if (useFixed) {
+                            if (Math.random() > 0.5) { n1 = fixedNum; n2 = Math.floor(Math.random() * (maxLimit - n1 + 1)); } 
+                            else { n2 = fixedNum; n1 = Math.floor(Math.random() * (maxLimit - n2 + 1)); }
+                        } else {
+                            n1 = Math.floor(Math.random() * (maxLimit + 1));
+                            n2 = Math.floor(Math.random() * (maxLimit - n1 + 1));
+                        }
+                        let carryNeeded = checkCarryNeeded(n1, n2);
+                        if (mode === 'simple') { if (!carryNeeded) isValid = true; } 
+                        else if (mode === 'complex') { if (carryNeeded) isValid = true; } 
+                        else { isValid = true; }
+                    } else { // sub
+                        if (useFixed) {
+                            if (Math.random() > 0.5) { n1 = fixedNum; n2 = Math.floor(Math.random() * (n1 + 1)); } 
+                            else { n2 = fixedNum; n1 = n2 + Math.floor(Math.random() * (maxLimit - n2 + 1)); }
+                        } else {
+                            n1 = Math.floor(Math.random() * (maxLimit + 1));
+                            n2 = Math.floor(Math.random() * (n1 + 1));
+                        }
+                        let borrowNeeded = checkBorrowNeeded(n1, n2);
+                        if (mode === 'simple') { if (!borrowNeeded) isValid = true; } 
+                        else if (mode === 'complex') { if (borrowNeeded) isValid = true; } 
+                        else { isValid = true; }
+                    }
+
+if (isValid) {
+            const questionKey = `${n1}${opSymbol}${n2}`;
+            if (allowDuplicates || !usedQuestions.has(questionKey)) {
+                if (!allowDuplicates) usedQuestions.add(questionKey);
+                questionsGenerated++;
+                const result = currentOp === 'add' ? (n1 + n2) : (n1 - n2);
+                
+                // 2. 【修改這裡】依照 layoutType 決定呼叫橫式或直式函數
+                if (layoutType === 'vertical') {
+                    appendVerticalQuestionItem(container, questionsGenerated, n1, opSymbol, n2, result);
+                } else {
+                    appendQuestionItem(container, questionsGenerated, `${n1} ${opSymbol} ${n2} =`, result);
+                }
+                        }
+                    }
+                }
+            } else if (mainMode === 'multi') { // 改為 else if
+                // =============== 多數連算生成邏輯 ===============
+                const opTypeMulti = document.querySelector('input[name="opTypeMulti"]:checked').value;
+                const maxAnswer = parseInt(document.getElementById('maxAnswer').value);
+                const numCount = parseInt(document.getElementById('numCount').value);
+                const maxValue = parseInt(document.getElementById('maxValueMulti').value);
+
+                // 防呆檢查
+                if ((opTypeMulti === 'add' || opTypeMulti === 'mix_pure') && maxAnswer < numCount) {
+                    showError(container, "❌ 錯誤：最後答案數值太小，無法容納指定數量的數字連加（每個數字最少為 1）。");
+                    return;
+                }
+                if ((opTypeMulti === 'sub' || opTypeMulti === 'mix' || opTypeMulti === 'mix_pure') && maxValue < numCount) {
+                    showError(container, "❌ 錯誤：單一數值的最大值太小，無法產生足夠的空間進行連續減法。");
+                    return;
+                }
+
+                while (questionsGenerated < targetCount && attempts < maxAttempts) {
+                    attempts++;
+                    let nums = [];
+                    let ops = []; 
+                    let isValid = true;
+                    let currentVal = 0;
+                    let qText = "";
+
+                    let currentOpType = opTypeMulti;
+                    if (opTypeMulti === 'mix_pure') {
+                        currentOpType = Math.random() < 0.5 ? 'add' : 'sub';
+                    }
+
+                    if (currentOpType === 'add') {
+                        for (let i = 0; i < numCount; i++) {
+                            let remainingNumbers = numCount - i - 1;
+                            let minForThis = 1;
+                            let maxForThis = Math.min(maxValue, maxAnswer - currentVal - remainingNumbers);
+
+                            if (minForThis > maxForThis) { isValid = false; break; }
+                            let val = Math.floor(Math.random() * (maxForThis - minForThis + 1)) + minForThis;
+                            nums.push(val);
+                            currentVal += val;
+                        }
+                        if (isValid && currentVal <= maxAnswer) {
+                            qText = nums.join(' + ') + ' =';
+                        } else { isValid = false; }
+
+                    } else if (currentOpType === 'sub') {
+                        let minStart = numCount - 1; 
+                        currentVal = Math.floor(Math.random() * (maxValue - minStart + 1)) + minStart;
+                        nums.push(currentVal);
+
+                        for (let i = 1; i < numCount; i++) {
+                            let remainingNumbers = numCount - i - 1;
+                            let minForThis = 1;
+                            let maxForThis = currentVal - remainingNumbers;
+
+                            if (minForThis > maxForThis) { isValid = false; break; }
+                            let val = Math.floor(Math.random() * (maxForThis - minForThis + 1)) + minForThis;
+                            nums.push(val);
+                            currentVal -= val;
+                        }
+                        if (isValid && currentVal <= maxAnswer && currentVal >= 0) {
+                            qText = nums.join(' - ') + ' =';
+                        } else { isValid = false; }
+
+                    } else if (currentOpType === 'mix') {
+                        currentVal = Math.floor(Math.random() * maxValue) + 1;
+                        nums.push(currentVal);
+
+                        for (let i = 1; i < numCount; i++) {
+                            let op = Math.random() < 0.5 ? '+' : '-';
+                            let minForThis = 1;
+                            let maxForThis;
+
+                            if (op === '+') {
+                                maxForThis = Math.min(maxValue, maxAnswer - currentVal);
+                                if (maxForThis < 1) op = '-'; 
+                            }
+
+                            if (op === '-') {
+                                maxForThis = currentVal;
+                                if (maxForThis < 1) {
+                                    if (maxAnswer - currentVal >= 1) {
+                                        op = '+'; 
+                                        maxForThis = Math.min(maxValue, maxAnswer - currentVal);
+                                    } else {
+                                        isValid = false; break; 
+                                    }
+                                }
+                            }
+
+                            let val = Math.floor(Math.random() * (maxForThis - minForThis + 1)) + minForThis;
+                            nums.push(val);
+                            ops.push(op);
+                            if (op === '+') currentVal += val;
+                            else currentVal -= val;
+                        }
+
+                        if (isValid && currentVal <= maxAnswer && currentVal >= 0) {
+                            let tempText = nums[0].toString();
+                            for (let i = 0; i < ops.length; i++) {
+                                tempText += ` ${ops[i]} ${nums[i+1]}`;
+                            }
+                            qText = tempText + ' =';
+                        } else { isValid = false; }
+                    }
+
+                    if (isValid) {
+                        if (allowDuplicates || !usedQuestions.has(qText)) {
+                            if (!allowDuplicates) usedQuestions.add(qText);
+                            questionsGenerated++;
+                            appendQuestionItem(container, questionsGenerated, qText, currentVal);
+                        }
+                    }
+                }
+            } else if (mainMode === 'twoPlusOne') {
+                const opTypeTwo = document.querySelector('input[name="opTypeTwo"]:checked').value;
+                const modeTwo = document.querySelector('input[name="modeTwo"]:checked').value;
+                const maxLimitTwo = parseInt(document.getElementById('rangeMaxTwo').value);
+                const useFixedTwo = document.getElementById('useFixedNumTwo').checked;
+                const fixedNumTwo = parseInt(document.getElementById('fixedNumTwo').value);
+
+                while (questionsGenerated < targetCount && attempts < maxAttempts) {
+                    attempts++;
+                    let currentOp = opTypeTwo;
+                    if (opTypeTwo === 'mixed') {
+                        currentOp = Math.random() > 0.5 ? 'add' : 'sub';
+                    }
+                    
+                    const opSymbol = currentOp === 'add' ? '+' : '-';
+                    let n1, n2, isValid = false;
+                    
+                    // n1 為兩位數 (10 至 maxLimitTwo)
+                    n1 = Math.floor(Math.random() * (maxLimitTwo - 9)) + 10; 
+                    
+                    // n2 為一位數
+                    if (useFixedTwo) {
+                        n2 = fixedNumTwo;
+                    } else {
+                        n2 = Math.floor(Math.random() * 9) + 1;
+                    }
+
+                    if (currentOp === 'add') {
+                        let carryNeeded = checkCarryNeeded(n1, n2);
+                        if (modeTwo === 'simple') { if (!carryNeeded) isValid = true; } 
+                        else if (modeTwo === 'complex') { if (carryNeeded) isValid = true; } 
+                        else { isValid = true; }
+                    } else { // sub
+                        let borrowNeeded = checkBorrowNeeded(n1, n2);
+                        if (modeTwo === 'simple') { if (!borrowNeeded) isValid = true; } 
+                        else if (modeTwo === 'complex') { if (borrowNeeded) isValid = true; } 
+                        else { isValid = true; }
+                    }
+                    
+                    if (isValid) {
+                        let qText = "";
+                        let result = 0;
+                        
+                        if (currentOp === 'add') {
+                            if (Math.random() > 0.5) {
+                                qText = `${n1} ${opSymbol} ${n2} =`;
+                            } else {
+                                qText = `${n2} ${opSymbol} ${n1} =`;
+                            }
+                            result = n1 + n2;
+                        } else {
+                            // 減法固定大數(兩位數)減小數(一位數)
+                            qText = `${n1} ${opSymbol} ${n2} =`;
+                            result = n1 - n2;
+                        }
+                        
+                        if (allowDuplicates || !usedQuestions.has(qText)) {
+                            if (!allowDuplicates) usedQuestions.add(qText);
+                            questionsGenerated++;
+                            appendQuestionItem(container, questionsGenerated, qText, result);
+                        }
+                    }
+                }
+            }
+
+            // 錯誤或提示訊息
+            if (questionsGenerated > 0 && questionsGenerated < targetCount) {
+                showError(container, `※ 提示：在目前的條件限制下，只能找到 ${questionsGenerated} 題不重複的組合。請嘗試放寬數值上限或允許題目重複。`);
+            } else if (questionsGenerated === 0) {
+                showError(container, "※ 無法生成任何題目，請檢查參數設定是否衝突（例如範圍過小）。");
+            }
+        }
+
+        // 輔助函數：渲染單一題目
+        function appendQuestionItem(container, num, text, answer) {
+            const item = document.createElement('div');
+            item.className = 'flex items-center justify-between border-b border-gray-100 pb-2 px-2';
+            item.innerHTML = `
+                <span class="w-8 text-xs text-gray-300 font-sans">${num}.</span>
+                <span class="flex-1 text-right pr-2 tracking-wider">${text}</span>
+                <span class="ans-slot inline-block w-16 border-b-2 border-gray-300 text-blue-500 transition-opacity duration-300 ${showAnswer ? 'opacity-100' : 'opacity-0'} text-center">
+                    ${answer}
+                </span>
+            `;
+            container.appendChild(item);
+        }
+        // 輔助函數：渲染基礎雙數的「直式」題目
+            function appendVerticalQuestionItem(container, num, n1, op, n2, answer) {
+                const item = document.createElement('div');
+                // 【修改這裡】在 className 中加入 avoid-break
+                item.className = 'avoid-break flex items-center justify-between border-b border-gray-100 pb-2 px-2'; 
+                
+                item.innerHTML = `
+                <span class="w-8 text-xs text-gray-300 font-sans self-start pt-2">${num}.</span>
+                <div class="flex-1 flex justify-center">
+                    <div class="vertical-math">
+                        <div class="row">${n1}</div>
+                        <div class="row bottom-row">
+                            <span>${op}</span>
+                            <span>${n2}</span>
+                        </div>
+                        <div class="row text-blue-500 transition-opacity duration-300 ${showAnswer ? 'opacity-100' : 'opacity-0'} ans-slot h-8">
+                            ${answer}
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(item);
+        }
+
+        // 輔助函數：顯示錯誤提示
+        function showError(container, msg) {
+            const errorMsg = document.createElement('div');
+            errorMsg.className = 'col-span-full text-center text-red-500 text-sm mt-4 bg-red-50 p-3 rounded font-bold';
+            errorMsg.innerText = msg;
+            container.appendChild(errorMsg);
+        }
+
+        function toggleAnswers() {
+            showAnswer = !showAnswer;
+            const btn = document.getElementById('toggleBtn');
+            btn.innerText = showAnswer ? '隱藏答案' : '顯示答案';
+            
+            const answers = document.querySelectorAll('.ans-slot');
+            answers.forEach(ans => {
+                ans.classList.toggle('opacity-0', !showAnswer);
+                ans.classList.toggle('opacity-100', showAnswer);
+            });
+        }
+
+        window.onload = updateUI;
+    </script>
+</body>
+</html>
